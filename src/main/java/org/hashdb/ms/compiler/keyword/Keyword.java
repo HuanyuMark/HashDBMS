@@ -1,8 +1,9 @@
 package org.hashdb.ms.compiler.keyword;
 
-import org.hashdb.ms.compiler.keyword.ctx.CmdCtx;
+import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.util.ReflectCacheData;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Date: 2023/11/25 3:13
@@ -10,11 +11,14 @@ import org.jetbrains.annotations.NotNull;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public interface Keyword {
+public interface Keyword<E extends Enum<E>> {
 
     String name();
 
     boolean match(@NotNull String unknownToken);
 
-    ReflectCacheData<? extends CmdCtx> cmdCtxFactory();
+    @Nullable
+    E typeOfIgnoreCase(@NotNull String unknownToken);
+
+    ReflectCacheData<? extends CompileCtx<?>> constructor();
 }

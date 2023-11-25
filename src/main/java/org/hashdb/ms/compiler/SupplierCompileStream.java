@@ -36,10 +36,10 @@ public class SupplierCompileStream extends TokenCompileStream {
     public SupplierCtx compile() {
         var commandContext = SupplierKeyword.createCtx(token());
         if (commandContext == null) {
-            throw new CommandCompileException("unknown token: '" + token() + "'");
+            throw new CommandCompileException("unknown keyword: '" + token() + "'");
         }
         next();
-        commandContext.doAfterCompile(this);
+        commandContext.compileWithStream(this);
         return commandContext;
     }
 }

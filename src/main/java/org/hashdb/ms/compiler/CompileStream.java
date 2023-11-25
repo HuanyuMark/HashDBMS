@@ -1,6 +1,6 @@
 package org.hashdb.ms.compiler;
 
-import org.hashdb.ms.compiler.keyword.ctx.CmdCtx;
+import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.exception.DBExternalException;
 
 import java.util.Iterator;
@@ -17,7 +17,7 @@ public interface CompileStream {
 
     String errToken(String token);
 
-    CmdCtx compile();
+    CompileCtx compile();
 
     String nearString();
 

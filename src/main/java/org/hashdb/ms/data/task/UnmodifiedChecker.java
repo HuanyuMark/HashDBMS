@@ -2,7 +2,6 @@ package org.hashdb.ms.data.task;
 
 import org.hashdb.ms.exception.DBExternalException;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
@@ -13,28 +12,28 @@ import java.util.Objects;
  * @version 0.0.1
  */
 public class UnmodifiedChecker {
-    public static final Class<?> unmodifiableCollectionClass;
-    public static final Class<?> unmodifiableListClass;
+    public static final Class<?> unmodifiableCollection;
+    public static final Class<?> unmodifiableList;
     static {
         try {
-            unmodifiableCollectionClass = Class.forName("java.util.Collections$UnmodifiableCollection");
-            unmodifiableListClass = Class.forName("java.util.Collections$UnmodifiableList");
+            unmodifiableCollection = Class.forName("java.util.Collections$UnmodifiableCollection");
+            unmodifiableList = Class.forName("java.util.Collections$UnmodifiableList");
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static boolean isUnmodified(Class<?> clazz) {
+    public static boolean isUnmodifiableCollection(Class<?> clazz) {
         Objects.requireNonNull(clazz);
-        return unmodifiableCollectionClass.isAssignableFrom(clazz);
+        return unmodifiableCollection.isAssignableFrom(clazz);
     }
-    public static boolean isUnmodified(List<?> container) {
+    public static boolean isUnmodifiableCollection(List<?> container) {
         Objects.requireNonNull(container);
-        return isUnmodified(container.getClass());
+        return isUnmodifiableCollection(container.getClass());
     }
 
     public static void check(List<?> container) {
-        if (isUnmodified(container)) {
+        if (isUnmodifiableCollection(container)) {
             throw new DBExternalException(new UnsupportedOperationException("List is not unmodifiable"));
         }
     }

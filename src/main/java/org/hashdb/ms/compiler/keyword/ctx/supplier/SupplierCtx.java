@@ -1,15 +1,15 @@
 package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
 import org.hashdb.ms.compiler.SupplierCompileStream;
-import org.hashdb.ms.compiler.keyword.ctx.CmdCtx;
-import org.hashdb.ms.compiler.option.OptionContext;
-import org.hashdb.ms.data.DataType;
+import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
+import org.hashdb.ms.compiler.option.OptionCtx;
 import org.hashdb.ms.data.OpsTask;
 import org.hashdb.ms.exception.DBInnerException;
 import org.hashdb.ms.exception.StopComplieException;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * Date: 2023/11/24 16:37
@@ -17,22 +17,24 @@ import java.util.Map;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public abstract class SupplierCtx extends CmdCtx<SupplierCompileStream> {
+public abstract class SupplierCtx extends CompileCtx<SupplierCompileStream> {
 
     private OpsTask<?> compileResult;
 
-    public OpsTask<?> doAfterCompile(SupplierCompileStream compileStream) throws StopComplieException {
+    public OpsTask<?> compileWithStream(SupplierCompileStream compileStream) throws StopComplieException {
         if (compileResult != null) {
             throw new DBInnerException(getClass().getSimpleName() + " is finish compilation");
         }
         stream = compileStream;
-        this.compileResult = compile(compileStream);
-        return compileResult;
+        var supplierTask = compile();
+        // 支持管道操作, 将原 生产型任务生产的 结果传给下一个消费者任务使用
+        this.compileResult = OpsTask.of(()-> consumeWithConsumer(supplierTask.get()));
+        return this.compileResult;
     }
 
-    abstract protected OpsTask<?> compile(SupplierCompileStream compileStream) throws StopComplieException;
+    abstract protected Supplier<?> compile() throws StopComplieException;
 
-    protected SupplierCtx(Map<Class<? extends OptionContext<?>>, OptionContext<?>> initialOptions) {
+    protected SupplierCtx(Map<Class<? extends OptionCtx<?>>, OptionCtx<?>> initialOptions) {
         super(initialOptions);
     }
 

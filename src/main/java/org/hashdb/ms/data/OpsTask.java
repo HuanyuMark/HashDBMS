@@ -17,24 +17,29 @@ import java.util.function.Supplier;
  */
 public interface OpsTask<T> extends Supplier<T> {
     T result();
+
+    CompletableFuture<T> future();
     @Slf4j
     @RequiredArgsConstructor
     class OpsTaskImpl<T> implements OpsTask<T> {
         public static final OpsTask<?> EMPTY = new OpsTaskImpl<>(()-> null);
-        private final CompletableFuture<T> result = new CompletableFuture<>();
+        private final CompletableFuture<T> future = new CompletableFuture<>();
         private final Supplier<T> supplier;
         @Override
         public T result() {
-            return Futures.unwrap(result);
+            return Futures.unwrap(future);
         }
+        @Override
+        public CompletableFuture<T> future(){return future;}
         @Override
         public T get() {
             try {
                 T res = supplier.get();
-                result.complete(res);
+                future.complete(res);
+                return res;
             } catch (Throwable e) {
                 log.info("supplier throw exception: {}",e.toString());
-                result.completeExceptionally(e);
+                future.completeExceptionally(e);
             }
             return null;
         }

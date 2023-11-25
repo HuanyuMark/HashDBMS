@@ -1,17 +1,18 @@
 package org.hashdb.ms.compiler;
 
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.compiler.keyword.ctx.CmdCtx;
-import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
+import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.exception.CommandCompileException;
 import org.hashdb.ms.exception.DBExternalException;
 import org.hashdb.ms.exception.DBInnerException;
+import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -24,7 +25,17 @@ import java.util.stream.Collectors;
 @Slf4j
 public abstract class TokenCompileStream implements CompileStream {
 
-    protected final String command;
+    protected final Lazy<String> command;
+
+    /**
+     * 存放token的序列可以改成 {@link LinkedList},
+     * 再初始化一个{@link LinkedList#listIterator()}, 来作为主遍历器
+     * 然后每次调用 {#link #next} {#prev} 的时候, 调用 {@link ListIterator#nextIndex()} 或
+     * {@link ListIterator#previousIndex()} 更新cursor即可
+     * 但是, 如果在 fork出子流时,使用 {@link LinkedList#subList(int form, int to)} 获取
+     * 子链表(这个链表是一个视图, 即对视图的操作会影响到原链表) 这导致了:
+     * 因为要去掉包裹内联命令的左右两个括号, 会直接影响到原链表的 token 序列
+     */
     protected final String[] tokens;
 
     protected final Database database;
@@ -34,8 +45,10 @@ public abstract class TokenCompileStream implements CompileStream {
     protected int cursor = 0;
 
     protected TokenCompileStream(Database database, @NotNull String command) {
+        LinkedList<Object> list = new LinkedList<>();
+        ListIterator<Object> objectListIterator = list.listIterator();
         var tokens = extractTokens(command);
-        this.command = String.join(" ", tokens);
+        this.command = Lazy.of(()->(String.join(" ", tokens)));
         this.tokens = tokens;
         this.database = database;
     }
@@ -47,7 +60,7 @@ public abstract class TokenCompileStream implements CompileStream {
         }
         eraseParentheses(childTokens);
         eraseLastSemicolon(childTokens);
-        this.command = String.join(" ", childTokens);
+        this.command = Lazy.of(()->String.join(" ", childTokens));
         this.tokens = childTokens;
         this.fatherStream = fatherStream;
         this.database = database;
@@ -122,9 +135,11 @@ public abstract class TokenCompileStream implements CompileStream {
             }
             wordQueue.add(curStr);
         }
-
         if (!symbolQueue.isEmpty()) {
             throw new CommandCompileException("fail to match symbol: '" + symbolQueue + "' in command: '" + command + "'");
+        } else if(!wordQueue.isEmpty()){
+            String token = String.join("", wordQueue);
+            tokenList.add(token);
         }
 
         var tokens = tokenList.toArray(String[]::new);
@@ -159,6 +174,10 @@ public abstract class TokenCompileStream implements CompileStream {
         String lastToken = tokens[last];
         int lastIndexOfFirstToken = tokens[0].lastIndexOf("(");
         int indexOfLashToken = lastToken.indexOf(")");
+        if(lastIndexOfFirstToken == - 1 && indexOfLashToken == -1) {
+            return;
+        }
+
         if (lastIndexOfFirstToken != lastToken.length() - indexOfLashToken - 1) {
             throw new CommandCompileException("fail to match parentheses token in string: " + String.join(" ", tokens));
         }
@@ -178,22 +197,21 @@ public abstract class TokenCompileStream implements CompileStream {
             log.error("endTokenIndex {} < startTokenIndex {}", endTokenIndex, startTokenIndex);
             throw new DBInnerException();
         }
-
         var childTokens = Arrays.stream(tokens).skip(startTokenIndex).limit(endTokenIndex - startTokenIndex + 1).toArray(String[]::new);
         return new SupplierCompileStream(database, childTokens, this);
     }
-    public ConsumerCompileStream forkConsumerCompileStream(int startTokenIndex, int endTokenIndex, CmdCtx<?> fatherCmdCtx) {
+    public ConsumerCompileStream forkConsumerCompileStream(int startTokenIndex, int endTokenIndex, CompileCtx<?> fatherCompileCtx) {
         if (endTokenIndex < startTokenIndex) {
             log.error("endTokenIndex {} < startTokenIndex {}", endTokenIndex, startTokenIndex);
             throw new DBInnerException();
         }
         // 这里相当于取了字串, 那么母串里被摘出的token需要切掉吗?
         var childTokens = Arrays.stream(tokens).skip(startTokenIndex).limit(endTokenIndex - startTokenIndex + 1).toArray(String[]::new);
-        return new ConsumerCompileStream(database, childTokens, this,fatherCmdCtx);
+        return new ConsumerCompileStream(database, childTokens, this, fatherCompileCtx);
     }
     @Override
     public String errToken(String token) {
-        return " msg: {\"token\":\" + token + \",\"near\":\"" + nearString() + "\"}";
+        return " msg: {\"token\":\""+ token +"\",\"near\":\"" + nearString() + "\"}";
     }
 
     public String errToken() {
@@ -215,7 +233,7 @@ public abstract class TokenCompileStream implements CompileStream {
 
     @Override
     public String command() {
-        return command;
+        return command.get();
     }
 
     @Override

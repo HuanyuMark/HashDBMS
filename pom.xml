@@ -12,7 +12,9 @@
     <groupId>org.hashdb</groupId>
     <artifactId>HashDBMS</artifactId>
     <version>1.0-SNAPSHOT</version>
-    <description>A simple hashtable database management system</description>
+    <description>
+        A remote memory store database, refer to Redis, dev with Spring Boot, Netty.
+    </description>
     <properties>
         <java.version>21</java.version>
     </properties>

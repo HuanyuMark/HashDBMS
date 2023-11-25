@@ -1,18 +1,19 @@
 package org.hashdb.ms.compiler.keyword;
 
-import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.*;
 import org.hashdb.ms.util.ReflectCacheData;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Date: 2023/11/24 16:22
  * 提供者关键字的特点就是, 构造的任务没有入参
  * 所以, 一般就用来当作命令的开头关键字
+ *
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public enum SupplierKeyword implements Keyword {
+public enum SupplierKeyword implements Keyword<SupplierKeyword> {
     GET(GetCtx.class),
     SET(SetCtx.class),
     RPL(RplCtx.class),
@@ -27,20 +28,18 @@ public enum SupplierKeyword implements Keyword {
     FLUSH(FlushCtx.class),
     TYPE(TypeCtx.class);
 
-    private final ReflectCacheData<? extends SupplierCtx> cmdCtxFactory;
+    private final ReflectCacheData<? extends SupplierCtx> constructor;
 
     SupplierKeyword(Class<? extends SupplierCtx> keywordCtxClass) {
-        this.cmdCtxFactory = new ReflectCacheData<>(keywordCtxClass);
+        this.constructor = new ReflectCacheData<>(keywordCtxClass);
     }
 
-    public static ReflectCacheData<? extends SupplierCtx> getCmdCtxConstructor(@NotNull String unknownToken) {
-        String normalizedStr = unknownToken.toUpperCase();
-        try {
-            SupplierKeyword keyword = valueOf(normalizedStr);
-            return keyword.cmdCtxFactory;
-        } catch (IllegalArgumentException e) {
+    public static ReflectCacheData<? extends SupplierCtx> getCompileCtxConstructor(@NotNull String unknownToken) {
+        SupplierKeyword supplierKeyword = typeOfIgnoreCase_(unknownToken);
+        if (supplierKeyword == null) {
             return null;
         }
+        return supplierKeyword.constructor;
     }
 
     public static boolean is(@NotNull String keyword) {
@@ -53,19 +52,35 @@ public enum SupplierKeyword implements Keyword {
     }
 
     public static SupplierCtx createCtx(@NotNull String unknownToken) {
-        var kwCtxConstructor = SupplierKeyword.getCmdCtxConstructor(unknownToken);
-        if(kwCtxConstructor == null) {
+        var kwCtxConstructor = SupplierKeyword.getCompileCtxConstructor(unknownToken);
+        if (kwCtxConstructor == null) {
             return null;
         }
         return kwCtxConstructor.create();
     }
 
+
     @Override
-    public ReflectCacheData<? extends SupplierCtx> cmdCtxFactory(){
-        return cmdCtxFactory;
+    public ReflectCacheData<? extends SupplierCtx> constructor() {
+        return constructor;
     }
 
     public boolean match(@NotNull String unknownToken) {
-        return name().equals(unknownToken.toUpperCase());
+        return name().equalsIgnoreCase(unknownToken);
+    }
+
+    @Nullable
+    @Override
+    public SupplierKeyword typeOfIgnoreCase(@NotNull String unknownToken) {
+        return typeOfIgnoreCase_(unknownToken);
+    }
+
+    public static SupplierKeyword typeOfIgnoreCase_(@NotNull String unknownToken) {
+        String normalizedStr = unknownToken.toUpperCase();
+        try {
+            return valueOf(normalizedStr);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 }

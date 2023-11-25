@@ -1,14 +1,17 @@
 package org.hashdb.ms.data;
 
 import lombok.extern.slf4j.Slf4j;
+import org.hashdb.ms.HashDBMSApp;
+import org.hashdb.ms.config.DBRamConfig;
 import org.hashdb.ms.exception.DBInnerException;
 import org.hashdb.ms.exception.IllegalJavaClassStoredException;
+import org.hashdb.ms.util.Lazy;
+import org.hashdb.ms.util.OneTimeLazy;
+import org.hashdb.ms.util.ReflectCacheData;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Constructor;
-import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -38,16 +41,30 @@ public enum DataType {
 //    ANY(List.of(), List.of());
     private final Set<Class<?>> javaClasses;
 
-    private final Class<?> defaultJavaClass;
+    private final ReflectCacheData<?> reflectCacheData;
     private final List<String> commandSymbol;
-    private static final Map<Class<?>, DataType> javaClassMap = new HashMap<>();
-    private static final Map<String, DataType> commandSymbolMap = new HashMap<>();
+    private static Map<Class<?>, DataType> javaClassMap;
+    private static Map<String, DataType> commandSymbolMap;
 
+    private static final OneTimeLazy<?> loadJavaClassOfMapDataTypeFromConfig = OneTimeLazy.of(()->{
+        DBRamConfig dbRamConfig = HashDBMSApp.ctx().getBean(DBRamConfig.class);
+        if (dbRamConfig.isStoreLikeJsonSequence()) {
+            javaClassMap.remove(HashMap.class);
+            javaClassMap.put(LinkedHashMap.class,MAP);
+        }
+        return null;
+    });
     private static void registerClass(Class<?> clazz, DataType type) {
+        if(javaClassMap == null) {
+            javaClassMap = new HashMap<>();
+        }
         javaClassMap.put(clazz, type);
     }
 
     private static void registerCommandSymbol(@NotNull List<String> symbols, DataType type) {
+        if(commandSymbolMap == null) {
+            commandSymbolMap = new HashMap<>();
+        }
         symbols.forEach(symbol -> commandSymbolMap.put(symbol, type));
     }
 
@@ -56,7 +73,7 @@ public enum DataType {
         this.commandSymbol = commandSymbol;
         registerClass(clazz, this);
         registerCommandSymbol(commandSymbol, this);
-        this.defaultJavaClass = clazz;
+        reflectCacheData = new ReflectCacheData<>(clazz);
     }
 
     DataType(@NotNull List<Class<?>> classes, List<String> commandSymbol) {
@@ -65,7 +82,7 @@ public enum DataType {
                 .collect(Collectors.toUnmodifiableSet());
         this.commandSymbol = commandSymbol;
         registerCommandSymbol(commandSymbol, this);
-        this.defaultJavaClass = classes.getFirst();
+        reflectCacheData = new ReflectCacheData<>(classes.getFirst());
     }
 
     public static @NotNull DataType typeofHValue(@Nullable HValue<?> value) {
@@ -73,6 +90,7 @@ public enum DataType {
     }
 
     public static @NotNull DataType typeOfRawValue(@Nullable Object instance) throws IllegalJavaClassStoredException {
+        loadJavaClassOfMapDataTypeFromConfig.get();
         Class<?> javaClass = Objects.requireNonNullElse(instance, Null.VALUE).getClass();
         DataType type = javaClassMap.get(javaClass);
         if (type == null) {
@@ -81,6 +99,7 @@ public enum DataType {
         return type;
     }
 
+    @Nullable
     public static DataType typeOfSymbol(String symbol) {
         Objects.requireNonNull(symbol);
         return commandSymbolMap.get(symbol.toUpperCase());
@@ -90,12 +109,16 @@ public enum DataType {
         return javaClasses;
     }
 
-    public Class<?> defaultJavaClass() {
-        return defaultJavaClass;
+    public ReflectCacheData<?> reflect() {
+        return reflectCacheData;
     }
 
     public Collection<String> commandSymbols() {
         return commandSymbol;
+    }
+
+    public static boolean canStore(Class<?> clazz) {
+        return javaClassMap.containsKey(clazz);
     }
 
     @Slf4j

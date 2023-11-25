@@ -1,8 +1,8 @@
 package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
-import org.hashdb.ms.compiler.SupplierCompileStream;
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
-import org.hashdb.ms.data.OpsTask;
+
+import java.util.function.Supplier;
 
 /**
  * Date: 2023/11/24 16:20
@@ -15,8 +15,14 @@ public class CountCtx extends SupplierCtx {
     public SupplierKeyword name() {
         return SupplierKeyword.COUNT;
     }
+
     @Override
-    public OpsTask<?> compile(SupplierCompileStream compileStream) {
-    return null;
+    public Class<?> supplyType() {
+        return Integer.class;
+    }
+
+    @Override
+    public Supplier<?> compile() {
+        return stream.db().countTask();
     }
 }

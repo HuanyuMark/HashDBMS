@@ -1,8 +1,8 @@
 package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
-import org.hashdb.ms.compiler.SupplierCompileStream;
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
-import org.hashdb.ms.data.OpsTask;
+
+import java.util.function.Supplier;
 
 /**
  * Date: 2023/11/24 16:20
@@ -17,7 +17,7 @@ public class ValuesCtx extends SupplierCtx {
     }
 
     @Override
-    public OpsTask<?> compile(SupplierCompileStream compileStream) {
+    public Supplier<?> compile() {
 
         return null;
     }

@@ -7,9 +7,9 @@ import java.util.function.Supplier;
  * 异步服务支持, 提供一个全局的公用线程池
  */
 public class AsyncService {
-    private static final Lazy<ExecutorService> executorService = Lazy.of(()->{
+    private static final Lazy<ExecutorService> executorService = AtomLazy.of(()->{
         ThreadFactory threadFactory = Thread.ofVirtual()
-                .name("v-t-executor-", 0)
+                .name("vt-", 0)
                 .inheritInheritableThreadLocals(true)
                 .uncaughtExceptionHandler((thread, e) -> {
                     System.err.printf("Thread: [%s] throw exception: %s\n", thread.getName(), e);
@@ -18,9 +18,9 @@ public class AsyncService {
         return Executors.newThreadPerTaskExecutor(threadFactory);
     });
 
-    private static final Lazy<ScheduledExecutorService> scheduledExecutorService = Lazy.of(()->{
+    private static final Lazy<ScheduledExecutorService> scheduledExecutorService = AtomLazy.of(()->{
         ThreadFactory threadFactory = Thread.ofVirtual()
-               .name("v-s-executor-", 0)
+               .name("vs-", 0)
                .inheritInheritableThreadLocals(true)
                .uncaughtExceptionHandler((thread, e) -> {
                     System.err.printf("Thread: [%s] throw exception: %s\n", thread.getName(), e);

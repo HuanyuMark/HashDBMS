@@ -7,10 +7,13 @@ import java.util.function.Supplier;
  * Date: 2023/11/13 19:38
  * 延迟加载类, 第一次使用 {@link #get()} 时, 会调用 {@link #supplier} 获取初值并缓存
  * 后面调用 {@link #get()} 时, 直接返回缓存下来的值
+ * 如果 supplier 运行后没有产生有效值 比如:{@code null}, 则下次调用 {@link #get()}
+ * 依旧会尝试运行 supplier 来产生值, 进行缓存
+ * 如果只需要运行supplier一次, 可以使用其子类 {@link OneTimeLazy}
  */
 public class Lazy<T> {
-    private volatile T value;
-    private final Supplier<T> supplier;
+    protected volatile T value;
+    protected final Supplier<T> supplier;
     protected Lazy(Supplier<T> supplier) {
         Objects.requireNonNull(supplier);
         this.supplier = supplier;

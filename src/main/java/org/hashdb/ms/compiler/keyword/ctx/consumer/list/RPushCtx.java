@@ -1,10 +1,9 @@
 package org.hashdb.ms.compiler.keyword.ctx.consumer.list;
 
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
-import org.hashdb.ms.compiler.keyword.ctx.CmdCtx;
-import org.hashdb.ms.compiler.keyword.ctx.consumer.ConsumerCtx;
+import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.consumer.OpsConsumerTask;
-import org.hashdb.ms.data.task.UnmodifiedChecker;
+import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
 import org.hashdb.ms.exception.StopComplieException;
 
 import java.util.List;
@@ -15,15 +14,10 @@ import java.util.List;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public class RPushCtx extends MutationCtx {
+public class RPushCtx extends PushCtx {
 
-    protected RPushCtx(CmdCtx<?> fatherCmdCtx) {
-        super(fatherCmdCtx);
-    }
-
-    @Override
-    public Class<?> supplyType() {
-        return Integer.class;
+    protected RPushCtx(CompileCtx<?> fatherCompileCtx) {
+        super(fatherCompileCtx);
     }
 
     @Override
@@ -32,7 +26,16 @@ public class RPushCtx extends MutationCtx {
     }
 
     @Override
-    protected OpsConsumerTask<List<?>, ?> compile() throws StopComplieException {
-        return null;
+    protected Integer doPushing(List<Object> opsTarget) {
+        for (Object value : values) {
+            Object result;
+            if(value instanceof SupplierCtx supplierCtx) {
+                result = supplierCtx.compileResult().get();
+            } else {
+                result = value;
+            }
+            opsTarget.add(result);
+        }
+        return opsTarget.size();
     }
 }

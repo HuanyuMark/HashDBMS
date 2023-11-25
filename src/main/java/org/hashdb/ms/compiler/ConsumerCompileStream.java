@@ -2,7 +2,7 @@ package org.hashdb.ms.compiler;
 
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
-import org.hashdb.ms.compiler.keyword.ctx.CmdCtx;
+import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.consumer.ConsumerCtx;
 import org.hashdb.ms.data.DataType;
 import org.hashdb.ms.data.Database;
@@ -21,25 +21,25 @@ import java.util.Objects;
 public class ConsumerCompileStream extends TokenCompileStream {
 
     private DataType opsTargetDataType;
-    private final CmdCtx<?> fatherCmdCtx;
+    private final CompileCtx<?> fatherCompileCtx;
 
     protected ConsumerCompileStream(Database database,
                                     String @NotNull [] childTokens,
                                     TokenCompileStream fatherSteam,
-                                    CmdCtx<?> fatherCmdCtx) {
+                                    CompileCtx<?> fatherCompileCtx) {
         super(database, childTokens, fatherSteam);
-        Objects.requireNonNull(fatherCmdCtx);
-        this.fatherCmdCtx = fatherCmdCtx;
+        Objects.requireNonNull(fatherCompileCtx);
+        this.fatherCompileCtx = fatherCompileCtx;
     }
 
     @Override
     public ConsumerCtx<?> compile() {
-        var cmdCtx = ConsumerKeyword.createCtx(token(), fatherCmdCtx);
+        var cmdCtx = ConsumerKeyword.createCtx(token(), fatherCompileCtx);
         if (cmdCtx == null) {
-            throw new CommandCompileException("unknown token: '" + token() + "'");
+            throw new CommandCompileException("unknown keyword: '" + token() + "'");
         }
         next();
-        cmdCtx.doAfterCompile(this);
+        cmdCtx.compileWithStream(this);
         return cmdCtx;
     }
 }

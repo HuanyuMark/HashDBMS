@@ -1,6 +1,5 @@
 package org.hashdb.ms.compiler.option;
 
-import org.hashdb.ms.compiler.SupplierCompileStream;
 import org.hashdb.ms.compiler.TokenCompileStream;
 import org.hashdb.ms.exception.CommandCompileException;
 import org.hashdb.ms.util.ReflectCacheData;
@@ -18,23 +17,30 @@ import java.util.Map;
  * @version 0.0.1
  */
 public enum Options {
-    EXISTS(ExistsOptionContext.class, List.of("es")),
-    LIMIT(LimitOptionContext.class, List.of("lm")),
-    OLD(OldOptionContext.class, List.of()),
-    EXPIRE(ExpireOptionContext.class, List.of("ep")),
-    POP(PopOptionContext.class, List.of());
-    private final static Map<String, Options> aliasMap = new HashMap<>();
+    EXISTS(ExistsOpCtx.class, List.of("es")),
+    LIMIT(LimitOpCtx.class, List.of("lm")),
+    OLD(OldOpCtx.class, List.of()),
+    EXPIRE(ExpireOpCtx.class, List.of("ep","lep")),
+    /**
+     * 高优先级删除
+     */
+    HEXPIRE(HExpireOpCtx.class,List.of("hep")),
+    POP(PopOpCtx.class, List.of());
+    private static Map<String, Options> aliasMap;
 
     private final OptionCache optionCacheCell;
 
-    Options(Class<? extends OptionContext<?>> optionClass, List<String> aliases) {
+    Options(Class<? extends OptionCtx<?>> optionClass, List<String> aliases) {
         this.optionCacheCell = new OptionCache(this,optionClass);
         addAlias(aliases, this);
     }
 
     private static void addAlias(@NotNull List<String> aliases, Options option) {
+        if(aliasMap == null) {
+            aliasMap = new HashMap<>();
+        }
         for (String alias : aliases) {
-            aliasMap.put(alias.toUpperCase(), option);
+            aliasMap.put(alias.toLowerCase(), option);
         }
     }
 
@@ -49,7 +55,7 @@ public enum Options {
     }
 
     @Nullable
-    public static OptionContext<?> compile(@NotNull String unknownToken, TokenCompileStream stream) {
+    public static OptionCtx<?> compile(@NotNull String unknownToken, TokenCompileStream stream) {
         // "?????" 是未知的token
         if (unknownToken.charAt(0) != '-') {
             return null;
@@ -70,7 +76,7 @@ public enum Options {
         }
         // "-[这个字符不是'-'而是其它字符]???" 是短名
         var normalizedOptionToken = assignPos == -1 ? unknownToken.substring(1).toLowerCase() : unknownToken.substring(1,assignPos).toLowerCase();
-        var options = aliasMap.get(normalizedOptionToken);
+        var options = aliasMap.get(normalizedOptionToken.toLowerCase());
         if (options == null) {
             throw new CommandCompileException("illegal option alias: '"+normalizedOptionToken+"'."+stream.errToken(unknownToken));
         }
@@ -81,11 +87,11 @@ public enum Options {
         return optionCacheCell;
     }
 
-    public static class OptionCache extends ReflectCacheData<OptionContext<?>> {
+    public static class OptionCache extends ReflectCacheData<OptionCtx<?>> {
 
         private final Options option;
 
-        public OptionCache(Options option, Class<? extends OptionContext<?>> clazz) {
+        public OptionCache(Options option, Class<? extends OptionCtx<?>> clazz) {
             super(clazz);
             this.option = option;
         }

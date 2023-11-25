@@ -2,7 +2,6 @@ package org.hashdb.ms.aspect.methodAccess;
 
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;
-import org.aspectj.lang.Signature;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.aspectj.lang.reflect.MethodSignature;
@@ -21,9 +20,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Aspect
 @Component
-public class DisposableUseSupport {
+public class OneTimeCallableSupport {
     private final Set<Method> usedFlags = ConcurrentHashMap.newKeySet();
-    @Before("@annotation(org.hashdb.ms.aspect.methodAccess.DisposableUse) || @within(org.hashdb.ms.aspect.methodAccess.DisposableUse)")
+    @Before("@annotation(org.hashdb.ms.aspect.methodAccess.OneTimeCallable) || @within(org.hashdb.ms.aspect.methodAccess.OneTimeCallable)")
     public void checkSetAction(JoinPoint joinPoint){
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method target = signature.getMethod();

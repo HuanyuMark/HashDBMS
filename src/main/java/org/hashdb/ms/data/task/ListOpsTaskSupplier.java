@@ -1,7 +1,7 @@
 package org.hashdb.ms.data.task;
 
 import org.hashdb.ms.data.OpsTask;
-import org.hashdb.ms.data.PlainEntry;
+import org.hashdb.ms.data.PlainPair;
 import org.hashdb.ms.data.result.PopPushResult;
 import org.hashdb.ms.exception.DBExternalException;
 import org.jetbrains.annotations.Contract;
@@ -18,7 +18,6 @@ import java.util.*;
 public class ListOpsTaskSupplier extends RefDataTypeOpsTaskSupplier {
     @Contract(pure = true)
     public static @NotNull OpsTask<List<?>> lPush(List<?> container, List<?> addList) {
-        UnmodifiedChecker.check(container);
         @SuppressWarnings("unchecked")
         List<Object> container_ = (List<Object>) container;
         return OpsTask.of(() -> {
@@ -135,11 +134,11 @@ public class ListOpsTaskSupplier extends RefDataTypeOpsTaskSupplier {
         });
     }
 
-    public static @NotNull OpsTask<List<?>> set(List<?> list, @NotNull List<PlainEntry<Integer, Object>> values) {
+    public static @NotNull OpsTask<List<?>> set(List<?> list, @NotNull List<PlainPair<Integer, Object>> values) {
         UnmodifiedChecker.check(list);
         @SuppressWarnings("unchecked")
         var list_ = (List<Object>) list;
-        var values_ = values.stream().map(e -> e.key() < 0 ? new PlainEntry<>(list_.size() + e.key(), e.value()) : e).sorted(Comparator.comparingInt(PlainEntry::key)).toList();
+        var values_ = values.stream().map(e -> e.key() < 0 ? new PlainPair<>(list_.size() + e.key(), e.value()) : e).sorted(Comparator.comparingInt(PlainPair::key)).toList();
         int largestIndex = values_.getLast().key();
         int smallestIndex = values_.getFirst().key();
         if (smallestIndex < 0 || largestIndex >= list_.size()) {
@@ -155,7 +154,7 @@ public class ListOpsTaskSupplier extends RefDataTypeOpsTaskSupplier {
             var indexIter = values_.listIterator();
             while (elIter.hasNext() && indexIter.hasNext()) {
                 Object el = elIter.next();
-                PlainEntry<Integer, ?> entry = indexIter.next();
+                PlainPair<Integer, ?> entry = indexIter.next();
                 if (elIndex == entry.key()) {
                     result.add(el);
                     elIter.set(entry.value());

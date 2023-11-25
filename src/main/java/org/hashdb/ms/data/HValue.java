@@ -1,15 +1,14 @@
 package org.hashdb.ms.data;
 
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.config.DBRamConfig;
 import org.hashdb.ms.exception.DBInnerException;
 import org.hashdb.ms.util.AsyncService;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.cglib.beans.ImmutableBean;
 
 import java.lang.reflect.Proxy;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.Objects;
 import java.util.Set;
@@ -25,7 +24,9 @@ import java.util.concurrent.ScheduledFuture;
 @Slf4j
 public class HValue<T> implements Cloneable {
     public final static HValue<?> EMPTY = new HValue<>();
-
+    public static <T> T unwrap(@Nullable HValue<T> hValue) {
+        return hValue == null? null : hValue.data;
+    }
     private final String key;
     private T data;
 
@@ -75,11 +76,15 @@ public class HValue<T> implements Cloneable {
     }
 
 
-    private ScheduledFuture<?> startExpiredTask(Database database, Long expireMilliseconds) {
+    private ScheduledFuture<?> startExpiredTask(Database database, Long expireMilliseconds, @Nullable OpsTaskPriority priority) {
         cancelClear();
-        DBRamConfig dbRamConfig = HashDBMSApp.ctx().getBean(DBRamConfig.class);
+        OpsTaskPriority p = Objects.requireNonNullElse(priority, DBRamConfig.DEFAULT_EXPIRED_KEY_DELETE_PRIORITY.get());
         return AsyncService.setTimeout(() -> {
-            dbRamConfig.getExpiredKeyClearStrategy().invoke(database, key);
+            if(p == OpsTaskPriority.HIGH) {
+                database.submitOpsTaskSync(database.delTask(key), OpsTaskPriority.HIGH);
+            } else {
+                database.submitOpsTaskSync(database.delTask(key));
+            }
         }, expireMilliseconds);
     }
 
@@ -88,11 +93,14 @@ public class HValue<T> implements Cloneable {
      *
      * @param database           这个value所在的数据库
      * @param expireMilliseconds 多少毫秒后过期
+     *                           null -> 不修改删除计划
+     *                           -1 -> 取消删除计划
+     *                           -2 -> 立即删除(删除方式: 给数据库提交一个删除任务(低优先级))
+     * @param priority           删除优先级
      */
-    public HValue<T> clearBy(Database database, Long expireMilliseconds) {
-        // TODO: 2023/11/25 null 的话....还没想好是不是要这么处理
+    public HValue<T> clearBy(Database database, Long expireMilliseconds, @Nullable OpsTaskPriority priority) {
+        //不修改删除计划
         if (expireMilliseconds == null) {
-            log.warn("receive null expireMilliseconds: {}", Arrays.stream(Thread.currentThread().getStackTrace()).limit(10).toList());
             return this;
         }
         // 如果设为-1 则为永不过期
@@ -103,7 +111,7 @@ public class HValue<T> implements Cloneable {
             return this;
         }
         if (expireMilliseconds <= -2) {
-            database.delTask(key).get();
+            database.submitOpsTaskSync(database.delTask(key));
             return this;
         }
 
@@ -112,7 +120,7 @@ public class HValue<T> implements Cloneable {
         if (isExpired()) {
             throw new DBInnerException();
         }
-        clearWhenExpiredTask = startExpiredTask(database, expireMilliseconds);
+        clearWhenExpiredTask = startExpiredTask(database, expireMilliseconds, priority);
         return this;
     }
 
