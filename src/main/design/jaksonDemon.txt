@@ -1,0 +1,61 @@
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.type.TypeBindings;
+
+import java.util.List;
+
+public class Example {
+
+    public static void main(String[] args) throws Exception {
+        // 创建一个ObjectMapper对象
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        // 创建一个SimpleModule对象，用于注册自定义类型处理器
+        SimpleModule module = new SimpleModule("CustomModule", "1.0.0");
+
+        // 创建一个TypeBindings对象，用于绑定自定义类型处理器到特定的类型
+        TypeBindings typeBindings = new TypeBindings();
+        typeBindings.put(new NamedType(YourClass.class, "yourClassType"));
+
+        // 注册自定义类型处理器
+        module.addSerializer(new YourClassSerializer(), typeBindings);
+        module.addDeserializer(YourClass.class, new YourClassDeserializer());
+
+        // 将SimpleModule对象添加到ObjectMapper对象中
+        objectMapper.registerModule(module);
+
+        // 序列化对象
+        YourClass yourClass = new YourClass();
+        String json = objectMapper.writeValueAsString(yourClass);
+
+        // 反序列化对象
+        YourClass deserializedObject = objectMapper.readValue(json, YourClass.class);
+    }
+
+    // 自定义类型处理器
+    public static class YourClassSerializer extends JsonSerializer<YourClass> {
+        @Override
+        public Class<YourClass> handledType() {
+            return YourClass.class;
+        }
+
+        @Override
+        public void serialize(YourClass value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+            // 序列化逻辑
+        }
+    }
+
+    public static class YourClassDeserializer extends JsonDeserializer<YourClass> {
+        @Override
+        public Class<YourClass> handledType() {
+            return YourClass.class;
+        }
+
+        @Override
+        public YourClass deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+            // 反序列化逻辑
+        }
+    }
+}

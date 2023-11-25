@@ -15,6 +15,8 @@ import java.util.Date;
 @Getter
 @RequiredArgsConstructor
 public class DatabaseInfos {
+    protected final int id;
+
     protected final String name;
     protected final Date createTime;
     @Setter

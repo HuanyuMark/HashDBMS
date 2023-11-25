@@ -1,7 +1,7 @@
 package org.hashdb.ms.config;
 
 import lombok.Getter;
-import org.hashdb.ms.aspect.methodAccess.DisposableUse;
+import org.hashdb.ms.aspect.methodAccess.ConfigLoadOnly;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
@@ -17,9 +17,8 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties("server")
 @EnableConfigurationProperties
 public class DBServerConfig {
-    private Integer port;
-
-    @DisposableUse
+    private Integer port = 3050;
+    @ConfigLoadOnly
     public void setPort(Integer port) {
         this.port = port;
     }

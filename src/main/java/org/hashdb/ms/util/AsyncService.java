@@ -37,16 +37,11 @@ public class AsyncService {
     public static CompletableFuture<Void> submit(Runnable task){
         return CompletableFuture.runAsync(task, service());
     }
-    public static void setTimeout(Runnable runnable, long milliseconds) {
-        scheduledExecutorService.get().schedule(runnable, milliseconds, TimeUnit.MILLISECONDS);
+    public static ScheduledFuture<?> setTimeout(Runnable runnable, long milliseconds) {
+        return scheduledExecutorService.get().schedule(runnable, milliseconds, TimeUnit.MILLISECONDS);
     }
-    public static void setTimeout(Runnable runnable, long milliseconds, AbortSignal signal) {
-        scheduledExecutorService.get().schedule(()-> {
-            if(signal.isAbort()) {
-                return;
-            }
-            runnable.run();
-        }, milliseconds, TimeUnit.MILLISECONDS);
+    public static <T> ScheduledFuture<T> setTimeout(Callable<T> callable, long milliseconds) {
+        return scheduledExecutorService.get().schedule(callable, milliseconds, TimeUnit.MILLISECONDS);
     }
 
     public static ScheduledFuture<?> setInterval(Runnable runnable, long milliseconds) {

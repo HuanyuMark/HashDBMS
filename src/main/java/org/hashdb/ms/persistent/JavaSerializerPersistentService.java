@@ -3,7 +3,6 @@ package org.hashdb.ms.persistent;
 import org.hashdb.ms.config.DBFileConfig;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.DatabaseInfos;
-import org.hashdb.ms.data.HKey;
 import org.hashdb.ms.exception.DBExternalException;
 import org.hashdb.ms.exception.DBFileAccessFailedException;
 import org.hashdb.ms.exception.NotFoundDatabaseException;
@@ -27,48 +26,51 @@ public class JavaSerializerPersistentService extends FileSystemPersistentService
     }
 
     /**
-     * 缺陷：该操作不具有原子性，抛出异常后， 可能会有文件碎片残留
+     * 缺陷：该操作(文件操作)不具有原子性，抛出异常后， 可能会有文件碎片残留
+     *
      * @param database 数据库
      */
     @Override
     public boolean persist(Database database) {
-        File dbFileDir = getDBFileDir(database);
-
-        // 将数据库的 HashTable 分块写入多个 {chunkId}.db 文件
-        HashMap<HKey, Object> buffer = new HashMap<>();
-        int[] chunkId = {0};
-        database.forEach(value -> {
-            buffer.put(value.key(), value.data());
-            long size = ClassLayout.parseInstance(buffer).getLossesTotal();
-            if (size >= dbFileConfig.getChunkSize()) {
-                File dbChunkFile = DBFileFactory.newDBChunkFile(dbFileDir, chunkId[0]++);
-                try (
-                        FileOutputStream tableValueFileOutputStream = new FileOutputStream(dbChunkFile);
-                        ObjectOutputStream tableValueOutputStream = new ObjectOutputStream(tableValueFileOutputStream);
-                ) {
-                    tableValueOutputStream.writeObject(buffer);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+        Objects.requireNonNull(database);
+        synchronized (database.SAVE_TASK_LOCK) {
+            File dbFileDir = getDBFileDir(database);
+            // 将数据库的 HashTable 分块写入多个 {chunkId}.db 文件
+            Map<String, Object> buffer = new HashMap<>();
+            int[] chunkId = {0};
+            database.forEach(value -> {
+                buffer.put(value.key(), value.data());
+                long size = ClassLayout.parseInstance(buffer).getLossesTotal();
+                if (size >= dbFileConfig.getChunkSize()) {
+                    File dbChunkFile = DBFileFactory.newDBChunkFile(dbFileDir, chunkId[0]++);
+                    try (
+                            FileOutputStream tableValueFileOutputStream = new FileOutputStream(dbChunkFile);
+                            ObjectOutputStream tableValueOutputStream = new ObjectOutputStream(tableValueFileOutputStream);
+                    ) {
+                        tableValueOutputStream.writeObject(buffer);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                    buffer.clear();
                 }
-                buffer.clear();
+            });
+
+            // 写入数据库索引文件， 保存数据库的基本信息
+            File indexFile = DBFileFactory.newIndexFile(dbFileDir);
+            FileUtils.prepareDir(indexFile, () -> new DBFileAccessFailedException("can`t access index db file '" + indexFile.getAbsolutePath() + "'"));
+            try (
+                    FileOutputStream fileOutputStream = new FileOutputStream(indexFile);
+                    ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
+            ) {
+                DatabaseInfos dbInfos = database.getInfos();
+                dbInfos.setLastSaveTime(new Date());
+                objectOutputStream.writeObject(dbInfos);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
-        });
 
-        // 写入数据库索引文件， 保存数据库的基本信息
-        File indexFile = DBFileFactory.newIndexFile(dbFileDir);
-        FileUtils.prepareDir(indexFile, () -> new DBFileAccessFailedException("can`t access index db file '" + indexFile.getAbsolutePath() + "'"));
-        try (
-                FileOutputStream fileOutputStream = new FileOutputStream(indexFile);
-                ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
-        ) {
-            DatabaseInfos dbInfos = database.getInfos();
-            dbInfos.setLastSaveTime(new Date());
-            objectOutputStream.writeObject(dbInfos);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            return true;
         }
-
-        return true;
     }
 
     /**
@@ -76,18 +78,19 @@ public class JavaSerializerPersistentService extends FileSystemPersistentService
      */
     @Override
     public List<Database> scanDatabases() {
-        return Arrays.stream(Objects.requireNonNullElse(dbFileConfig.getDbFileRootDir().listFiles(),new File[0]))
+        return Arrays.stream(Objects.requireNonNullElse(dbFileConfig.getDbFileRootDir().listFiles(), new File[0]))
                 .parallel()
                 .map(JavaSerializerPersistentService::scanDatabase)
                 .toList();
     }
+
     @Override
     public Database scanDatabase(String name) {
         File dbFileDir = new File(dbFileConfig.getDbFileRootDir(), name);
-        if(!dbFileDir.exists()) {
+        if (!dbFileDir.exists()) {
             throw NotFoundDatabaseException.of(name);
         }
-        if(!dbFileDir.isDirectory()) {
+        if (!dbFileDir.isDirectory()) {
             throw new DBExternalException("db file '" + dbFileDir.getAbsolutePath() + "' is not a directory");
         }
         return scanDatabase(dbFileDir);
@@ -101,28 +104,28 @@ public class JavaSerializerPersistentService extends FileSystemPersistentService
         try (
                 FileInputStream is = new FileInputStream(indexFile);
                 ObjectInputStream inputStream = new ObjectInputStream(is);
-        ){
+        ) {
             databaseInfos = (DatabaseInfos) inputStream.readObject();
         } catch (IOException | ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
         // 读取数据库的 HashTable 分块
         File[] dbChunkFile = DBFileFactory.loadDBChunkFile(dbFileDir);
-        HashMap<HKey, Object> allEntries = new HashMap<>();
-        Arrays.stream(dbChunkFile).parallel().forEach(file-> {
+        Map<String, Object> initEntries = new HashMap<>();
+        Arrays.stream(dbChunkFile).parallel().forEach(file -> {
             try (
                     FileInputStream is = new FileInputStream(file);
                     ObjectInputStream inputStream = new ObjectInputStream(is);
-            ){
+            ) {
                 @SuppressWarnings("unchecked")
-                HashMap<HKey, Object> chunk = (HashMap<HKey, Object>) inputStream.readObject();
-                allEntries.putAll(chunk);
+                Map<String, Object> chunk = (Map<String, Object>) inputStream.readObject();
+                initEntries.putAll(chunk);
             } catch (IOException | ClassNotFoundException e) {
                 throw new RuntimeException(e);
             }
         });
 
-        return new Database(databaseInfos, allEntries);
+        return new Database(databaseInfos, initEntries);
     }
 
 }

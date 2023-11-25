@@ -8,9 +8,12 @@ import org.hashdb.ms.util.AsyncService;
 import org.hashdb.ms.util.Lazy;
 import org.intellij.lang.annotations.Identifier;
 import org.intellij.lang.annotations.Subst;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Date;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.ScheduledFuture;
 
 /**
  * Date: 2023/11/21 1:48
@@ -19,6 +22,7 @@ import java.util.Objects;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
+@Deprecated
 public class HKey {
     @Identifier
     private final String keyName;
@@ -31,9 +35,9 @@ public class HKey {
     /**
      * 是否取消， 当该key过期时， 清除该key
      */
-    private AbortSignal clearWhenExpiredTask;
+    private ScheduledFuture<?> clearWhenExpiredTask;
 
-    public HKey(@Subst("String") String keyName, Long expireMilliseconds) {
+    public HKey(@Subst("String") String keyName,@Nullable Long expireMilliseconds) {
         this.keyName = keyName;
         if(expireMilliseconds == null) {
             this.expireMilliseconds = Lazy.of(null);
@@ -47,7 +51,7 @@ public class HKey {
         }
     }
 
-    public HKey(@Subst("String") String keyName, Date expireDate) {
+    public HKey(@Subst("String") String keyName,@Nullable Date expireDate) {
         this.keyName = keyName;
         if(expireDate == null) {
             this.expireMilliseconds = Lazy.of(null);
@@ -60,17 +64,16 @@ public class HKey {
             throw new DBInnerException("expire date '"+expireDate+"' is expired");
         }
     }
-    public void clearWhenExpiredBy(Database database) {
+    public HKey clearBy(Database database) {
         if (expireMilliseconds == null) {
-            return;
+            return this;
         }
-        clearWhenExpiredTask = new AbortSignal();
         DBRamConfig dbRamConfig = HashDBMSApp.ctx().getBean(DBRamConfig.class);
-        AsyncService.setTimeout(
-                ()-> dbRamConfig.getExpiredKeyClearStrategy().invoke(database,this),
-                expireMilliseconds.get(),
-                clearWhenExpiredTask
+        clearWhenExpiredTask = AsyncService.setTimeout(
+                ()-> dbRamConfig.getExpiredKeyClearStrategy().invoke(database,keyName),
+                expireMilliseconds.get()
         );
+        return this;
     }
 
     public String getName() {
@@ -87,20 +90,39 @@ public class HKey {
     public boolean isExpired() {
         return expireDate.get() != null && expireDate.get().before(new Date());
     }
+
+    /**
+     * 记得在延迟后，手动调用 {@link #clearBy(Database db)}
+     * @param expireDate 在此时间后过期
+     */
     public HKey withExpireDate(Date expireDate) {
+        if(expireDate == null) {
+            return new HKey(keyName, (Date) null);
+        }
+        if(expireDate.after(new Date())) {
+            throw new DBInnerException();
+        }
+        cancelClearExpired();
         return new HKey(keyName, expireDate);
     }
-    public HKey withDelay(long millisecond) {
+
+    /**
+     * 记得在延迟后，手动调用 {@link #clearBy(Database db)}
+     * @param millisecond 多少毫秒后删除该键
+     */
+    public HKey withDelay(Long millisecond) {
         // 取消原键的过期清除任务，因为原键与新键的hashcode equal 调用结果一致
         // 即 原键与新键 在 hashtable中语义一致，原键触发清除，会将新键所对应的值也给清除
-        cancelClearExpired();
-        Date newExpire = new Date(Objects.requireNonNullElse(expireDate.get(), new Date()).getTime() + millisecond);
-        return new HKey(keyName, newExpire);
+        Date newExpire = Optional.ofNullable(millisecond)
+                .map(t-> new Date(Objects.requireNonNullElse(expireDate.get(), new Date()).getTime() + millisecond))
+                .orElse(null);
+        return withExpireDate(newExpire);
     }
-    public void cancelClearExpired() {
+    public HKey cancelClearExpired() {
         if (clearWhenExpiredTask != null) {
-            clearWhenExpiredTask.abort();
+            clearWhenExpiredTask.cancel(false);
         }
+        return this;
     }
 
     @Override
