@@ -3,7 +3,10 @@ package org.hashdb.ms.data;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import org.hashdb.ms.util.JacksonSerializer;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.util.Date;
 
 /**
@@ -14,11 +17,18 @@ import java.util.Date;
  */
 @Getter
 @RequiredArgsConstructor
-public class DatabaseInfos {
+public class DatabaseInfos implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 632895L;
     protected final int id;
 
     protected final String name;
     protected final Date createTime;
     @Setter
     protected Date lastSaveTime = new Date();
+
+    @Override
+    public String toString() {
+        return JacksonSerializer.stringfy(this);
+    }
 }

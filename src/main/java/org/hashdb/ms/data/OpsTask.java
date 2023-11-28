@@ -38,7 +38,7 @@ public interface OpsTask<T> extends Supplier<T> {
                 future.complete(res);
                 return res;
             } catch (Throwable e) {
-                log.info("supplier throw exception: {}",e.toString());
+                log.error("supplier throw exception: {}",e.toString());
                 future.completeExceptionally(e);
             }
             return null;

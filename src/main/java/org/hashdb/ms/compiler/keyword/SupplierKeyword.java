@@ -1,6 +1,8 @@
 package org.hashdb.ms.compiler.keyword;
 
 import org.hashdb.ms.compiler.keyword.ctx.supplier.*;
+import org.hashdb.ms.compiler.keyword.ctx.supplier.IncCtx;
+import org.hashdb.ms.compiler.keyword.ctx.supplier.MulCtx;
 import org.hashdb.ms.util.ReflectCacheData;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -26,7 +28,10 @@ public enum SupplierKeyword implements Keyword<SupplierKeyword> {
     CLEAR(ClearCtx.class),
     TTL(TtlCtx.class),
     FLUSH(FlushCtx.class),
-    TYPE(TypeCtx.class);
+    TYPE(TypeCtx.class),
+    EXPIRE(ExpireCtx.class),
+    INC(IncCtx.class),
+    MUL(MulCtx.class);
 
     private final ReflectCacheData<? extends SupplierCtx> constructor;
 

@@ -9,7 +9,7 @@ import org.hashdb.ms.exception.IllegalValueException;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public class LimitOpCtx extends IntegerOpCtx {
+public class LimitOpCtx extends LongOpCtx {
 
     public LimitOpCtx() {
         super(null);
@@ -23,7 +23,7 @@ public class LimitOpCtx extends IntegerOpCtx {
     @Override
     protected void afterCompile(String unknownValueToken, TokenCompileStream stream) {
         if(value < 0) {
-            throw new IllegalValueException("pop option should be greater then 0");
+            throw new IllegalValueException("option value of '"+key()+"' should be greater then 0");
         }
     }
 }

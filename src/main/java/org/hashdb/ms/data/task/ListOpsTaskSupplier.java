@@ -30,7 +30,7 @@ public class ListOpsTaskSupplier extends RefDataTypeOpsTaskSupplier {
 
     @Contract(pure = true)
     public static @NotNull OpsTask<List<?>> rPush(List<?> container, List<?> addList) {
-        UnmodifiedChecker.check(container);
+        ImmutableChecker.check(container);
         @SuppressWarnings("unchecked")
         List<Object> container_ = (List<Object>) container;
         return OpsTask.of(() -> {
@@ -42,7 +42,7 @@ public class ListOpsTaskSupplier extends RefDataTypeOpsTaskSupplier {
 
     @Contract(pure = true)
     public static @NotNull OpsTask<?> lPop(List<?> container) {
-        UnmodifiedChecker.check(container);
+        ImmutableChecker.check(container);
         @SuppressWarnings("unchecked")
         List<Object> container_ = (List<Object>) container;
         return OpsTask.of(container_::removeFirst);
@@ -50,7 +50,7 @@ public class ListOpsTaskSupplier extends RefDataTypeOpsTaskSupplier {
 
     @Contract(pure = true)
     public static @NotNull OpsTask<?> rPop(List<?> container) {
-        UnmodifiedChecker.check(container);
+        ImmutableChecker.check(container);
         @SuppressWarnings("unchecked")
         List<Object> container_ = (List<Object>) container;
         return OpsTask.of(container_::removeLast);
@@ -68,7 +68,7 @@ public class ListOpsTaskSupplier extends RefDataTypeOpsTaskSupplier {
     }
 
     public static @NotNull OpsTask<List<?>> reverseSelf(List<?> list) {
-        UnmodifiedChecker.check(list);
+        ImmutableChecker.check(list);
         return OpsTask.of(() -> {
             Collections.reverse(list);
             return list;
@@ -92,7 +92,7 @@ public class ListOpsTaskSupplier extends RefDataTypeOpsTaskSupplier {
      */
     @Contract(value = "_, _ -> new", pure = true)
     public static @NotNull OpsTask<List<?>> trim(List<?> list, int count) {
-        UnmodifiedChecker.check(list);
+        ImmutableChecker.check(list);
         return OpsTask.of(() -> {
             List<Object> result = new LinkedList<>();
             for (int i = 0; i < count; i++) {
@@ -107,7 +107,7 @@ public class ListOpsTaskSupplier extends RefDataTypeOpsTaskSupplier {
     }
 
     public static OpsTask<PopPushResult> rPopLPush(List<?> container, int popCount, List<?> pushList) {
-        UnmodifiedChecker.check(container);
+        ImmutableChecker.check(container);
         @SuppressWarnings("unchecked")
         List<Object> container_ = (List<Object>) container;
         return OpsTask.of(() -> {
@@ -121,7 +121,7 @@ public class ListOpsTaskSupplier extends RefDataTypeOpsTaskSupplier {
     }
 
     public static OpsTask<PopPushResult> lPopRPush(List<?> container, int popCount, List<?> pushList) {
-        UnmodifiedChecker.check(container);
+        ImmutableChecker.check(container);
         @SuppressWarnings("unchecked")
         List<Object> container_ = (List<Object>) container;
         return OpsTask.of(() -> {
@@ -135,7 +135,7 @@ public class ListOpsTaskSupplier extends RefDataTypeOpsTaskSupplier {
     }
 
     public static @NotNull OpsTask<List<?>> set(List<?> list, @NotNull List<PlainPair<Integer, Object>> values) {
-        UnmodifiedChecker.check(list);
+        ImmutableChecker.check(list);
         @SuppressWarnings("unchecked")
         var list_ = (List<Object>) list;
         var values_ = values.stream().map(e -> e.key() < 0 ? new PlainPair<>(list_.size() + e.key(), e.value()) : e).sorted(Comparator.comparingInt(PlainPair::key)).toList();
@@ -185,7 +185,7 @@ public class ListOpsTaskSupplier extends RefDataTypeOpsTaskSupplier {
 
     @Contract(value = "_, _ -> new", pure = true)
     public static @NotNull OpsTask<List<?>> del(List<?> list, List<Integer> indexes) {
-        UnmodifiedChecker.check(list);
+        ImmutableChecker.check(list);
         var indexes_ = sortIndexes(list.size(), indexes);
         return OpsTask.of(() -> {
             var result = new LinkedList<>();

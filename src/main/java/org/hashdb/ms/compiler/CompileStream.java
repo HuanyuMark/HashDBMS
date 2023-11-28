@@ -17,7 +17,7 @@ public interface CompileStream {
 
     String errToken(String token);
 
-    CompileCtx compile();
+    CompileCtx<?> compile();
 
     String nearString();
 
@@ -45,64 +45,12 @@ public interface CompileStream {
 
     void end();
 
-    TokenItr tokenItr();
+    Iterator<String> tokenItr();
 
-    TokenItr tokenItr(int startIndex);
+    Iterator<String> tokenItr(int startIndex);
 
-    TokenItr descendingTokenItr();
+    Iterator<String> descendingTokenItr();
 
-    TokenItr descendingTokenItr(int negativeIndex);
+    Iterator<String> descendingTokenItr(int negativeIndex);
 
-
-    class TokenItr implements Iterator<String> {
-        protected final String[] tokens;
-        protected int cursor = 0;
-
-        public TokenItr(String[] tokens) {
-            this.tokens = tokens;
-        }
-
-        public TokenItr(String[] tokens, int startIndex) {
-            this.tokens = tokens;
-            cursor = startIndex;
-        }
-        @Override
-        public boolean hasNext() {
-            return cursor < tokens.length;
-        }
-
-        @Override
-        public String next() {
-            return tokens[cursor++];
-        }
-
-        public int cursor() {
-            return cursor;
-        }
-    }
-
-    class DescTokenItr extends TokenItr {
-        private int cursor;
-
-        public DescTokenItr(String[] tokens) {
-            super(tokens);
-            cursor = tokens.length - 1;
-        }
-
-        public DescTokenItr(String[] tokens, int negativeStartIndex) {
-            super(tokens);
-            cursor = tokens.length + negativeStartIndex;
-        }
-        @Override
-        public boolean hasNext() {
-            return cursor >= 0;
-        }
-        @Override
-        public String next() {
-            return tokens[cursor--];
-        }
-        public int cursor() {
-            return cursor;
-        }
-    }
 }

@@ -2,7 +2,9 @@ package org.hashdb.ms.compiler.keyword.ctx.consumer.list;
 
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.consumer.ConsumerCtx;
-import org.hashdb.ms.data.task.UnmodifiedChecker;
+import org.hashdb.ms.data.task.ImmutableChecker;
+import org.hashdb.ms.exception.CommandExecuteException;
+import org.hashdb.ms.util.JacksonSerializer;
 
 import java.util.List;
 
@@ -19,14 +21,20 @@ public abstract class MutateListCtx extends ConsumerCtx<List<?>> {
 
     @Override
     protected boolean checkConsumeType(Object supplierType) {
-        boolean isList = List.class.isAssignableFrom(supplierType.getClass());
-        if(isList) {
-            List<?> list = (List<?>) supplierType;
-            if(list.size() != 1) {
-                return false;
-            }
-            return !UnmodifiedChecker.isUnmodifiableCollection(list.getFirst().getClass());
+        if (!List.class.isAssignableFrom(supplierType.getClass())) {
+            return false;
         }
-        return false;
+        List<?> list = (List<?>) supplierType;
+        if (list.size() != 1) {
+            return false;
+        }
+        Object first = list.getFirst();
+        if(!(first instanceof List<?>)) {
+            throw new CommandExecuteException("keyword '"+name()+"' can not operate value '"+
+                     JacksonSerializer.stringfy(supplierType) +"'");
+        }
+        return !ImmutableChecker.isUnmodifiableCollection(first.getClass());
     }
+
+
 }

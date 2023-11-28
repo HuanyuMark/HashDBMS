@@ -13,8 +13,8 @@ import java.util.function.Function;
  * @version 0.0.1
  */
 public class ReflectCacheData<T> {
-    private final Class<? extends T> clazz;
-    private final Lazy<Constructor<? extends T>> constructor;
+    protected final Class<? extends T> clazz;
+    protected final Lazy<Constructor<? extends T>> constructor;
 
     public final static Function<Class<?>, Constructor<?>> constructorFinder = clazz -> {
         try {

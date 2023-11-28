@@ -1,4 +1,4 @@
-package org.hashdb.ms.communication;
+package org.hashdb.ms.net;
 
 import org.hashdb.ms.data.Database;
 

@@ -11,5 +11,5 @@ import java.util.function.Supplier;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public interface OpsConsumerTask<I, O> extends Function<I, OpsTask<O>> {
+public interface OpsConsumerTask<I, O> extends Function<I, Supplier<O>> {
 }

@@ -1,7 +1,10 @@
 package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
+import org.hashdb.ms.compiler.option.LimitOpCtx;
+import org.hashdb.ms.data.HValue;
 
+import java.util.List;
 import java.util.function.Supplier;
 
 /**
@@ -10,13 +13,19 @@ import java.util.function.Supplier;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public class DelCtx extends SupplierCtx {
+public class DelCtx extends ReadSupplierCtx {
     @Override
     public SupplierKeyword name() {
         return SupplierKeyword.DEL;
     }
     @Override
-    public Supplier<?> compile() {
-    return null;
+    protected List<?> doQueryLike(String pattern) {
+        LimitOpCtx limitOpCtx = getOption(LimitOpCtx.class);
+        return stream.db().delLike(pattern, limitOpCtx == null? null : limitOpCtx.value()).stream().map(HValue::data).toList();
+    }
+
+    @Override
+    protected Object doQuery(String key) {
+        return HValue.unwrapData(stream.db().del(key));
     }
 }

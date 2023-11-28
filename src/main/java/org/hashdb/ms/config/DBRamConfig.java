@@ -24,7 +24,6 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
 @ConfigurationProperties("db.ram")
 @EnableAspectJAutoProxy(exposeProxy = true)
 public class DBRamConfig {
-
     public static final Lazy<OpsTaskPriority> DEFAULT_EXPIRED_KEY_DELETE_PRIORITY = Lazy.of(()->{
         DBRamConfig dbRamConfig = HashDBMSApp.ctx().getBean(DBRamConfig.class);
         return dbRamConfig.getExpiredKeyDeletePriority();

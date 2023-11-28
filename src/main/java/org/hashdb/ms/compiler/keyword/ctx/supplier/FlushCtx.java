@@ -15,8 +15,12 @@ public class FlushCtx extends SupplierCtx {
     public SupplierKeyword name() {
         return SupplierKeyword.FLUSH;
     }
+
     @Override
     public Supplier<?> compile() {
-    return null;
+        return () -> {
+            stream.db().clear();
+            return true;
+        };
     }
 }

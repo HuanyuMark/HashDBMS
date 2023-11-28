@@ -5,18 +5,15 @@ import org.hashdb.ms.config.DBFileConfig;
 import org.hashdb.ms.exception.IllegalJavaClassStoredException;
 import org.hashdb.ms.exception.IncreaseUnsupportedException;
 import org.hashdb.ms.exception.ServiceStoppedException;
-import org.hashdb.ms.exception.WorkerInterruptedException;
 import org.hashdb.ms.persistent.PersistentService;
 import org.hashdb.ms.util.AsyncService;
+import org.hashdb.ms.util.BlockingQueueTaskConsumer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -30,7 +27,7 @@ import java.util.stream.Stream;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public class Database implements Iterable<HValue<?>> {
+public class Database extends BlockingQueueTaskConsumer implements Iterable<HValue<?>>, IDatabase {
     private final DatabaseInfos info;
     /**
      * 可以用 {@link String} 来当作键名来查询， 原因参见 {@link #get(String key)}
@@ -39,59 +36,11 @@ public class Database implements Iterable<HValue<?>> {
      */
     protected final HashMap<String, HValue<?>> table = new HashMap<>();
     protected final AtomicReference<ScheduledFuture<?>> saveTask = new AtomicReference<>();
-    protected final AtomicReference<CompletableFuture<?>> opsTaskDequeConsumeLoopConsumer = new AtomicReference<>();
-    protected final AtomicBoolean receiveNewTask = new AtomicBoolean(false);
-    protected final BlockingDeque<OpsTask<?>> opsTaskDeque = new LinkedBlockingDeque<>();
     public final Object SAVE_TASK_LOCK = new Object();
 
-    public CompletableFuture<Boolean> startDatabaseDaemon() {
+    public CompletableFuture<Boolean> startDaemon() {
         startSaveTask();
-        return startOpsTaskDequeConsumer();
-    }
-
-    public CompletableFuture<Boolean> startOpsTaskDequeConsumer() {
-        // 正在接收新任务，则直接 返回启动成功
-        if (receiveNewTask.get()) {
-            return CompletableFuture.completedFuture(true);
-        }
-        CompletableFuture<Boolean> future = new CompletableFuture<>();
-        Supplier<CompletableFuture<?>> taskDequeConsumeLoopConsumerSupplier = () -> AsyncService.submit(() -> {
-            receiveNewTask.set(true);
-            future.complete(true);
-            while (true) {
-                if (opsTaskDeque.size() == 0 && receiveNewTask.compareAndSet(false, false)) {
-                    opsTaskDequeConsumeLoopConsumer.set(null);
-                    break;
-                }
-                OpsTask<?> task;
-                try {
-                    task = opsTaskDeque.take();
-                } catch (InterruptedException e) {
-                    throw new WorkerInterruptedException(e);
-                }
-                task.get();
-            }
-        });
-        // 需要接收新任务
-        // 消费线程在running, 就不开启新消费任务, 返回启动成功
-        // 不在running, 就开启一个新消费任务
-        if (opsTaskDequeConsumeLoopConsumer.compareAndSet(null, taskDequeConsumeLoopConsumerSupplier.get())) {
-            return future;
-        }
-        return CompletableFuture.completedFuture(true);
-    }
-
-    public CompletableFuture<Boolean> stopOpsTaskDequeConsumer() {
-        if (!receiveNewTask.compareAndSet(true, false)) {
-            return CompletableFuture.completedFuture(true);
-        }
-        // 避免消费者线程一直卡在 take() 方法
-        opsTaskDeque.add(OpsTask.empty());
-        CompletableFuture<?> consumeLoopResult = opsTaskDequeConsumeLoopConsumer.get();
-        if (consumeLoopResult == null) {
-            return CompletableFuture.completedFuture(true);
-        }
-        return consumeLoopResult.thenApply(v -> true);
+        return startConsumeOpsTask();
     }
 
     public boolean startSaveTask() {
@@ -112,7 +61,7 @@ public class Database implements Iterable<HValue<?>> {
         return true;
     }
 
-    public boolean stopSaveTask() {
+    public synchronized boolean stopSaveTask() {
         if (saveTask.get() == null) {
             return true;
         }
@@ -131,24 +80,45 @@ public class Database implements Iterable<HValue<?>> {
         this.info = databaseInfos;
     }
 
-    public Database(int id, String name, Date createTime, @NotNull Map<String, Object> initialValues) {
-        this(new DatabaseInfos(id, name, createTime), initialValues);
+    public Database(int id, String name, Date createTime, @NotNull Map<String, StorableHValue<?>> fromData) {
+        this(new DatabaseInfos(id, name, createTime), fromData);
     }
 
-    public Database(DatabaseInfos databaseInfos, @NotNull Map<String, Object> initialValues) {
+    public Database(DatabaseInfos databaseInfos, @NotNull Map<String, StorableHValue<?>> fromData) {
         this.info = databaseInfos;
-        initialValues.forEach((k, v) -> table.put(k, new HValue<>(k, v)));
+        restoreAll(fromData);
+    }
+
+    private Database restoreAll(Map<String, StorableHValue<?>> from) {
+        for (var entry : from.entrySet()) {
+            var key = entry.getKey();
+            var value = entry.getValue();
+            Long expireMillis = null;
+            if (value.expireDate() != null) {
+                expireMillis = value.expireDate().getTime() - System.currentTimeMillis();
+                if (expireMillis < 0) {
+                    continue;
+                }
+            }
+            HValue<?> hValue = new HValue<>(key, value.data()).
+                    clearBy(this, expireMillis, value.deletePriority());
+            table.put(key, hValue);
+        }
+        return this;
     }
 
     public DatabaseInfos getInfos() {
         return info;
     }
 
+    /**
+     * @param key      键名
+     * @param value    值
+     * @param millis   过期时间
+     * @param priority 删除优先级
+     * @return 旧值
+     */
     public @Nullable HValue<?> set(String key, Object value, Long millis, OpsTaskPriority priority) {
-        return submitOpsTaskSync(setTask(key, value, millis, priority));
-    }
-
-    public @Nullable HValue<?> setImmediately(String key, Object value, Long millis, OpsTaskPriority priority) {
         HValue<Object> hValue = new HValue<>(key, value).clearBy(this, millis, priority);
         HValue<?> oldValue = table.put(key, hValue);
         if (oldValue != null) {
@@ -159,33 +129,15 @@ public class Database implements Iterable<HValue<?>> {
 
     /**
      * 等效于命令：
-     * SET $KEY [#TYPE_SYMBOL,]$VALUE[,--[h]expire=$MILLIS] ... $KEY [#TYPE_SYMBOL,]$VALUE[,--[h]expire=$MILLIS]
-     *
-     * @param key      键名
-     * @param value    值
-     * @param millis   过期时间
-     * @param priority
-     * @return 旧值
-     */
-    public OpsTask<@Nullable HValue<?>> setTask(String key, Object value, Long millis, OpsTaskPriority priority) {
-        return OpsTask.of(() -> setImmediately(key, value, millis, priority));
-    }
-
-    public HValue<?> inc(String key, String step, Long millis,OpsTaskPriority priority) {
-        return submitOpsTaskSync(incTask(key, step, millis, priority));
-    }
-
-    /**
-     * 等效于命令：
      * INC $KEY [,$STEP][, --expire=MILLIS] … $KEY[,$STEP][,--expire=MILLIS]
      *
      * @param key      键名
      * @param step     递增步长， 可以为负数
      * @param millis   几毫秒后过期, 如果 INC 的键不存在，则将其设置为该新键的过期时间
-     * @param priority
+     * @param priority 删除优先级
      * @return 旧值
      */
-    public OpsTask<@Nullable HValue<?>> incTask(String key, String step, Long millis, OpsTaskPriority priority) {
+    public HValue<?> inc(String key, String step, Long millis, OpsTaskPriority priority) {
         Number stepNumber;
         try {
             if (step.contains(".")) {
@@ -196,130 +148,67 @@ public class Database implements Iterable<HValue<?>> {
         } catch (NumberFormatException e) {
             throw new IncreaseUnsupportedException("step '" + step + "' must be a number");
         }
-
-        return OpsTask.of(() -> {
-            @SuppressWarnings("unchecked")
-            HValue<Object> value = (HValue<Object>) table.get(key);
-            final DataType dataType = DataType.typeofHValue(value);
-            switch (dataType) {
-                case STRING -> {
-                    final HValue<Object> oldValue = value.cloneDefault();
-                    final String rawValue = ((String) value.data());
-                    final Number newValue;
-                    try {
-                        if (rawValue.contains(".")) {
-                            newValue = Double.parseDouble(rawValue) + ((stepNumber instanceof Double) ? (Double) stepNumber : (Long) stepNumber);
-                        } else {
-                            newValue = Long.parseLong(rawValue) + ((stepNumber instanceof Double) ? (Double) stepNumber : (Long) stepNumber);
-                        }
-                    } catch (NumberFormatException e) {
-                        throw new IncreaseUnsupportedException("can`t increase string: '" + rawValue + "' with step '" + step + "'");
-                    } catch (ClassCastException e) {
-                        throw IllegalJavaClassStoredException.of(rawValue.getClass());
+        @SuppressWarnings("unchecked")
+        HValue<Object> value = (HValue<Object>) table.get(key);
+        final DataType dataType = DataType.typeofHValue(value);
+        switch (dataType) {
+            case STRING -> {
+                final HValue<Object> oldValue = value.cloneDefault();
+                final String rawValue = ((String) value.data());
+                final Number newValue;
+                try {
+                    if (rawValue.contains(".")) {
+                        newValue = Double.parseDouble(rawValue) + ((stepNumber instanceof Double) ? (Double) stepNumber : (Long) stepNumber);
+                    } else {
+                        newValue = Long.parseLong(rawValue) + ((stepNumber instanceof Double) ? (Double) stepNumber : (Long) stepNumber);
                     }
-                    value.data(newValue);
-                    return oldValue;
+                } catch (NumberFormatException e) {
+                    throw new IncreaseUnsupportedException("can`t increase string: '" + rawValue + "' with step '" + step + "'");
+                } catch (ClassCastException e) {
+                    throw IllegalJavaClassStoredException.of(rawValue.getClass());
                 }
-                case NUMBER -> {
-                    final HValue<Object> oldValue = value.cloneDefault();
-                    final Number rawValue = (Number) value.data();
-                    final Number newValue;
-                    try {
-                        newValue = (rawValue instanceof Long ? (Long) rawValue : (Double) rawValue) + (stepNumber instanceof Double ? (Double) stepNumber : (Long) stepNumber);
-                    } catch (NumberFormatException e) {
-                        throw new IncreaseUnsupportedException("can`t increase number: '" + rawValue + "' with step '" + step + "'");
-                    } catch (ClassCastException e) {
-                        throw IllegalJavaClassStoredException.of(rawValue.getClass());
-                    }
-                    value.data(newValue);
-                    return oldValue;
-                }
-                case NULL -> {
-                    table.put(key, new HValue<>(key, stepNumber).clearBy(this, millis, priority));
-                    return null;
-                }
-                default ->
-                        throw new IncreaseUnsupportedException("can`t increase type: '" + dataType + "' with step '" + step + "'");
+                value.data(newValue);
+                return oldValue;
             }
-        });
-    }
-
-
-    public Object get(String key) {
-        return submitOpsTaskSync(getTask(key));
-    }
-
-    public List<?> getLike(String pattern, int limit) {
-        return submitOpsTaskSync(getLikeTask(pattern, limit));
-    }
-
-    /**
-     * 等效于命令：
-     * GET $KEY … $KEY
-     *
-     * @param key 键名
-     */
-    public OpsTask<?> getTask(String key) {
-        return OpsTask.of(() -> {
-            HValue<?> value = table.get(key);
-            if(value == null) {
+            case NUMBER -> {
+                final HValue<Object> oldValue = value.cloneDefault();
+                final Number rawValue = (Number) value.data();
+                final Number newValue;
+                try {
+                    newValue = (rawValue instanceof Long ? (Long) rawValue : (Double) rawValue) + (stepNumber instanceof Double ? (Double) stepNumber : (Long) stepNumber);
+                } catch (NumberFormatException e) {
+                    throw new IncreaseUnsupportedException("can`t increase number: '" + rawValue + "' with step '" + step + "'");
+                } catch (ClassCastException e) {
+                    throw IllegalJavaClassStoredException.of(rawValue.getClass());
+                }
+                value.data(newValue);
+                return oldValue;
+            }
+            case NULL -> {
+                table.put(key, new HValue<>(key, stepNumber).clearBy(this, millis, priority));
                 return null;
             }
-            return value.data();
-        });
+            default ->
+                    throw new IncreaseUnsupportedException("can`t increase type: '" + dataType + "' with step '" + step + "'");
+        }
     }
 
-    /**
-     * 等效于命令：
-     * GET LIKE $PATTERN1 [,$LIMIT]
-     *
-     * @param pattern 正则
-     * @param limit   最多返回多少个
-     * @return 对应的value序列
-     */
-    public OpsTask<List<?>> getLikeTask(String pattern, Integer limit) {
-        return OpsTask.of(() -> {
-            Stream<?> stream = table.values().parallelStream().filter(v -> v.key().matches(pattern)).map(HValue::data);
-            if(limit != null) {
-                return stream.limit(limit).toList();
-            }
-            return stream.toList();
-        });
+
+
+    public HValue<?> get(String key) {
+        return table.get(key);
     }
 
-    public List<String> keys(int limit) {
-        return submitOpsTaskSync(keysTask(limit));
+    public List<?> getLike(String pattern, Long limit) {
+        Stream<?> stream = table.values().parallelStream().filter(v -> v.key().matches(pattern)).map(HValue::data);
+        if (limit != null) {
+            return stream.limit(limit).toList();
+        }
+        return stream.toList();
     }
-
 
     public Set<String> keys() {
-        return submitOpsTaskSync(keysTask());
-    }
-
-    /**
-     * 等效于命令:
-     * KEYS $LIMIT
-     */
-    public OpsTask<List<String>> keysTask(int limit) {
-        return OpsTask.of(() -> table.keySet().stream().limit(limit).toList());
-    }
-
-    /**
-     * 等效于命令:
-     * KEYS
-     */
-    public OpsTask<Set<String>> keysTask() {
-        return OpsTask.of(table::keySet);
-    }
-
-
-    public List<HValue<?>> values(int limit) {
-        return submitOpsTaskSync(valuesTask(limit));
-    }
-
-
-    public Collection<HValue<?>> values() {
-        return submitOpsTaskSync(valuesTask());
+        return table.keySet();
     }
 
     /**
@@ -329,8 +218,9 @@ public class Database implements Iterable<HValue<?>> {
      *
      * @param limit 限定数量
      */
-    public OpsTask<List<HValue<?>>> valuesTask(int limit) {
-        return OpsTask.of(() -> table.values().stream().limit(limit).toList());
+
+    public List<HValue<?>> values(int limit) {
+        return table.values().stream().limit(limit).toList();
     }
 
     /**
@@ -338,12 +228,8 @@ public class Database implements Iterable<HValue<?>> {
      * VALUES
      * 获取数据库中所有值
      */
-    public OpsTask<Collection<HValue<?>>> valuesTask() {
-        return OpsTask.of(table::values);
-    }
-
-    public HValue<?> del(String key) {
-        return submitOpsTaskSync(delTask(key));
+    public Collection<HValue<?>> values() {
+        return table.values();
     }
 
     /**
@@ -352,41 +238,29 @@ public class Database implements Iterable<HValue<?>> {
      *
      * @param key 键名
      */
-    public OpsTask<HValue<?>> delTask(String key) {
-        return OpsTask.of(() -> {
-            HValue<?> value = table.remove(key);
-            if (value != null) {
-                value.cancelClear();
-            }
-            return value;
-        });
+    public HValue<?> del(String key) {
+        HValue<?> value = table.remove(key);
+        if (value != null) {
+            value.cancelClear();
+        }
+        return value;
     }
 
-    public void clear() {
-        submitOpsTaskSync(clearTask());
-    }
 
     /**
      * 等效于命令：
      * CLEAR
      */
-    public OpsTask<Boolean> clearTask() {
-        return OpsTask.of(() -> {
-            table.values().forEach(HValue::cancelClear);
-            table.clear();
-            return true;
-        });
+    public void clear() {
+        table.values().forEach(HValue::cancelClear);
+        table.clear();
     }
 
     /**
-     * 等效于 {@link #clearTask()}
+     * 等效于 {@link #clear()}
      */
-    public OpsTask<Boolean> flushTask(){
-        return clearTask();
-    }
-
-    public List<HValue<?>> delLike(String pattern, @Nullable Long limit) {
-        return submitOpsTaskSync(delLikeTask(pattern, limit));
+    public void flush() {
+        clear();
     }
 
     /**
@@ -395,21 +269,14 @@ public class Database implements Iterable<HValue<?>> {
      *
      * @param pattern 正则表达式
      */
-    public OpsTask<List<HValue<?>>> delLikeTask(String pattern, @Nullable Long limit) {
-        return OpsTask.of(() -> {
-                    Stream<HValue<?>> stream = table.values().parallelStream()
-                            .filter(value -> value.key().matches(pattern))
-                            .peek(v -> table.remove(v.key()).cancelClear());
-                    if (limit == null) {
-                        return stream.toList();
-                    }
-                    return stream.limit(limit).toList();
-                }
-        );
-    }
-
-    public HValue<?> rpl(String key, Object value, Long millis, OpsTaskPriority priority) {
-        return submitOpsTaskSync(rplTask(key, value, millis, priority));
+    public List<HValue<?>> delLike(String pattern, @Nullable Long limit) {
+        Stream<HValue<?>> stream = table.values().parallelStream()
+                .filter(value -> value.key().matches(pattern))
+                .peek(v -> table.remove(v.key()).cancelClear());
+        if (limit == null) {
+            return stream.toList();
+        }
+        return stream.limit(limit).toList();
     }
 
     /**
@@ -423,22 +290,16 @@ public class Database implements Iterable<HValue<?>> {
      * @param priority
      * @return 旧值，可能为空
      */
-    public OpsTask<HValue<?>> rplTask(String key, Object value, Long millis, OpsTaskPriority priority) {
-        return OpsTask.of(() -> {
-            @SuppressWarnings("unchecked")
-            HValue<Object> hValue = (HValue<Object>) table.get(key);
-            if (hValue == null) {
-                return null;
-            }
-            HValue<Object> old = hValue.cloneDefault();
-            hValue.clearBy(this, millis, priority);
-            hValue.data(value);
-            return old;
-        });
-    }
-
-    public List<Long> exists(List<String> keys) {
-        return submitOpsTaskSync(existsTask(keys));
+    public HValue<?> rpl(String key, Object value, Long millis, OpsTaskPriority priority) {
+        @SuppressWarnings("unchecked")
+        HValue<Object> hValue = (HValue<Object>) table.get(key);
+        if (hValue == null) {
+            return null;
+        }
+        HValue<Object> old = hValue.cloneDefault();
+        hValue.clearBy(this, millis, priority);
+        hValue.data(value);
+        return old;
     }
 
     /**
@@ -448,23 +309,20 @@ public class Database implements Iterable<HValue<?>> {
      * @param keys 键名序列
      * @return table里存在的键名 在keys序列里的索引
      */
-    public OpsTask<List<Long>> existsTask(List<String> keys) {
-        return OpsTask.of(() -> {
-            long[] index = {0L};
-            List<Long> containIndexes = new ArrayList<>();
-            keys.forEach(key -> {
-                if (table.containsKey(key)) {
-                    containIndexes.add(index[0]);
-                }
-                ++index[0];
-            });
-            return containIndexes;
+    public List<Long> exists(List<String> keys) {
+        long[] index = {0L};
+        List<Long> containIndexes = new ArrayList<>();
+        keys.forEach(key -> {
+            if (table.containsKey(key)) {
+                containIndexes.add(index[0]);
+            }
+            ++index[0];
         });
+        return containIndexes;
     }
 
-
-    public void expire(String key, Long millis, OpsTaskPriority priority) {
-        submitOpsTaskSync(expireTask(key, millis, priority));
+    public boolean exists(String key) {
+        return table.containsKey(key);
     }
 
     /**
@@ -476,18 +334,12 @@ public class Database implements Iterable<HValue<?>> {
      * @param millis   多少毫秒后过期
      * @param priority
      */
-    public OpsTask<?> expireTask(String key, Long millis, OpsTaskPriority priority) {
-        return OpsTask.of(() -> {
-            HValue<?> value = table.get(key);
-            if (value == null) {
-                return;
-            }
-            value.clearBy(this, millis, priority);
-        });
-    }
-
-    public void expireAt(String key, long timestamp, OpsTaskPriority priority) {
-        submitOpsTaskSync(expireAtTask(key, timestamp, priority));
+    public void expire(String key, Long millis, OpsTaskPriority priority) {
+        HValue<?> value = table.get(key);
+        if (value == null) {
+            return;
+        }
+        value.clearBy(this, millis, priority);
     }
 
     /**
@@ -498,18 +350,12 @@ public class Database implements Iterable<HValue<?>> {
      * @param timestamp 在该时间戳过期
      * @param priority
      */
-    public OpsTask<?> expireAtTask(String key, long timestamp, OpsTaskPriority priority) {
-        return OpsTask.of(() -> {
-            HValue<?> value = table.get(key);
-            if (value == null) {
-                return;
-            }
-            value.clearBy(this, timestamp,priority );
-        });
-    }
-
-    public void expireLike(String pattern, Long millis, OpsTaskPriority priority) {
-        submitOpsTaskSync(expireLikeTask(pattern, millis, priority));
+    public void expireAt(String key, long timestamp, OpsTaskPriority priority) {
+        HValue<?> value = table.get(key);
+        if (value == null) {
+            return;
+        }
+        value.clearBy(this, timestamp, priority);
     }
 
     /**
@@ -521,18 +367,12 @@ public class Database implements Iterable<HValue<?>> {
      * @param millis   多少毫秒后过期
      * @param priority
      */
-    public OpsTask<?> expireLikeTask(String pattern, Long millis, OpsTaskPriority priority) {
-        return OpsTask.of(() -> {
-            table.values().parallelStream()
-                    .filter(v -> v.key().matches(pattern))
-                    .forEach(v -> {
-                        v.clearBy(this, millis, priority);
-                    });
-        });
-    }
-
-    public void expireAtLike(String pattern, long timestamp, OpsTaskPriority priority) {
-        submitOpsTaskSync(expireAtLikeTask(pattern, timestamp, priority));
+    public void expireLike(String pattern, Long millis, OpsTaskPriority priority) {
+        table.values().parallelStream()
+                .filter(v -> v.key().matches(pattern))
+                .forEach(v -> {
+                    v.clearBy(this, millis, priority);
+                });
     }
 
     /**
@@ -543,30 +383,21 @@ public class Database implements Iterable<HValue<?>> {
      * @param timestamp 到这个时间戳过期
      * @param priority
      */
-    public OpsTask<?> expireAtLikeTask(String pattern, long timestamp, OpsTaskPriority priority) {
-        return OpsTask.of(() -> {
-            table.values().parallelStream()
-                    .filter(v -> v.key().matches(pattern))
-                    .forEach(v -> {
-                        v.clearBy(this, timestamp, priority);
-                    });
-        });
+    public void expireAtLike(String pattern, long timestamp, OpsTaskPriority priority) {
+        table.values().parallelStream()
+                .filter(v -> v.key().matches(pattern))
+                .forEach(v -> {
+                    v.clearBy(this, timestamp, priority);
+                });
     }
 
-    public int count() {
-        return table.size();
-    }
 
     /**
      * 等效于命令：
      * COUNT
      */
-    public OpsTask<Integer> countTask() {
-        return OpsTask.of(table::size);
-    }
-
-    public long countLike(String pattern) {
-        return submitOpsTaskSync(countLikeTask(pattern));
+    public int count() {
+        return table.size();
     }
 
     /**
@@ -575,14 +406,10 @@ public class Database implements Iterable<HValue<?>> {
      *
      * @param pattern 正则表达式
      */
-    public OpsTask<Long> countLikeTask(String pattern) {
-        return OpsTask.of(() -> table.values().parallelStream()
+    public long countLike(String pattern) {
+        return table.values().parallelStream()
                 .filter(v -> v.key().matches(pattern))
-                .count());
-    }
-
-    public List<?> transactional(List<OpsTask<?>> tasks) {
-        return submitOpsTaskSync(transactionalTask(tasks));
+                .count();
     }
 
     /**
@@ -591,39 +418,8 @@ public class Database implements Iterable<HValue<?>> {
      *
      * @param tasks 序列任务
      */
-    public OpsTask<? extends List<?>> transactionalTask(List<OpsTask<?>> tasks) {
-        return OpsTask.of(() -> tasks.stream().map(OpsTask::get).toList());
-    }
-
-    public <T> T submitOpsTaskSync(OpsTask<T> task, OpsTaskPriority priority) {
-        checkTaskQueueConsumer();
-        if (OpsTaskPriority.LOW == priority) {
-            opsTaskDeque.add(task);
-        } else {
-            opsTaskDeque.addFirst(task);
-        }
-        return task.result();
-    }
-
-    public <T> CompletableFuture<T> submitOpsTask(OpsTask<T> task, OpsTaskPriority priority) {
-        checkTaskQueueConsumer();
-        if (OpsTaskPriority.LOW == priority) {
-            opsTaskDeque.add(task);
-        } else {
-            opsTaskDeque.addFirst(task);
-        }
-        return task.future();
-    }
-
-    public <T> T submitOpsTaskSync(OpsTask<T> task) {
-        return submitOpsTaskSync(task, OpsTaskPriority.LOW);
-    }
-
-    public <T> CompletableFuture<T> submitOpsTask(OpsTask<T> task) {
-        return submitOpsTask(task, OpsTaskPriority.LOW);
-    }
-    public DataType type(String key) {
-        return submitOpsTaskSync(typeTask(key));
+    public List<?> transactional(List<OpsTask<?>> tasks) {
+        return tasks.stream().map(OpsTask::get).toList();
     }
 
     /**
@@ -633,32 +429,22 @@ public class Database implements Iterable<HValue<?>> {
      * @param key 键名
      * @return 数据类型
      */
-    public OpsTask<DataType> typeTask(String key) {
-        return OpsTask.of(() -> {
-            HValue<?> hValue = table.get(key);
-            return DataType.typeofHValue(hValue);
-        });
-    }
-
-    public Long ttl(String key) {
-        return submitOpsTaskSync(ttlTask(key));
+    public DataType type(String key) {
+        HValue<?> hValue = table.get(key);
+        return DataType.typeofHValue(hValue);
     }
 
     /**
      * 等效于命令：
-     * TTL $KEY ... $KEY
      *
      * @param key 键名
-     * @return 还有多少毫秒过期
-     * -2 键不存在
+     * @return -2 键不存在
      * -1 键不会过期
      * >=0 键剩余时间
      */
-    public OpsTask<Long> ttlTask(String key) {
-        return OpsTask.of(() -> {
-            HValue<?> value = table.get(key);
-            return value == null ? -2 : value.ttl();
-        });
+    public Long ttl(String key) {
+        HValue<?> value = table.get(key);
+        return value == null ? -2 : value.ttl();
     }
 
     public CompletableFuture<Boolean> save() {
@@ -669,10 +455,6 @@ public class Database implements Iterable<HValue<?>> {
         });
     }
 
-    public boolean saveSync() {
-        return submitOpsTaskSync(saveSyncTask());
-    }
-
     /**
      * 等效于命令：
      * SAVE
@@ -680,24 +462,41 @@ public class Database implements Iterable<HValue<?>> {
      *
      * @return 异步结果
      */
-    public OpsTask<Boolean> saveSyncTask() {
-        return OpsTask.of(() -> {
-            PersistentService persistentService = HashDBMSApp.ctx().getBean(PersistentService.class);
-            persistentService.persist(this);
-            return true;
-        });
-    }
-
-    public void checkTaskQueueConsumer() {
-        if (receiveNewTask.get()) {
-            return;
-        }
-        throw new ServiceStoppedException("database '" + info.getName() + "' has stopped providing external services");
+    public boolean saveSync() {
+        PersistentService persistentService = HashDBMSApp.ctx().getBean(PersistentService.class);
+        persistentService.persist(this);
+        return true;
     }
 
     @NotNull
     @Override
     public Iterator<HValue<?>> iterator() {
         return table.values().iterator();
+    }
+
+    @Override
+    public boolean checkTaskQueueConsumer() {
+        if (super.checkTaskQueueConsumer()) {
+            return true;
+        }
+        throw new ServiceStoppedException("database '" + info.getName() + "' has stopped providing external services");
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Database db)) return false;
+
+        return Objects.equals(info, db.info);
+    }
+
+    @Override
+    public int hashCode() {
+        return info != null ? info.hashCode() : 0;
+    }
+
+    @Override
+    public String toString() {
+        return "Database" + info;
     }
 }

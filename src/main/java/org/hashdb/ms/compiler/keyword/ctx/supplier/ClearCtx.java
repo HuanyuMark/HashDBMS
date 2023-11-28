@@ -18,11 +18,14 @@ public class ClearCtx extends SupplierCtx {
 
     @Override
     public Class<?> supplyType() {
-        return String.class;
+        return Boolean.class;
     }
 
     @Override
     public Supplier<?> compile() {
-        return stream.db().clearTask();
+        return ()-> {
+            stream.db().clear();
+            return true;
+        };
     }
 }

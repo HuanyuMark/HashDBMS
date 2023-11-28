@@ -1,5 +1,8 @@
 package org.hashdb.ms.util;
 
+import com.fasterxml.jackson.annotation.JsonValue;
+
+import java.util.Collections;
 import java.util.Objects;
 import java.util.function.Supplier;
 
@@ -13,16 +16,27 @@ import java.util.function.Supplier;
  */
 public class Lazy<T> {
     protected volatile T value;
+
     protected final Supplier<T> supplier;
     protected Lazy(Supplier<T> supplier) {
         Objects.requireNonNull(supplier);
         this.supplier = supplier;
     }
+
+    protected Lazy(T initValue) {
+        Objects.requireNonNull(initValue);
+        value = initValue;
+        this.supplier = () -> initValue;
+    }
+
+    protected Lazy(){
+        supplier = ()->null;
+    }
     public static <T> Lazy<T> of(Supplier<T> supplier) {
         return new Lazy<>(supplier);
     }
     public static <T> Lazy<T> of(T value) {
-        return new Lazy<>(()->value);
+        return new Lazy<>(value);
     }
     /**
      * 线程不安全, {@link #supplier} 可能会被多次调用
@@ -35,10 +49,27 @@ public class Lazy<T> {
         return value;
     }
 
+    public boolean isCached() {
+        return value!= null;
+    }
+
     /**
      * @param value 后期给定的值， 直接跳过 {@link #supplier} 的调用， 直接使用给定值
      */
     public void computedWith(T value) {
         this.value = value;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Lazy<?> lazy)) return false;
+
+        return Objects.equals(value, lazy.value);
+    }
+
+    @Override
+    public int hashCode() {
+        return value != null ? value.hashCode() : 0;
     }
 }

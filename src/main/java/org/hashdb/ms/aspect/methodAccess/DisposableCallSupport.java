@@ -20,9 +20,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Aspect
 @Component
-public class OneTimeCallableSupport {
+public class DisposableCallSupport {
     private final Set<Method> usedFlags = ConcurrentHashMap.newKeySet();
-    @Before("@annotation(org.hashdb.ms.aspect.methodAccess.OneTimeCallable) || @within(org.hashdb.ms.aspect.methodAccess.OneTimeCallable)")
+    @Before("@annotation(org.hashdb.ms.aspect.methodAccess.DisposableCall) || @within(org.hashdb.ms.aspect.methodAccess.DisposableCall)")
     public void checkSetAction(JoinPoint joinPoint){
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method target = signature.getMethod();

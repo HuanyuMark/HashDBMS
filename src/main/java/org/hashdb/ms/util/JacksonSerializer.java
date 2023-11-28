@@ -9,6 +9,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import lombok.extern.slf4j.Slf4j;
+import org.hashdb.ms.HashDBMSApp;
+import org.hashdb.ms.config.DBRamConfig;
 import org.hashdb.ms.exception.DBInnerException;
 import org.jetbrains.annotations.Nullable;
 
@@ -29,12 +31,16 @@ public class JacksonSerializer {
     private static final ObjectMapper COMMON = new ObjectMapper();
     private static final Version JACKSON_SERIALIZER_VERSION = new Version(1, 0, 1, "dev compiler", "hashdb", "hashDBMS");
 
-    static {
+    private static final OneTimeLazy<?> configCommonObjectMapper = OneTimeLazy.of(()->{
         SimpleModule dataTypeModule = new SimpleModule("dataType", JACKSON_SERIALIZER_VERSION);
-        dataTypeModule.addDeserializer(Map.class, new UnorderedMapDeserializer());
-        dataTypeModule.addDeserializer(List.class, new UnorderedListDeserializer());
+        DBRamConfig dbRamConfig = HashDBMSApp.ctx().getBean(DBRamConfig.class);
+        if(!dbRamConfig.isStoreLikeJsonSequence()) {
+            dataTypeModule.addDeserializer(Map.class, new HashMapDeserializer());
+            dataTypeModule.addDeserializer(List.class, new LinkedListDeserializer());
+        }
         COMMON.registerModule(dataTypeModule);
-    }
+        return null;
+    });
 
     public static String stringfy(Object obj) {
         try {
@@ -45,6 +51,7 @@ public class JacksonSerializer {
     }
 
     public static @Nullable Object parse(String json, Class<?> clazz) throws JsonProcessingException {
+        configCommonObjectMapper.get();
         Object value = COMMON.readValue(json, clazz);
         if (value == null) {
             return null;
@@ -62,8 +69,8 @@ public class JacksonSerializer {
         return parse(json, Object.class);
     }
 
-    private static class UnorderedMapDeserializer extends StdDeserializer<HashMap<Object, Object>> {
-        public UnorderedMapDeserializer() {
+    private static class HashMapDeserializer extends StdDeserializer<HashMap<Object, Object>> {
+        public HashMapDeserializer() {
             super(HashMap.class);
         }
 
@@ -115,8 +122,8 @@ public class JacksonSerializer {
         }
     }
 
-    private static class UnorderedListDeserializer extends StdDeserializer<List<Object>> {
-        public UnorderedListDeserializer() {
+    private static class LinkedListDeserializer extends StdDeserializer<List<Object>> {
+        public LinkedListDeserializer() {
             super(List.class);
         }
 

@@ -11,13 +11,15 @@ import java.util.Objects;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public class UnmodifiedChecker {
+public class ImmutableChecker {
     public static final Class<?> unmodifiableCollection;
     public static final Class<?> unmodifiableList;
+    public static final Class<?> unmodifiableSet;
     static {
         try {
             unmodifiableCollection = Class.forName("java.util.Collections$UnmodifiableCollection");
             unmodifiableList = Class.forName("java.util.Collections$UnmodifiableList");
+            unmodifiableSet = Class.forName("java.util.Collections$UnmodifiableSet");
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }

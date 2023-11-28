@@ -15,8 +15,15 @@ public abstract class ParseableOpCtx<V> implements OptionCtx<V> {
 
     public ParseableOpCtx() {
     }
+
     @Override
     public V value() {
         return value;
+    }
+
+    @Override
+    public String toString() {
+        String simpleName = getClass().getSimpleName();
+        return simpleName.substring(0,simpleName.length()-5)+"="+value;
     }
 }

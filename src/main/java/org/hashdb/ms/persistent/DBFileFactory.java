@@ -16,10 +16,10 @@ import java.util.Objects;
  * @version 0.0.1
  */
 public class DBFileFactory {
-    public static final String INDEX_FILE_NAME = "db.index";
+    public static final String INDEX_FILE_NAME = "index.db";
     @Contract("_, _ -> new")
     public static @NotNull File newDBChunkFile(File dbFileDir, int chunkId) {
-        return new File(dbFileDir,chunkId + ".db");
+        return new File(dbFileDir,chunkId + ".chunk.db");
     }
     public static File newIndexFile(File dbFileDir) {
         return new File(dbFileDir,INDEX_FILE_NAME);
@@ -27,7 +27,7 @@ public class DBFileFactory {
     public static File loadIndexFile(File dbFileDir) {
         File[] files = dbFileDir.listFiles(f -> f.getName().equals(INDEX_FILE_NAME));
         if(files == null || files.length == 0) {
-            throw new DBExternalException(new FileNotFoundException("can`t find database index file: '"+
+            throw new DBExternalException(new FileNotFoundException("can not find database index file: '"+
                     Path.of(dbFileDir.getAbsolutePath(),INDEX_FILE_NAME) +"'"));
         }
         return files[0];
@@ -38,13 +38,6 @@ public class DBFileFactory {
      * @return 升序排列的数据块文件
      */
     public static File[] loadDBChunkFile(@NotNull File dbFileDir) {
-        File[] shouldBeSort = Objects.requireNonNullElse(dbFileDir.listFiles(f -> f.getName().matches("\\d+\\.db")), new File[0]);
-//        Pattern nonNum = Pattern.compile("\\D+");
-//        Arrays.parallelSort(shouldBeSort, (f1, f2) -> {
-//            String numStr1 = nonNum.matcher(f1.getName()).replaceAll("").trim();
-//            String numStr2 = nonNum.matcher(f2.getName()).replaceAll("").trim();
-//            return Integer.parseInt(numStr1) - Integer.parseInt(numStr2);
-//        });
-        return shouldBeSort;
+        return Objects.requireNonNullElse(dbFileDir.listFiles(f -> f.getName().matches("\\d+\\.chunk\\.db")), new File[0]);
     }
 }

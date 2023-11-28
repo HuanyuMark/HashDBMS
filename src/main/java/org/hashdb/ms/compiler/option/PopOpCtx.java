@@ -21,7 +21,7 @@ public class PopOpCtx extends IntegerOpCtx {
     @Override
     protected void afterCompile(String unknownValueToken, TokenCompileStream stream) {
         if(value < 0) {
-            throw new IllegalValueException("pop option should be greater then 0");
+            throw new IllegalValueException("option '"+key()+"' should be greater then 0");
         }
     }
 }

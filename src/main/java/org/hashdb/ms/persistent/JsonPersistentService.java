@@ -1,6 +1,10 @@
 package org.hashdb.ms.persistent;
 
 import org.hashdb.ms.data.Database;
+import org.hashdb.ms.data.DatabaseInfos;
+import org.hashdb.ms.exception.NotFoundDatabaseException;
+import org.hashdb.ms.sys.SystemInfo;
+import org.hashdb.ms.util.JacksonSerializer;
 
 import java.util.List;
 
@@ -13,20 +17,42 @@ import java.util.List;
 public class JsonPersistentService implements PersistentService {
     @Override
     public boolean persist(Database database) {
-        return false;
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public List<Database> scanDatabases() {
-        return null;
+    public boolean persist(SystemInfo systemInfo) {
+//        JacksonSerializer.stringfy()
+        return true;
     }
+
+    @Deprecated
+    public List<Database> scanDatabases() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public List<DatabaseInfos> scanDatabaseInfos() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public DatabaseInfos scanDatabaseInfo(String name) throws NotFoundDatabaseException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public SystemInfo scanSystemInfo() {
+        throw new UnsupportedOperationException();
+    }
+
     @Override
     public Database scanDatabase(String name) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean deleteDatabase(String name) {
-        return false;
+        throw new UnsupportedOperationException();
     }
 }

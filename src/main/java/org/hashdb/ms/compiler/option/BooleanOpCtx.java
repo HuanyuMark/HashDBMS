@@ -9,14 +9,14 @@ import org.hashdb.ms.exception.CommandCompileException;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public abstract class BooleanOpCtx extends ParseableOpCtx<Boolean> {
+public abstract class BooleanOpCtx extends ParseableOpCtx<Boolean> implements FlyweightOpCtx {
     public BooleanOpCtx(Boolean defaultValue){
         super(defaultValue);
     }
     @Override
     public BooleanOpCtx compile(String unknownValueToken, TokenCompileStream stream) {
         // 使用默认值
-        if(useDefaultValueWhenEmpty() && unknownValueToken.isEmpty()) {
+        if(unknownValueToken.isEmpty() && useDefaultValueWhenEmpty()) {
             return this;
         }
         if("t".equalsIgnoreCase(unknownValueToken) || "true".equalsIgnoreCase(unknownValueToken)) {

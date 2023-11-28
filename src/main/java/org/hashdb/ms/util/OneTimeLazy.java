@@ -24,8 +24,9 @@ public class OneTimeLazy<T> extends Lazy<T> {
     @Override
     public T get() {
         if (ran.compareAndSet(false, true)) {
+            value = supplier.get();
             return value;
         }
-        return super.get();
+        return value;
     }
 }

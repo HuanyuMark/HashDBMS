@@ -9,10 +9,7 @@ import org.hashdb.ms.exception.DBInnerException;
 import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.ListIterator;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -44,15 +41,26 @@ public abstract class TokenCompileStream implements CompileStream {
 
     protected int cursor = 0;
 
+    /**
+     * 构造主流
+     *
+     * @param database 数据库
+     * @param command  原始命令
+     */
     protected TokenCompileStream(Database database, @NotNull String command) {
-        LinkedList<Object> list = new LinkedList<>();
-        ListIterator<Object> objectListIterator = list.listIterator();
         var tokens = extractTokens(command);
-        this.command = Lazy.of(()->(String.join(" ", tokens)));
+        this.command = Lazy.of(() -> (String.join(" ", tokens)));
         this.tokens = tokens;
         this.database = database;
     }
 
+    /**
+     * 构造子流
+     *
+     * @param database     数据库
+     * @param childTokens  子 tokens
+     * @param fatherStream 父 流
+     */
     protected TokenCompileStream(Database database, String @NotNull [] childTokens, TokenCompileStream fatherStream) {
         if (childTokens.length == 0) {
             log.error("compiler error: father tokens: {} child tokens: {}", childTokens, childTokens);
@@ -60,11 +68,11 @@ public abstract class TokenCompileStream implements CompileStream {
         }
         eraseParentheses(childTokens);
         eraseLastSemicolon(childTokens);
-        this.command = Lazy.of(()->String.join(" ", childTokens));
+        this.command = Lazy.of(() -> String.join(" ", childTokens));
         this.tokens = childTokens;
         this.fatherStream = fatherStream;
         this.database = database;
-        if(log.isTraceEnabled()) {
+        if (log.isTraceEnabled()) {
             log.trace("open compile stream: {}", String.join(" ", tokens));
         }
     }
@@ -75,40 +83,36 @@ public abstract class TokenCompileStream implements CompileStream {
      * @param command 原始命令字符串
      */
     protected static String @NotNull [] extractTokens(@NotNull String command) {
-        record Symbol(int index, String content) {
-            @Override
-            public String toString() {
-                return "(symbol: '" + content + "' at index " + index + ")";
-            }
-        }
-
         List<String> tokenList = new LinkedList<>();
         List<String> wordQueue = new LinkedList<>();
-        List<Symbol> symbolQueue = new LinkedList<>();
+        List<Symbol> jsonSymbolQueue = new LinkedList<>();
+//        LinkedList<Symbol> parenthesesQueue = new LinkedList<>();
         // 其实也可以用 循环 substring 来取得每个字符(UTF-8字符)的字符串
         String[] charts = command.split("");
         for (int index = 0; index < charts.length; index++) {
             String curStr = charts[index];
             switch (curStr) {
                 case " " -> {
-                    if (symbolQueue.isEmpty()) {
+                    // token may be  SET k1 v1 k2 v2
+                    if (jsonSymbolQueue.isEmpty()) {
                         if (!wordQueue.isEmpty()) {
-                            String token = String.join("", wordQueue);
+                            String token = java.lang.String.join("", wordQueue);
                             tokenList.add(token);
                             wordQueue.clear();
                         }
                         continue;
                     }
                 }
-                case "[" -> symbolQueue.add(new Symbol(index, "["));
+                case "[" -> jsonSymbolQueue.add(new Symbol(index, "["));
                 case "]" -> {
-                    if (symbolQueue.isEmpty()) {
+                    // token may be [1, 2 ,   3]
+                    if (jsonSymbolQueue.isEmpty()) {
                         throw new CommandCompileException("missing open symbol '['. match close symbol ']' in command '" + command + "' at index " + index + "");
                     }
                     wordQueue.add(curStr);
-                    if ("[".equals(symbolQueue.getLast().content())) {
-                        symbolQueue.removeLast();
-                        if (symbolQueue.isEmpty()) {
+                    if ("[".equals(jsonSymbolQueue.getLast().content())) {
+                        jsonSymbolQueue.removeLast();
+                        if (jsonSymbolQueue.isEmpty()) {
                             String token = String.join("", wordQueue);
                             tokenList.add(token);
                             wordQueue.clear();
@@ -116,39 +120,48 @@ public abstract class TokenCompileStream implements CompileStream {
                     }
                     continue;
                 }
-                case "{" -> symbolQueue.addLast(new Symbol(index, "{"));
+                case "{" -> jsonSymbolQueue.addLast(new Symbol(index, "{"));
                 case "}" -> {
-                    if (symbolQueue.isEmpty()) {
+                    // token may be {   "a":123, "b": [1, "789", {}]}
+                    if (jsonSymbolQueue.isEmpty()) {
                         throw new CommandCompileException("missing open symbol '{'. match close symbol '}' in command '" + command + "' at index " + index + "");
                     }
                     wordQueue.add(curStr);
-                    if ("{".equals(symbolQueue.getLast().content)) {
-                        symbolQueue.removeLast();
-                        if (symbolQueue.isEmpty()) {
+                    if ("{".equals(jsonSymbolQueue.getLast().content)) {
+                        jsonSymbolQueue.removeLast();
+                        if (jsonSymbolQueue.isEmpty()) {
                             String token = String.join("", wordQueue);
                             tokenList.add(token);
                             wordQueue.clear();
                         }
                     }
                     continue;
+                }
+                case "\"" -> {
+                    // token may be "str   str"
+                    if (jsonSymbolQueue.isEmpty()) {
+                        jsonSymbolQueue.add(new Symbol(index, "\""));
+                    } else if ("\"".equals(jsonSymbolQueue.getLast().content())) {
+                        jsonSymbolQueue.removeLast();
+                    }
                 }
             }
             wordQueue.add(curStr);
         }
-        if (!symbolQueue.isEmpty()) {
-            throw new CommandCompileException("fail to match symbol: '" + symbolQueue + "' in command: '" + command + "'");
-        } else if(!wordQueue.isEmpty()){
-            String token = String.join("", wordQueue);
-            tokenList.add(token);
+        if (!jsonSymbolQueue.isEmpty()) {
+            throw new CommandCompileException("fail to match json symbol: '" + jsonSymbolQueue + "' in command: '" + command + "'");
+        } else if (!wordQueue.isEmpty()) {
+            tokenList.add(String.join("", wordQueue));
+        }
+
+        if (tokenList.isEmpty()) {
+            throw new CommandCompileException("illegal command '" + command + "'");
         }
 
         var tokens = tokenList.toArray(String[]::new);
-        if (tokens.length == 0) {
-            throw new CommandCompileException("illegal command '" + command + "'");
-        }
         eraseLastSemicolon(tokens);
         eraseParentheses(tokens);
-        if(log.isTraceEnabled()) {
+        if (log.isTraceEnabled()) {
             log.trace("open compile stream: {}", String.join(" ", tokens));
         }
         return tokens;
@@ -171,18 +184,20 @@ public abstract class TokenCompileStream implements CompileStream {
      */
     protected static void eraseParentheses(String @NotNull [] tokens) {
         int last = tokens.length - 1;
-        String lastToken = tokens[last];
-        int lastIndexOfFirstToken = tokens[0].lastIndexOf("(");
-        int indexOfLashToken = lastToken.indexOf(")");
-        if(lastIndexOfFirstToken == - 1 && indexOfLashToken == -1) {
-            return;
+        while (true) {
+            var firstToken = tokens[0];
+            var lastToken = tokens[last];
+            int lastIndexOfLastToken = lastToken.length() - 1;
+            if (firstToken.charAt(0) != '(' || lastToken.charAt(lastIndexOfLastToken) != ')') {
+                break;
+            }
+            try {
+                tokens[0] = firstToken.substring(1);
+                tokens[last] = lastToken.substring(0, lastIndexOfLastToken);
+            } catch (IndexOutOfBoundsException e) {
+                throw new CommandCompileException("fail to match '()' on tokens: '[" + firstToken + "," + lastToken + "]' of command '" + String.join(" ", tokens) + "'");
+            }
         }
-
-        if (lastIndexOfFirstToken != lastToken.length() - indexOfLashToken - 1) {
-            throw new CommandCompileException("fail to match parentheses token in string: " + String.join(" ", tokens));
-        }
-        tokens[0] = tokens[0].substring(lastIndexOfFirstToken + 1);
-        tokens[last] = lastToken.substring(0, indexOfLashToken);
     }
 
     /**
@@ -200,6 +215,7 @@ public abstract class TokenCompileStream implements CompileStream {
         var childTokens = Arrays.stream(tokens).skip(startTokenIndex).limit(endTokenIndex - startTokenIndex + 1).toArray(String[]::new);
         return new SupplierCompileStream(database, childTokens, this);
     }
+
     public ConsumerCompileStream forkConsumerCompileStream(int startTokenIndex, int endTokenIndex, CompileCtx<?> fatherCompileCtx) {
         if (endTokenIndex < startTokenIndex) {
             log.error("endTokenIndex {} < startTokenIndex {}", endTokenIndex, startTokenIndex);
@@ -209,13 +225,10 @@ public abstract class TokenCompileStream implements CompileStream {
         var childTokens = Arrays.stream(tokens).skip(startTokenIndex).limit(endTokenIndex - startTokenIndex + 1).toArray(String[]::new);
         return new ConsumerCompileStream(database, childTokens, this, fatherCompileCtx);
     }
+
     @Override
     public String errToken(String token) {
-        return " msg: {\"token\":\""+ token +"\",\"near\":\"" + nearString() + "\"}";
-    }
-
-    public String errToken() {
-        return " msg: {\"token\":\"\",\"near\":\"" + nearString() + "\"}";
+        return " msg: {\"token\":\"" + token + "\",\"near\":\"" + nearString() + "\"}";
     }
 
     @Override
@@ -320,8 +333,70 @@ public abstract class TokenCompileStream implements CompileStream {
         return new DescTokenItr(tokens, negativeIndex);
     }
 
-
     public Database db() {
         return database;
+    }
+
+    protected record Symbol(int index, String content) {
+        @Override
+        public String toString() {
+            return "(symbol: '" + content + "' at index " + index + ")";
+        }
+    }
+
+    public static class TokenItr implements Iterator<String> {
+        protected final String[] tokens;
+        protected int cursor = 0;
+
+        public TokenItr(String[] tokens) {
+            this.tokens = tokens;
+        }
+
+        public TokenItr(String[] tokens, int startIndex) {
+            this.tokens = tokens;
+            cursor = startIndex;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return cursor < tokens.length;
+        }
+
+        @Override
+        public String next() {
+            return tokens[cursor++];
+        }
+
+        public int cursor() {
+            return cursor;
+        }
+    }
+
+    public static class DescTokenItr extends TokenItr {
+        private int cursor;
+
+        public DescTokenItr(String[] tokens) {
+            super(tokens);
+            cursor = tokens.length;
+        }
+
+        public DescTokenItr(String[] tokens, int negativeStartIndex) {
+            super(tokens);
+            cursor = tokens.length + negativeStartIndex;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return cursor >= 0;
+        }
+
+        @Override
+        public String next() {
+            return tokens[--cursor];
+        }
+
+        public int cursor() {
+            return cursor;
+        }
     }
 }

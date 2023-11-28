@@ -5,8 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.compiler.SupplierCompileStream;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
 import org.hashdb.ms.data.Database;
+import org.hashdb.ms.data.StorableHValue;
+import org.hashdb.ms.exception.DatabaseClashException;
+import org.hashdb.ms.exception.NotFoundDatabaseException;
+import org.hashdb.ms.sys.DBSystem;
 import org.hashdb.ms.util.JacksonSerializer;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -28,48 +31,37 @@ import java.util.*;
 public class HashDBMSApp {
     private static ConfigurableApplicationContext context;
 
-    @Slf4j
-    static final class Person implements Comparable<Person> {
-        private int age;
-
-        Person(int age) {
-            this.age = age;
-        }
-
-        public int getAge() {
-            return age;
-        }
-
-        public void setAge(int age) {
-            this.age = age;
-        }
-
-        @Override
-        public int compareTo(@NotNull Person o) {
-            return age - o.age;
-        }
-
-        @Override
-        public String toString() {
-            return "Person[" +
-                    "age=" + age + ']';
-        }
-    }
-
     public static void main(String[] args) throws InterruptedException, ClassNotFoundException, JsonProcessingException {
         context = SpringApplication.run(HashDBMSApp.class, args);
-        Database database = new Database(1, "main", new Date(), Map.of("list", new LinkedList<>()));
-        database.startDatabaseDaemon().join();
+        DBSystem dbSystem = context.getBean(DBSystem.class);
+        Database database = null;
+        try {
+            database = dbSystem.getDatabase(1);
+        } catch (NotFoundDatabaseException ignore) {}
+        if(database == null) {
+            database = new Database(
+                    1,
+                    "main",
+                    new Date(),
+                    Map.of("ls", new StorableHValue<>(new LinkedList<>(),null,null))
+            );
+            database.startDaemon().join();
+            dbSystem.addDatabase(database);
+        }
+
         Scanner scanner = new Scanner(System.in);
         while (true) {
             try {
                 String command = scanner.nextLine();
+                if(command.equals("exit")){
+                    System.exit(0);
+                }
                 SupplierCompileStream compileStream = SupplierCompileStream.open(database, command);
                 SupplierCtx supplierCtx = compileStream.compile();
                 database.submitOpsTaskSync(supplierCtx.compileResult());
                 Object result = supplierCtx.compileResult().result();
                 System.out.println("result:");
-                System.out.println(JacksonSerializer.stringfy(result == null ? "null": result));
+                System.out.println(JacksonSerializer.stringfy(result == null ? "null" : result));
             } catch (RuntimeException e) {
                 e.printStackTrace();
             }

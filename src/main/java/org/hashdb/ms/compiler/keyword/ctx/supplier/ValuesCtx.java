@@ -1,8 +1,14 @@
 package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
+import org.hashdb.ms.compiler.option.LimitOpCtx;
+import org.hashdb.ms.data.HValue;
+import org.hashdb.ms.data.task.ImmutableChecker;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 /**
  * Date: 2023/11/24 16:20
@@ -17,8 +23,41 @@ public class ValuesCtx extends SupplierCtx {
     }
 
     @Override
-    public Supplier<?> compile() {
+    public Class<?> supplyType() {
+        return ImmutableChecker.unmodifiableList;
+    }
 
-        return null;
+    @Override
+    public Supplier<?> compile() {
+        doCompile();
+        LimitOpCtx limitOpCtx = getOption(LimitOpCtx.class);
+        return ()->{
+            Stream<Object> stream = this.stream.db().values().stream().map(HValue::data);
+            if(limitOpCtx != null) {
+                return stream.limit(limitOpCtx.value()).toList();
+            }
+            return stream.toList();
+        };
+    }
+
+    private void doCompile() {
+        while (true) {
+            try {
+                if (compilePipe()) {
+                    return;
+                }
+                filterAllKeywords();
+            } catch (ArrayIndexOutOfBoundsException e) {
+                return;
+            }
+
+            if (compileOptions(op->{
+                addOption(op);
+                return true;
+            })) {
+                return;
+            }
+            stream.next();
+        }
     }
 }

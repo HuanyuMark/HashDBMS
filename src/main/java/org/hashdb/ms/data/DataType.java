@@ -46,14 +46,11 @@ public enum DataType {
     private static Map<Class<?>, DataType> javaClassMap;
     private static Map<String, DataType> commandSymbolMap;
 
-    private static final OneTimeLazy<?> loadJavaClassOfMapDataTypeFromConfig = OneTimeLazy.of(()->{
-        DBRamConfig dbRamConfig = HashDBMSApp.ctx().getBean(DBRamConfig.class);
-        if (dbRamConfig.isStoreLikeJsonSequence()) {
-            javaClassMap.remove(HashMap.class);
-            javaClassMap.put(LinkedHashMap.class,MAP);
-        }
-        return null;
-    });
+    static {
+        // 配合配置项: dbRamConfig.isStoreLikeJsonSequence()
+        javaClassMap.put(LinkedHashMap.class,MAP);
+    }
+
     private static void registerClass(Class<?> clazz, DataType type) {
         if(javaClassMap == null) {
             javaClassMap = new HashMap<>();
@@ -90,7 +87,6 @@ public enum DataType {
     }
 
     public static @NotNull DataType typeOfRawValue(@Nullable Object instance) throws IllegalJavaClassStoredException {
-        loadJavaClassOfMapDataTypeFromConfig.get();
         Class<?> javaClass = Objects.requireNonNullElse(instance, Null.VALUE).getClass();
         DataType type = javaClassMap.get(javaClass);
         if (type == null) {

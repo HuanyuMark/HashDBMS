@@ -20,7 +20,7 @@ public interface OptionCtx<V> {
 
     default OptionCtx<V> prepareCompile(String valueToken, int assignPos, TokenCompileStream stream) {
         if(valueToken.isEmpty() && assignPos != -1) {
-            throw new CommandCompileException("the value of option '"+key().name().toLowerCase()+"' should not be empty."+stream.errToken());
+            throw new CommandCompileException("option '"+key().name().toLowerCase()+"' require value."+stream.errToken(valueToken));
         }
         return compile(valueToken, stream);
     }

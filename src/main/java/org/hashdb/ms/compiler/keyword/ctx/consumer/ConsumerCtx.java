@@ -10,6 +10,8 @@ import org.hashdb.ms.exception.CommandExecuteException;
 import org.hashdb.ms.exception.DBInnerException;
 import org.hashdb.ms.exception.StopComplieException;
 
+import java.util.function.Supplier;
+
 /**
  * Date: 2023/11/25 13:28
  *
@@ -38,17 +40,18 @@ public abstract class ConsumerCtx<I> extends CompileCtx<ConsumerCompileStream> {
         }
         this.stream = compileStream;
         compileResult = compile();
-        return compileResult;
+
+        return opsTarget -> ()->consumeWithConsumer(compileResult.apply(opsTarget).get());
     }
 
     abstract protected OpsConsumerTask<I, ?> compile() throws StopComplieException;
 
-    public OpsTask<?> compileResult(I opsTarget) {
+    public Supplier<?> compileResult(I opsTarget) {
         if(opsTarget == null) {
-            throw new CommandExecuteException("keyword can not consume type: 'null'");
+            throw new CommandExecuteException("keyword '"+name()+"' can not consume type: 'null'."+stream.errToken(stream.token()));
         }
         if(!checkConsumeType(opsTarget)) {
-            throw new CommandExecuteException("keyword can not consume type: '"+ DataType.typeOfRawValue(opsTarget) +"'");
+            throw new CommandExecuteException("keyword '"+name()+"' can not consume type: '"+ DataType.typeOfRawValue(opsTarget) +"'");
         }
         return compileResult.apply(opsTarget);
     }

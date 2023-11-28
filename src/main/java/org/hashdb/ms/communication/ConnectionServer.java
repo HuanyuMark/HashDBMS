@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @version 0.0.1
  */
 @Slf4j
-@Component
+//@Component
 @RequiredArgsConstructor
 public class ConnectionServer implements InitializingBean {
     private ServerSocketChannel serverChannel;

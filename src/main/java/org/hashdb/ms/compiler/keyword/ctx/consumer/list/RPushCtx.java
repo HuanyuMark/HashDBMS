@@ -2,10 +2,10 @@ package org.hashdb.ms.compiler.keyword.ctx.consumer.list;
 
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
-import org.hashdb.ms.compiler.keyword.ctx.consumer.OpsConsumerTask;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
-import org.hashdb.ms.exception.StopComplieException;
+import org.jetbrains.annotations.NotNull;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -26,16 +26,12 @@ public class RPushCtx extends PushCtx {
     }
 
     @Override
-    protected Integer doPushing(List<Object> opsTarget) {
-        for (Object value : values) {
-            Object result;
-            if(value instanceof SupplierCtx supplierCtx) {
-                result = supplierCtx.compileResult().get();
-            } else {
-                result = value;
-            }
-            opsTarget.add(result);
-        }
-        return opsTarget.size();
+    protected void doPushRaw(@NotNull List<Object> opsTarget, Object rawValue) {
+        opsTarget.addLast(rawValue);
+    }
+
+    @Override
+    protected void doPushCollection(List<Object> opsTarget, Collection<Object> other) {
+        opsTarget.addAll(other);
     }
 }

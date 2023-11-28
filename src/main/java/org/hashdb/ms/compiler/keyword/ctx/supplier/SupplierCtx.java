@@ -1,6 +1,8 @@
 package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
 import org.hashdb.ms.compiler.SupplierCompileStream;
+import org.hashdb.ms.compiler.keyword.Keyword;
+import org.hashdb.ms.compiler.keyword.SupplierKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.option.OptionCtx;
 import org.hashdb.ms.data.OpsTask;
@@ -50,4 +52,7 @@ public abstract class SupplierCtx extends CompileCtx<SupplierCompileStream> {
     public Class<?> supplyType() {
         return Object.class;
     }
+
+    @Override
+    abstract public SupplierKeyword name();
 }

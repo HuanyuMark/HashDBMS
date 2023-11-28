@@ -3,10 +3,13 @@ package org.hashdb.ms.compiler.keyword.ctx.consumer.list;
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
+import org.hashdb.ms.compiler.option.DestructOpCtx;
 import org.hashdb.ms.data.DataType;
+import org.hashdb.ms.data.task.ImmutableChecker;
+import org.hashdb.ms.exception.CommandExecuteException;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Collections;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -22,20 +25,20 @@ public class LPushCtx extends PushCtx {
     }
 
     @Override
-    protected Integer doPushing(@NotNull List<Object> opsTarget) {
-        for (Object value : values.reversed()) {
-            Object result;
-            // 运行内联命令
-            if(value instanceof SupplierCtx supplierCtx) {
-                result = supplierCtx.compileResult().get();
-            } else {
-                result = value;
-            }
-            opsTarget.addFirst(result);
-        }
-
-        return opsTarget.size();
+    protected void doPushRaw(@NotNull List<Object> opsTarget, Object rawValue) {
+        opsTarget.addFirst(rawValue);
     }
+
+    @Override
+    protected void doPushCollection(List<Object> opsTarget, Collection<Object> other) {
+        opsTarget.addAll(0,other);
+    }
+
+    @Override
+    protected List<Object> beforePush() {
+        return values.reversed();
+    }
+
     @Override
     public ConsumerKeyword name() {
         return ConsumerKeyword.LPUSH;

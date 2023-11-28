@@ -1,11 +1,17 @@
 package org.hashdb.ms.data;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.config.DBRamConfig;
 import org.hashdb.ms.exception.DBInnerException;
+import org.hashdb.ms.exception.ServiceStoppedException;
 import org.hashdb.ms.util.AsyncService;
+import org.hashdb.ms.util.JacksonSerializer;
+import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.cglib.beans.ImmutableBean;
 
 import java.lang.reflect.Proxy;
@@ -23,20 +29,38 @@ import java.util.concurrent.ScheduledFuture;
  */
 @Slf4j
 public class HValue<T> implements Cloneable {
+    public final static Lazy<DBRamConfig> dbRamConfig = Lazy.of(() -> HashDBMSApp.ctx().getBean(DBRamConfig.class));
     public final static HValue<?> EMPTY = new HValue<>();
-    public static <T> T unwrap(@Nullable HValue<T> hValue) {
-        return hValue == null? null : hValue.data;
+
+    public static <T> T unwrapData(@Nullable HValue<T> hValue) {
+        return hValue == null ? null : hValue.data;
     }
+
+    public static long unwrapExpire(@Nullable HValue<?> hValue) {
+        return hValue == null ? -2 : hValue.expireMilliseconds == null ? -1 : hValue.expireMilliseconds;
+    }
+
+    @Getter
     private final String key;
+    @Getter
     private T data;
 
+    @Getter
     private final Date createDate = new Date();
 
     /**
      * 如果为空，则永不过期
      */
+    @Getter
     private Long expireMilliseconds;
+    @Getter
     private Date expireDate;
+
+    /**
+     * 如果为高,则触发删除任务时, 将删除任务插入任务队列头部, 优先执行
+     */
+    @Getter
+    private OpsTaskPriority deletePriority = dbRamConfig.get().getExpiredKeyDeletePriority();
     /**
      * 是否取消， 当该key过期时， 清除该key
      */
@@ -58,6 +82,7 @@ public class HValue<T> implements Cloneable {
         return data;
     }
 
+
     public DataType dataType() {
         return DataType.typeofHValue(this);
     }
@@ -67,23 +92,37 @@ public class HValue<T> implements Cloneable {
         this.data = data;
     }
 
+    public void setData(T data) {
+        Objects.requireNonNull(data);
+        this.data = data;
+    }
+
     public String key() {
         return key;
     }
+
 
     public long ttl() {
         return expireDate == null ? -1 : expireDate.getTime() - System.currentTimeMillis();
     }
 
+    /**
+     * @return 可持久化对象
+     * @throws ServiceStoppedException 如果在持久化期间数据库
+     */
+    public StorableHValue<T> toStorable() throws ServiceStoppedException {
+        return new StorableHValue<>(data, expireDate, deletePriority);
+    }
 
     private ScheduledFuture<?> startExpiredTask(Database database, Long expireMilliseconds, @Nullable OpsTaskPriority priority) {
         cancelClear();
-        OpsTaskPriority p = Objects.requireNonNullElse(priority, DBRamConfig.DEFAULT_EXPIRED_KEY_DELETE_PRIORITY.get());
+        deletePriority = Objects.requireNonNullElse(priority, DBRamConfig.DEFAULT_EXPIRED_KEY_DELETE_PRIORITY.get());
         return AsyncService.setTimeout(() -> {
-            if(p == OpsTaskPriority.HIGH) {
-                database.submitOpsTaskSync(database.delTask(key), OpsTaskPriority.HIGH);
+            var deleteTask = OpsTask.of(() -> database.del(key));
+            if (deletePriority == OpsTaskPriority.HIGH) {
+                database.submitOpsTask(deleteTask, OpsTaskPriority.HIGH);
             } else {
-                database.submitOpsTaskSync(database.delTask(key));
+                database.submitOpsTask(deleteTask);
             }
         }, expireMilliseconds);
     }
@@ -111,31 +150,42 @@ public class HValue<T> implements Cloneable {
             return this;
         }
         if (expireMilliseconds <= -2) {
-            database.submitOpsTaskSync(database.delTask(key));
+            var deleteTask = OpsTask.of(() -> database.del(key));
+            if (deletePriority == OpsTaskPriority.HIGH) {
+                database.submitOpsTask(deleteTask, OpsTaskPriority.HIGH);
+            } else {
+                database.submitOpsTask(deleteTask);
+            }
             return this;
         }
 
         this.expireMilliseconds = expireMilliseconds;
         this.expireDate = new Date(System.currentTimeMillis() + expireMilliseconds);
-        if (isExpired()) {
-            throw new DBInnerException();
+        // 如果不传值, 则不改变原优先级
+        if (priority == null) {
+            priority = this.deletePriority;
         }
         clearWhenExpiredTask = startExpiredTask(database, expireMilliseconds, priority);
         return this;
     }
 
-//    public HValue<T> clearBy(Database database, Date expireDate) {
-//        if (expireMilliseconds == null) {
-//            return this;
-//        }
-//        this.expireDate = expireDate;
-//        this.expireMilliseconds = expireDate.getTime() - System.currentTimeMillis();
-//        if (isExpired()) {
-//            throw new DBInnerException();
-//        }
-//        clearWhenExpiredTask = startExpiredTask(database, expireMilliseconds);
-//        return this;
-//    }
+    @Deprecated
+    public HValue<T> clearBy(Database database, Date expireDate, @Nullable OpsTaskPriority priority) {
+        if (expireMilliseconds == null) {
+            return this;
+        }
+        this.expireDate = expireDate;
+        this.expireMilliseconds = expireDate.getTime() - System.currentTimeMillis();
+        if (isExpired()) {
+            throw new DBInnerException();
+        }
+        // 如果不传值, 则不改变原优先级
+        if (priority == null) {
+            priority = this.deletePriority;
+        }
+        clearWhenExpiredTask = startExpiredTask(database, expireMilliseconds, priority);
+        return this;
+    }
 
     public HValue<T> cancelClear() {
         if (clearWhenExpiredTask == null) {
@@ -155,7 +205,13 @@ public class HValue<T> implements Cloneable {
         return expireDate.before(new Date());
     }
 
+    /**
+     * should call super clone(), but {@link #clone(boolean)} has been already called}
+     *
+     * @throws CloneNotSupportedException
+     */
     @Override
+    @SuppressWarnings("all")
     public HValue<T> clone() throws CloneNotSupportedException {
         return clone(false);
     }
@@ -171,7 +227,7 @@ public class HValue<T> implements Cloneable {
             // 默认浅拷贝其它指针域
             clone.clearWhenExpiredTask = null;
 
-            HValue<T> accessObj = mutable ? clone : ((HValue<T>) ImmutableBean.create(clone));
+//            HValue<T> accessObj = mutable ? clone : ((HValue<T>) ImmutableBean.create(clone));
             Set<String> interceptedMethodNames = Set.of("cancelClear", "clearBy", "clone", "cloneDefault");
             return (HValue<T>) Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(), new Class[]{HValue.class}, (proxy, method, args) -> {
                 if (interceptedMethodNames.contains(method.getName())) {
@@ -181,10 +237,40 @@ public class HValue<T> implements Cloneable {
                     );
                 }
 
-                return method.invoke(accessObj, args);
+                return method.invoke(clone, args);
             });
         } catch (CloneNotSupportedException e) {
             throw new AssertionError(e);
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof HValue<?> hValue)) return false;
+
+        if (!Objects.equals(key, hValue.key)) return false;
+        if (!Objects.equals(data, hValue.data)) return false;
+        if (!createDate.equals(hValue.createDate)) return false;
+        if (!Objects.equals(expireMilliseconds, hValue.expireMilliseconds))
+            return false;
+        if (!Objects.equals(expireDate, hValue.expireDate)) return false;
+        return deletePriority == hValue.deletePriority;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = key != null ? key.hashCode() : 0;
+        result = 31 * result + (data != null ? data.hashCode() : 0);
+        result = 31 * result + createDate.hashCode();
+        result = 31 * result + (expireMilliseconds != null ? expireMilliseconds.hashCode() : 0);
+        result = 31 * result + (expireDate != null ? expireDate.hashCode() : 0);
+        result = 31 * result + (deletePriority != null ? deletePriority.hashCode() : 0);
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return JacksonSerializer.stringfy(this);
     }
 }
