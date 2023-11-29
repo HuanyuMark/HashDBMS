@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.compiler.SupplierCompileStream;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
 import org.hashdb.ms.data.Database;
+import org.hashdb.ms.data.HValue;
+import org.hashdb.ms.data.PlainPair;
 import org.hashdb.ms.data.StorableHValue;
 import org.hashdb.ms.exception.DatabaseClashException;
 import org.hashdb.ms.exception.NotFoundDatabaseException;
@@ -17,6 +19,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Date: ${DATE} ${TIME}
@@ -58,14 +61,30 @@ public class HashDBMSApp {
                 }
                 SupplierCompileStream compileStream = SupplierCompileStream.open(database, command);
                 SupplierCtx supplierCtx = compileStream.compile();
-                database.submitOpsTaskSync(supplierCtx.compileResult());
+                database.submitOpsTask(supplierCtx.compileResult());
                 Object result = supplierCtx.compileResult().result();
-                System.out.println("result:");
-                System.out.println(JacksonSerializer.stringfy(result == null ? "null" : result));
+                Object normalizeValue = normalizeValue(result);
+                System.out.println(JacksonSerializer.stringfy(normalizeValue == null ? "null" : normalizeValue));
             } catch (RuntimeException e) {
                 e.printStackTrace();
             }
         }
+    }
+
+    public static Object normalizeValue(Object result){
+        if(result instanceof HValue<?> hValue){
+            return hValue.data();
+        }
+        if(result instanceof List<?> ls){
+            return ls.stream().map(HashDBMSApp::normalizeValue).toList();
+        }
+        if(result instanceof Set<?> ls){
+            return ls.stream().map(HashDBMSApp::normalizeValue).toList();
+        }
+        if(result instanceof Map<?,?> map){
+            return map.entrySet().stream().map((entry)-> new PlainPair<>(entry.getKey(),normalizeValue(entry.getValue()))).collect(Collectors.toMap(PlainPair::key,PlainPair::value));
+        }
+        return result;
     }
 
     public static ConfigurableApplicationContext ctx() {

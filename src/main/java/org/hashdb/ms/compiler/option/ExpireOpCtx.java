@@ -1,6 +1,6 @@
 package org.hashdb.ms.compiler.option;
 
-import org.hashdb.ms.compiler.TokenCompileStream;
+import org.hashdb.ms.compiler.DatabaseCompileStream;
 import org.hashdb.ms.exception.CommandCompileException;
 
 /**
@@ -24,7 +24,7 @@ public class ExpireOpCtx extends LongOpCtx {
     }
 
     @Override
-    protected void beforeCompile(String unknownValueToken, TokenCompileStream stream) {
+    protected void beforeCompile(String unknownValueToken, DatabaseCompileStream stream) {
         if(unknownValueToken.isEmpty()) {
             throw new CommandCompileException("expire option require a param(millisecond)."+stream.errToken(""));
         }

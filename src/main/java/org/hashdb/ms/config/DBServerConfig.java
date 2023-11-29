@@ -17,7 +17,7 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties("server")
 @EnableConfigurationProperties
 public class DBServerConfig {
-    private Integer port = 3050;
+    private Integer port = 4090;
     @ConfigLoadOnly
     public void setPort(Integer port) {
         this.port = port;

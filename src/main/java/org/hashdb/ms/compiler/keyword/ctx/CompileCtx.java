@@ -3,7 +3,7 @@ package org.hashdb.ms.compiler.keyword.ctx;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.compiler.ConsumerCompileStream;
-import org.hashdb.ms.compiler.TokenCompileStream;
+import org.hashdb.ms.compiler.DatabaseCompileStream;
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.Keyword;
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
@@ -30,7 +30,7 @@ import java.util.function.Function;
  * @version 0.0.1
  */
 @Slf4j
-public abstract class CompileCtx<S extends TokenCompileStream> {
+public abstract class CompileCtx<S extends DatabaseCompileStream> {
     protected Map<Class<? extends OptionCtx<?>>, OptionCtx<?>> options;
 
 
@@ -48,6 +48,7 @@ public abstract class CompileCtx<S extends TokenCompileStream> {
 
     protected CompileCtx() {
     }
+
 
     /**
      * @param valueConsumer 这个方法将接收两个参数 ({@link DataType} dataType,{@link Object}value)
@@ -122,8 +123,8 @@ public abstract class CompileCtx<S extends TokenCompileStream> {
 
     public abstract Class<?> supplyType();
 
-    protected static String normalizeToQueryKey(Object unknownKey) {
-        Object oneValue = normalizeToOneValue(unknownKey);
+    protected static String normalizeToQueryKey(Object unknownKey) throws UnsupportedQueryKey {
+        Object oneValue = normalizeToOneValueOrElseThrow(unknownKey);
         if (oneValue instanceof String str) {
             if (str.isEmpty()) {
                 throw new UnsupportedQueryKey("can not query key of element '" + str + "'");
@@ -134,22 +135,30 @@ public abstract class CompileCtx<S extends TokenCompileStream> {
             type = DataType.typeOfRawValue(oneValue);
         } catch (IllegalJavaClassStoredException e) {
             log.error("can not normalize unknownKey: {}", unknownKey);
-            throw new DBInnerException("can not normalize unknownKey: " + unknownKey);
+            throw new UnsupportedQueryKey("can not normalize unknownKey: " + unknownKey);
         }
         return switch (type) {
             case STRING, NUMBER -> oneValue.toString();
-            default -> throw new DBInnerException("can not parse data type '" + type + "' to query key");
+            default -> throw new UnsupportedQueryKey("can not parse data type '" + type + "' to query key");
         };
     }
 
     protected static Object normalizeToOneValue(Object unknownValue) {
+        try {
+            return normalizeToOneValueOrElseThrow(unknownValue);
+        } catch (DBInnerException e) {
+            return unknownValue;
+        }
+    }
+
+    protected static Object normalizeToOneValueOrElseThrow(Object unknownValue) {
         Function<Collection<?>, Object> normalizeCollectionToQueryKey = collection -> {
             if (collection.isEmpty()) {
                 return "";
             }
             if (collection.size() == 1) {
                 Object toQuery = collection.stream().limit(1).toArray()[0];
-                return normalizeToOneValue(toQuery);
+                return normalizeToOneValueOrElseThrow(toQuery);
             }
             throw new UnsupportedQueryKey("can not query key of a collection containing multiple elements");
         };
@@ -174,7 +183,7 @@ public abstract class CompileCtx<S extends TokenCompileStream> {
             return suppliedResult;
         }
         // 如果有ConsumerKeyword生成的消费者上下文, 则将结果交由其处理
-        return consumerCtx.compileResult(suppliedResult).get();
+        return consumerCtx.consume(suppliedResult);
     }
 
     @NotNull
@@ -185,6 +194,13 @@ public abstract class CompileCtx<S extends TokenCompileStream> {
                     supplierCtx.command() + "'." + stream.errToken(supplierCtx.command()));
         }
         return o;
+    }
+
+    protected Object adaptSuppliedValueToOneRawValue(Object mayBeSupplier){
+        if(mayBeSupplier instanceof SupplierCtx s) {
+            return getSuppliedValue(s);
+        }
+        return mayBeSupplier;
     }
 
     @Nullable

@@ -1,6 +1,6 @@
 package org.hashdb.ms.compiler.option;
 
-import org.hashdb.ms.compiler.TokenCompileStream;
+import org.hashdb.ms.compiler.DatabaseCompileStream;
 import org.hashdb.ms.exception.CommandCompileException;
 
 import java.util.List;
@@ -18,12 +18,12 @@ public interface OptionCtx<V> {
 
     V value();
 
-    default OptionCtx<V> prepareCompile(String valueToken, int assignPos, TokenCompileStream stream) {
+    default OptionCtx<V> prepareCompile(String valueToken, int assignPos, DatabaseCompileStream stream) {
         if(valueToken.isEmpty() && assignPos != -1) {
             throw new CommandCompileException("option '"+key().name().toLowerCase()+"' require value."+stream.errToken(valueToken));
         }
         return compile(valueToken, stream);
     }
 
-    OptionCtx<V> compile(String unknownValueToken, TokenCompileStream stream);
+    OptionCtx<V> compile(String unknownValueToken, DatabaseCompileStream stream);
 }

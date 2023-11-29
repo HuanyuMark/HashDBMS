@@ -1,14 +1,10 @@
 package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
-import org.hashdb.ms.compiler.keyword.KeyStringModifier;
+import org.hashdb.ms.compiler.keyword.KeywordModifier;
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
-import org.hashdb.ms.data.task.ImmutableChecker;
 import org.hashdb.ms.exception.CommandCompileException;
-import org.hashdb.ms.exception.DBInnerException;
 
-import java.util.LinkedList;
 import java.util.List;
-import java.util.function.Supplier;
 
 /**
  * Date: 2023/11/24 16:20
@@ -23,6 +19,7 @@ public class TtlCtx extends ReadSupplierCtx {
         return SupplierKeyword.TTL;
     }
 
+
     @Override
     protected List<?> doQueryLike(String pattern) {
         throw new UnsupportedOperationException();
@@ -34,7 +31,7 @@ public class TtlCtx extends ReadSupplierCtx {
     }
 
     @Override
-    protected void beforeCompileModifier(KeyStringModifier modifier) {
+    protected void beforeCompileModifier(KeywordModifier modifier) {
         throw new CommandCompileException("keyword '"+name()+"' can not use modifier '"+modifier+"'");
     }
 }

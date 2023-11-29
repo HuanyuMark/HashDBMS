@@ -1,6 +1,8 @@
 package org.hashdb.ms.exception;
 
 import lombok.experimental.StandardException;
+import org.hashdb.ms.compiler.keyword.Keyword;
+import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
 import org.hashdb.ms.util.JacksonSerializer;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -18,5 +20,10 @@ public class UnsupportedQueryKey extends DBExternalException {
     @Contract("_ -> new")
     public static @NotNull UnsupportedQueryKey of(List<?> unsupportedKeys) {
         return new UnsupportedQueryKey("can not query key of these value: " + JacksonSerializer.stringfy(unsupportedKeys));
+    }
+
+    public static UnsupportedQueryKey of(Enum<?> keyword, SupplierCtx supplierCtx) {
+        return new UnsupportedQueryKey("keyword '"+keyword.name()+"' require string return type to query, but " +
+                "receive a illegal type from supplier command '"+supplierCtx.command()+"'");
     }
 }

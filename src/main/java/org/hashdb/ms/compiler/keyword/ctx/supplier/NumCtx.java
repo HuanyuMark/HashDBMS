@@ -1,16 +1,12 @@
 package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
-import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
 import org.hashdb.ms.compiler.option.ExpireOpCtx;
 import org.hashdb.ms.compiler.option.HExpireOpCtx;
 import org.hashdb.ms.compiler.option.LExpireOpCtx;
 import org.hashdb.ms.data.DataType;
 import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.OpsTaskPriority;
-import org.hashdb.ms.exception.CommandCompileException;
-import org.hashdb.ms.exception.IllegalJavaClassStoredException;
-import org.hashdb.ms.exception.IncreaseUnsupportedException;
-import org.hashdb.ms.exception.StopComplieException;
+import org.hashdb.ms.exception.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -33,14 +29,22 @@ public abstract class NumCtx extends SupplierCtx {
         beforeCompilePipe();
         return () -> arithmeticCtxes.stream()
                 .map(arithmeticCtx->{
+                    String key;
                     if(arithmeticCtx.keyOrSupplier instanceof SupplierCtx keySupplier) {
                         arithmeticCtx.keyOrSupplier = getSuppliedValue(keySupplier);
+                        try {
+                            key = normalizeToQueryKey(arithmeticCtx.keyOrSupplier);
+                        } catch (UnsupportedQueryKey e) {
+                            throw UnsupportedQueryKey.of(name(), keySupplier);
+                        }
+                    } else {
+                        key = ((String) arithmeticCtx.keyOrSupplier);
                     }
                     if(arithmeticCtx.stepOrSupplier instanceof SupplierCtx stepSupplier) {
                         arithmeticCtx.stepOrSupplier = getSuppliedValue(stepSupplier);
                     }
                     return doArithmeticOps(
-                            normalizeToQueryKey(arithmeticCtx.keyOrSupplier),
+                            key,
                             arithmeticCtx.stepOrSupplier,
                             arithmeticCtx.millis,
                             arithmeticCtx.priority
@@ -101,6 +105,7 @@ public abstract class NumCtx extends SupplierCtx {
                     arithmeticCtx.millis = expireCtx.value();
                     arithmeticCtx.priority = OpsTaskPriority.LOW;
                 }
+                addOption(op);
                 return true;
             });
             arithmeticCtxes.add(arithmeticCtx);
@@ -115,7 +120,7 @@ public abstract class NumCtx extends SupplierCtx {
     }
 
     private @Nullable Object doArithmeticOps(String key, @NotNull Object stepValue, Long millis, OpsTaskPriority priority) {
-        Object oneValue = normalizeToOneValue(stepValue);
+        Object oneValue = normalizeToOneValueOrElseThrow(stepValue);
         if(oneValue instanceof Double d) {
             if(d.isInfinite()) {
                 throw new IncreaseUnsupportedException("step '" + oneValue + "' should be a finite number");
@@ -149,9 +154,9 @@ public abstract class NumCtx extends SupplierCtx {
                 final Number newValue;
                 try {
                     if (rawValue.contains(".")) {
-                        newValue(Double.parseDouble(rawValue), stepNumber);
+                        value.data(newValue(Double.parseDouble(rawValue), stepNumber));
                     } else {
-                        newValue(Long.parseLong(rawValue), stepNumber);
+                        value.data(newValue(Long.parseLong(rawValue), stepNumber));
                     }
                 } catch (NumberFormatException e) {
                     throw new IncreaseUnsupportedException("can '" + name() + "' string: '" + rawValue + "' with step '" + step + "'");

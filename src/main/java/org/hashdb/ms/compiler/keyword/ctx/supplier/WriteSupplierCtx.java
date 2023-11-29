@@ -1,14 +1,12 @@
 package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
-import org.hashdb.ms.compiler.option.ExpireOpCtx;
 import org.hashdb.ms.compiler.option.LongOpCtx;
 import org.hashdb.ms.compiler.option.Options;
-import org.hashdb.ms.data.DataType;
 import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.OpsTaskPriority;
 import org.hashdb.ms.data.task.ImmutableChecker;
 import org.hashdb.ms.exception.CommandCompileException;
-import org.hashdb.ms.exception.CommandExecuteException;
+import org.hashdb.ms.exception.UnsupportedQueryKey;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedList;
@@ -92,10 +90,11 @@ public abstract class WriteSupplierCtx extends SupplierCtx {
                 } else if (Options.HEXPIRE == optionCtx.key()) {
                     pair.valueCtx.expireTime = ((LongOpCtx) optionCtx).value();
                     pair.valueCtx.priority = OpsTaskPriority.HIGH;
-                } else if (Options.LExpire == optionCtx.key()) {
+                } else if (Options.LEXPIRE == optionCtx.key()) {
                     pair.valueCtx.expireTime = ((LongOpCtx) optionCtx).value();
                     pair.valueCtx.priority = OpsTaskPriority.LOW;
                 }
+                addOption(optionCtx);
                 return true;
             });
 
@@ -110,12 +109,16 @@ public abstract class WriteSupplierCtx extends SupplierCtx {
             String key;
             Object value;
             if (pair.keyOrSupplier instanceof SupplierCtx keySupplier) {
-                key = normalizeToQueryKey(getSuppliedValue(keySupplier));
+                try {
+                    key = normalizeToQueryKey(getSuppliedValue(keySupplier));
+                } catch (UnsupportedQueryKey e) {
+                    throw UnsupportedQueryKey.of(name(), keySupplier);
+                }
             } else {
                 key = (String) pair.keyOrSupplier;
             }
             if (pair.valueCtx.rawOrSupplier instanceof SupplierCtx valueSupplier) {
-                value = normalizeToOneValue(getSuppliedValue(valueSupplier));
+                value = normalizeToOneValueOrElseThrow(getSuppliedValue(valueSupplier));
             } else {
                 value = pair.valueCtx.rawOrSupplier;
             }

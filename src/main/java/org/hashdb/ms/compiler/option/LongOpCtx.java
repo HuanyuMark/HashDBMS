@@ -1,6 +1,6 @@
 package org.hashdb.ms.compiler.option;
 
-import org.hashdb.ms.compiler.TokenCompileStream;
+import org.hashdb.ms.compiler.DatabaseCompileStream;
 import org.hashdb.ms.exception.CommandCompileException;
 
 /**
@@ -15,7 +15,7 @@ public abstract class LongOpCtx extends ParseableOpCtx<Long> {
     }
 
     @Override
-    public LongOpCtx compile(String unknownValueToken, TokenCompileStream stream) {
+    public LongOpCtx compile(String unknownValueToken, DatabaseCompileStream stream) {
         beforeCompile(unknownValueToken, stream);
         try {
             value = Long.parseLong(unknownValueToken);
@@ -26,9 +26,9 @@ public abstract class LongOpCtx extends ParseableOpCtx<Long> {
         return this;
     }
 
-    protected void beforeCompile(String unknownValueToken, TokenCompileStream stream) {
+    protected void beforeCompile(String unknownValueToken, DatabaseCompileStream stream) {
     }
 
-    protected void afterCompile(String unknownValueToken,TokenCompileStream stream){
+    protected void afterCompile(String unknownValueToken, DatabaseCompileStream stream){
     }
 }

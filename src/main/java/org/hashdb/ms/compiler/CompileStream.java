@@ -13,7 +13,6 @@ import java.util.function.Function;
  * @version 0.0.1
  */
 public interface CompileStream {
-    SupplierCompileStream forkSupplierCompileStream(int startTokenIndex, int endTokenIndex);
 
     String errToken(String token);
 

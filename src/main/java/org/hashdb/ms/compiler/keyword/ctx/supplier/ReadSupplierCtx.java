@@ -1,12 +1,13 @@
 package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
-import org.hashdb.ms.compiler.keyword.KeyStringModifier;
+import org.hashdb.ms.compiler.keyword.KeywordModifier;
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.option.LimitOpCtx;
-import org.hashdb.ms.compiler.option.OptionCtx;
 import org.hashdb.ms.data.task.ImmutableChecker;
 import org.hashdb.ms.exception.CommandCompileException;
+import org.hashdb.ms.exception.CommandExecuteException;
+import org.hashdb.ms.exception.UnsupportedQueryKey;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -42,20 +43,32 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
         return () -> {
             if (like) {
                 // 需要模糊匹配
-                var toQuery = keyOrSupplier.getFirst();
-                if (toQuery instanceof SupplierCtx supplierCtx) {
+                var patternOrSupplier = keyOrSupplier.getFirst();
+                String pattern;
+                if (patternOrSupplier instanceof SupplierCtx supplierCtx) {
                     // 有内联命令, 则执行其命令, 获取返回结果
-                    toQuery = getSuppliedValue(supplierCtx);
+                    pattern = normalizeToQueryKey(getSuppliedValue(supplierCtx));
+                } else {
+                    pattern = ((String) patternOrSupplier);
                 }
-                return doQueryLike(CompileCtx.normalizeToQueryKey(toQuery));
+                return doQueryLike(pattern);
             }
             // 需要批量查询
-            return keyOrSupplier.stream().map(toQuery -> {
-                if (toQuery instanceof SupplierCtx supplierCtx) {
+            return keyOrSupplier.stream().map(keyOrSupplier -> {
+                String key;
+                if (keyOrSupplier instanceof SupplierCtx supplierCtx) {
                     // 有内联命令, 则执行其命令, 获取返回结果
-                    toQuery = getSuppliedValue(supplierCtx);
+                    keyOrSupplier = getSuppliedValue(supplierCtx);
+                    try {
+                        key = normalizeToQueryKey(keyOrSupplier);
+                    } catch (UnsupportedQueryKey e) {
+                        throw UnsupportedQueryKey.of(name(), supplierCtx);
+                    }
+                } else {
+                    key = ((String) keyOrSupplier);
                 }
-                return doQuery(CompileCtx.normalizeToQueryKey(toQuery));
+
+                return doQuery(key);
             }).toList();
         };
     }
@@ -127,9 +140,9 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
     }
 
     protected boolean compileModifier() {
-        KeyStringModifier modifier;
+        KeywordModifier modifier;
         try {
-            modifier = KeyStringModifier.of(stream.token());
+            modifier = KeywordModifier.of(stream.token());
         } catch (ArrayIndexOutOfBoundsException e) {
             return true;
         }
@@ -138,7 +151,7 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
                 return false;
             }
             case LIKE -> {
-                beforeCompileModifier(KeyStringModifier.LIKE);
+                beforeCompileModifier(KeywordModifier.LIKE);
                 stream.next();
                 return true;
             }
@@ -147,8 +160,8 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
         }
     }
 
-    protected void beforeCompileModifier(KeyStringModifier modifier) {
-        if (modifier != KeyStringModifier.LIKE) {
+    protected void beforeCompileModifier(KeywordModifier modifier) {
+        if (modifier != KeywordModifier.LIKE) {
             return;
         }
         Supplier<String> errorMsgSupplier = () -> "modifier keyword 'LIKE' should modify with keyword '"+name()+"'." + stream.errToken(stream.token());

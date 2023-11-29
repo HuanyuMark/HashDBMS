@@ -14,15 +14,29 @@ import java.util.Objects;
 public class ImmutableChecker {
     public static final Class<?> unmodifiableCollection;
     public static final Class<?> unmodifiableList;
+    public static final Class<?> unmodifiableAbstractList;
     public static final Class<?> unmodifiableSet;
+    public static final Class<?> unmodifiableAbstractSet;
     static {
         try {
             unmodifiableCollection = Class.forName("java.util.Collections$UnmodifiableCollection");
             unmodifiableList = Class.forName("java.util.Collections$UnmodifiableList");
             unmodifiableSet = Class.forName("java.util.Collections$UnmodifiableSet");
+            unmodifiableAbstractList = Class.forName("java.util.ImmutableCollections$AbstractImmutableList");
+            unmodifiableAbstractSet = Class.forName("java.util.ImmutableCollections$AbstractImmutableSet");
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static boolean isUnmodifiableList(Class<?> clazz) {
+        Objects.requireNonNull(clazz);
+        return unmodifiableList.isAssignableFrom(clazz) || unmodifiableAbstractList.isAssignableFrom(clazz);
+    }
+
+    public static boolean isUnmodifiableSet(Class<?> clazz) {
+        Objects.requireNonNull(clazz);
+        return unmodifiableSet.isAssignableFrom(clazz) || unmodifiableAbstractSet.isAssignableFrom(clazz);
     }
 
     public static boolean isUnmodifiableCollection(Class<?> clazz) {

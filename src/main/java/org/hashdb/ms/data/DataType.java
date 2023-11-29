@@ -82,7 +82,7 @@ public enum DataType {
         reflectCacheData = new ReflectCacheData<>(classes.getFirst());
     }
 
-    public static @NotNull DataType typeofHValue(@Nullable HValue<?> value) {
+    public static @NotNull DataType typeofHValue(@Nullable HValue<?> value) throws IllegalJavaClassStoredException {
         return typeOfRawValue(Objects.requireNonNullElse(value, HValue.EMPTY).data());
     }
 

@@ -1,6 +1,6 @@
 package org.hashdb.ms.compiler.option;
 
-import org.hashdb.ms.compiler.TokenCompileStream;
+import org.hashdb.ms.compiler.DatabaseCompileStream;
 import org.hashdb.ms.exception.IllegalValueException;
 
 /**
@@ -19,7 +19,7 @@ public class PopOpCtx extends IntegerOpCtx {
     }
 
     @Override
-    protected void afterCompile(String unknownValueToken, TokenCompileStream stream) {
+    protected void afterCompile(String unknownValueToken, DatabaseCompileStream stream) {
         if(value < 0) {
             throw new IllegalValueException("option '"+key()+"' should be greater then 0");
         }

@@ -9,6 +9,7 @@ import org.hashdb.ms.data.task.ImmutableChecker;
 import org.hashdb.ms.exception.CommandCompileException;
 import org.hashdb.ms.exception.CommandExecuteException;
 import org.hashdb.ms.exception.StopComplieException;
+import org.hashdb.ms.exception.UnsupportedQueryKey;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -39,10 +40,16 @@ public class ExpireCtx extends SupplierCtx {
         doCompile();
         beforeCompilePipe();
         return () -> keys.stream().map(keyCtx -> {
+            String key;
             if (keyCtx.keyOrSupplier instanceof SupplierCtx supplierCtx) {
-                keyCtx.keyOrSupplier = getSuppliedValue(supplierCtx);
+                try {
+                    key = SupplierCtx.normalizeToQueryKey(getSuppliedValue(supplierCtx));
+                } catch (UnsupportedQueryKey e) {
+                    throw UnsupportedQueryKey.of(name(), supplierCtx);
+                }
+            } else {
+                key = ((String) keyCtx.keyOrSupplier);
             }
-            String key = SupplierCtx.normalizeToQueryKey(keyCtx.keyOrSupplier);
             HValue<?> value = stream.db().get(key);
             if (value == null) {
                 if (keyCtx.keyOrSupplier instanceof SupplierCtx supplierCtx) {
@@ -100,6 +107,7 @@ public class ExpireCtx extends SupplierCtx {
                     keyCtx.millis = hExpireOpCtx.value();
                     keyCtx.deletePriority = OpsTaskPriority.HIGH;
                 }
+                addOption(op);
                 return true;
             });
             if (keyCtx.millis == null) {

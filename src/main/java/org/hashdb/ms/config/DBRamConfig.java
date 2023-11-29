@@ -39,7 +39,6 @@ public class DBRamConfig {
 
     @ConfigLoadOnly
     public void setExpiredKeyDeletePriority(OpsTaskPriority expiredKeyDeletePriority) {
-        log.info("set expiredKeyClearStrategy original:{}", expiredKeyDeletePriority);
         this.expiredKeyDeletePriority = expiredKeyDeletePriority;
     }
 

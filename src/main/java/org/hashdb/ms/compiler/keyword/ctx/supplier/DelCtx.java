@@ -19,13 +19,13 @@ public class DelCtx extends ReadSupplierCtx {
         return SupplierKeyword.DEL;
     }
     @Override
-    protected List<?> doQueryLike(String pattern) {
+    protected List<HValue<?>> doQueryLike(String pattern) {
         LimitOpCtx limitOpCtx = getOption(LimitOpCtx.class);
-        return stream.db().delLike(pattern, limitOpCtx == null? null : limitOpCtx.value()).stream().map(HValue::data).toList();
+        return stream.db().delLike(pattern, limitOpCtx == null? null : limitOpCtx.value());
     }
 
     @Override
-    protected Object doQuery(String key) {
-        return HValue.unwrapData(stream.db().del(key));
+    protected HValue<?> doQuery(String key) {
+        return stream.db().del(key);
     }
 }

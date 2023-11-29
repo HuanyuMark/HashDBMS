@@ -1,6 +1,6 @@
 package org.hashdb.ms.compiler.option;
 
-import org.hashdb.ms.compiler.TokenCompileStream;
+import org.hashdb.ms.compiler.DatabaseCompileStream;
 import org.hashdb.ms.exception.CommandCompileException;
 
 /**
@@ -14,7 +14,7 @@ public abstract class BooleanOpCtx extends ParseableOpCtx<Boolean> implements Fl
         super(defaultValue);
     }
     @Override
-    public BooleanOpCtx compile(String unknownValueToken, TokenCompileStream stream) {
+    public BooleanOpCtx compile(String unknownValueToken, DatabaseCompileStream stream) {
         // 使用默认值
         if(unknownValueToken.isEmpty() && useDefaultValueWhenEmpty()) {
             return this;

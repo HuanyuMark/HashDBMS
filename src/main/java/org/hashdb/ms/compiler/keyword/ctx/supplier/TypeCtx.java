@@ -3,6 +3,7 @@ package org.hashdb.ms.compiler.keyword.ctx.supplier;
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
 import org.hashdb.ms.data.task.ImmutableChecker;
 import org.hashdb.ms.exception.CommandCompileException;
+import org.hashdb.ms.exception.UnsupportedQueryKey;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -32,12 +33,18 @@ public class TypeCtx extends SupplierCtx {
         beforeCompilePipe();
         return ()->keyOrSupplier.stream().map(keyOrSupplier->{
             Object toQuery;
+            String key;
             if (keyOrSupplier instanceof SupplierCtx keySupplierCtx) {
                 toQuery = getSuppliedValue(keySupplierCtx);
+                try {
+                    key = normalizeToQueryKey(toQuery);
+                } catch (UnsupportedQueryKey e) {
+                    throw UnsupportedQueryKey.of(name(), keySupplierCtx);
+                }
             } else {
-                toQuery = keyOrSupplier;
+                key = ((String) keyOrSupplier);
             }
-            return stream.db().type(normalizeToQueryKey(toQuery));
+            return stream.db().type(key);
         }).toList();
     }
 

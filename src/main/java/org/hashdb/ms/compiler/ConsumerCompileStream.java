@@ -4,7 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.consumer.ConsumerCtx;
-import org.hashdb.ms.data.DataType;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.exception.CommandCompileException;
 import org.jetbrains.annotations.NotNull;
@@ -18,14 +17,13 @@ import java.util.Objects;
  * @version 0.0.1
  */
 @Slf4j
-public class ConsumerCompileStream extends TokenCompileStream {
+public class ConsumerCompileStream extends DatabaseCompileStream {
 
-    private DataType opsTargetDataType;
     private final CompileCtx<?> fatherCompileCtx;
 
     protected ConsumerCompileStream(Database database,
                                     String @NotNull [] childTokens,
-                                    TokenCompileStream fatherSteam,
+                                    DatabaseCompileStream fatherSteam,
                                     CompileCtx<?> fatherCompileCtx) {
         super(database, childTokens, fatherSteam);
         Objects.requireNonNull(fatherCompileCtx);

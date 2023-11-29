@@ -1,7 +1,7 @@
 package org.hashdb.ms.sys;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.exception.DatabaseClashException;
 import org.hashdb.ms.exception.NotFoundDatabaseException;
@@ -24,11 +24,21 @@ import java.util.Objects;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public final class DBSystem extends BlockingQueueTaskConsumer implements InitializingBean, DisposableBean {
+
+    private static final Lazy<DBSystem> INSTANCE = Lazy.of(()-> HashDBMSApp.ctx().getBean(DBSystem.class));
 
     private SystemInfo systemInfo;
     private final PersistentService persistentService;
+
+    public DBSystem(PersistentService persistentService) {
+        this.persistentService = persistentService;
+        startConsumeOpsTask();
+    }
+
+    public static DBSystem instance(){
+        return INSTANCE.get();
+    }
 
     public Map<String, Lazy<Database>> getDatabaseNameMap() {
         return systemInfo.dbNameMap();

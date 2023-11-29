@@ -78,7 +78,7 @@ public class HValue<T> implements Cloneable {
         this.data = null;
     }
 
-    public Object data() {
+    public T data() {
         return data;
     }
 

@@ -1,6 +1,8 @@
 package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
+import org.hashdb.ms.exception.CommandExecuteException;
+import org.hashdb.ms.exception.UnsupportedQueryKey;
 
 import java.util.List;
 import java.util.function.Supplier;
@@ -29,7 +31,11 @@ public class ExistsCtx extends SupplierCtx {
             return getCtx.keyOrSupplier.stream().flatMap(keyOfSupplier -> {
                 String key;
                 if (keyOfSupplier instanceof SupplierCtx supplierCtx) {
-                    key = normalizeToQueryKey(supplierCtx);
+                    try {
+                        key = normalizeToQueryKey(supplierCtx);
+                    } catch (UnsupportedQueryKey e) {
+                        throw UnsupportedQueryKey.of(name(), supplierCtx);
+                    }
                 } else {
                     key = (String) keyOfSupplier;
                 }

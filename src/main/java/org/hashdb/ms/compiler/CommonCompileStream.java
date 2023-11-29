@@ -1,29 +1,26 @@
 package org.hashdb.ms.compiler;
 
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
-import org.hashdb.ms.data.Database;
 import org.hashdb.ms.exception.CommandCompileException;
 import org.hashdb.ms.exception.DBExternalException;
-import org.hashdb.ms.exception.DBInnerException;
 import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.*;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.ListIterator;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
- * Date: 2023/11/25 3:00
+ * Date: 2023/11/30 1:14
  *
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
 @Slf4j
-public abstract class TokenCompileStream implements CompileStream {
-
-    protected final Lazy<String> command;
-
+public abstract class CommonCompileStream implements CompileStream {
+    protected Lazy<String> command;
     /**
      * 存放token的序列可以改成 {@link LinkedList},
      * 再初始化一个{@link LinkedList#listIterator()}, 来作为主遍历器
@@ -33,49 +30,8 @@ public abstract class TokenCompileStream implements CompileStream {
      * 子链表(这个链表是一个视图, 即对视图的操作会影响到原链表) 这导致了:
      * 因为要去掉包裹内联命令的左右两个括号, 会直接影响到原链表的 token 序列
      */
-    protected final String[] tokens;
-
-    protected final Database database;
-
-    protected TokenCompileStream fatherStream;
-
+    protected String[] tokens;
     protected int cursor = 0;
-
-    /**
-     * 构造主流
-     *
-     * @param database 数据库
-     * @param command  原始命令
-     */
-    protected TokenCompileStream(Database database, @NotNull String command) {
-        var tokens = extractTokens(command);
-        this.command = Lazy.of(() -> (String.join(" ", tokens)));
-        this.tokens = tokens;
-        this.database = database;
-    }
-
-    /**
-     * 构造子流
-     *
-     * @param database     数据库
-     * @param childTokens  子 tokens
-     * @param fatherStream 父 流
-     */
-    protected TokenCompileStream(Database database, String @NotNull [] childTokens, TokenCompileStream fatherStream) {
-        if (childTokens.length == 0) {
-            log.error("compiler error: father tokens: {} child tokens: {}", childTokens, childTokens);
-            throw new DBInnerException("see console. fail to extract child tokens");
-        }
-        eraseParentheses(childTokens);
-        eraseLastSemicolon(childTokens);
-        this.command = Lazy.of(() -> String.join(" ", childTokens));
-        this.tokens = childTokens;
-        this.fatherStream = fatherStream;
-        this.database = database;
-        if (log.isTraceEnabled()) {
-            log.trace("open compile stream: {}", String.join(" ", tokens));
-        }
-    }
 
     /**
      * 解析命令字符串, 按照json字符串, 空格分割 的规则, 进行分割
@@ -85,7 +41,7 @@ public abstract class TokenCompileStream implements CompileStream {
     protected static String @NotNull [] extractTokens(@NotNull String command) {
         List<String> tokenList = new LinkedList<>();
         List<String> wordQueue = new LinkedList<>();
-        List<Symbol> jsonSymbolQueue = new LinkedList<>();
+        List<DatabaseCompileStream.Symbol> jsonSymbolQueue = new LinkedList<>();
 //        LinkedList<Symbol> parenthesesQueue = new LinkedList<>();
         // 其实也可以用 循环 substring 来取得每个字符(UTF-8字符)的字符串
         String[] charts = command.split("");
@@ -96,14 +52,14 @@ public abstract class TokenCompileStream implements CompileStream {
                     // token may be  SET k1 v1 k2 v2
                     if (jsonSymbolQueue.isEmpty()) {
                         if (!wordQueue.isEmpty()) {
-                            String token = java.lang.String.join("", wordQueue);
+                            String token = String.join("", wordQueue);
                             tokenList.add(token);
                             wordQueue.clear();
                         }
                         continue;
                     }
                 }
-                case "[" -> jsonSymbolQueue.add(new Symbol(index, "["));
+                case "[" -> jsonSymbolQueue.add(new DatabaseCompileStream.Symbol(index, "["));
                 case "]" -> {
                     // token may be [1, 2 ,   3]
                     if (jsonSymbolQueue.isEmpty()) {
@@ -120,7 +76,7 @@ public abstract class TokenCompileStream implements CompileStream {
                     }
                     continue;
                 }
-                case "{" -> jsonSymbolQueue.addLast(new Symbol(index, "{"));
+                case "{" -> jsonSymbolQueue.addLast(new DatabaseCompileStream.Symbol(index, "{"));
                 case "}" -> {
                     // token may be {   "a":123, "b": [1, "789", {}]}
                     if (jsonSymbolQueue.isEmpty()) {
@@ -140,7 +96,7 @@ public abstract class TokenCompileStream implements CompileStream {
                 case "\"" -> {
                     // token may be "str   str"
                     if (jsonSymbolQueue.isEmpty()) {
-                        jsonSymbolQueue.add(new Symbol(index, "\""));
+                        jsonSymbolQueue.add(new DatabaseCompileStream.Symbol(index, "\""));
                     } else if ("\"".equals(jsonSymbolQueue.getLast().content())) {
                         jsonSymbolQueue.removeLast();
                     }
@@ -159,8 +115,8 @@ public abstract class TokenCompileStream implements CompileStream {
         }
 
         var tokens = tokenList.toArray(String[]::new);
-        eraseLastSemicolon(tokens);
-        eraseParentheses(tokens);
+        CommonCompileStream.eraseLastSemicolon(tokens);
+        CommonCompileStream.eraseParentheses(tokens);
         if (log.isTraceEnabled()) {
             log.trace("open compile stream: {}", String.join(" ", tokens));
         }
@@ -200,48 +156,9 @@ public abstract class TokenCompileStream implements CompileStream {
         }
     }
 
-    /**
-     * {@param startTokenIndex} 与 {@param endTokenIndex} 最后都会被包含在子流中
-     *
-     * @param startTokenIndex 开始包括的token索引
-     * @param endTokenIndex   结束不包括的token索引
-     */
-    @Override
-    public SupplierCompileStream forkSupplierCompileStream(int startTokenIndex, int endTokenIndex) {
-        if (endTokenIndex < startTokenIndex) {
-            log.error("endTokenIndex {} < startTokenIndex {}", endTokenIndex, startTokenIndex);
-            throw new DBInnerException();
-        }
-        var childTokens = Arrays.stream(tokens).skip(startTokenIndex).limit(endTokenIndex - startTokenIndex + 1).toArray(String[]::new);
-        return new SupplierCompileStream(database, childTokens, this);
-    }
-
-    public ConsumerCompileStream forkConsumerCompileStream(int startTokenIndex, int endTokenIndex, CompileCtx<?> fatherCompileCtx) {
-        if (endTokenIndex < startTokenIndex) {
-            log.error("endTokenIndex {} < startTokenIndex {}", endTokenIndex, startTokenIndex);
-            throw new DBInnerException();
-        }
-        // 这里相当于取了字串, 那么母串里被摘出的token需要切掉吗?
-        var childTokens = Arrays.stream(tokens).skip(startTokenIndex).limit(endTokenIndex - startTokenIndex + 1).toArray(String[]::new);
-        return new ConsumerCompileStream(database, childTokens, this, fatherCompileCtx);
-    }
-
     @Override
     public String errToken(String token) {
         return " msg: {\"token\":\"" + token + "\",\"near\":\"" + nearString() + "\"}";
-    }
-
-    @Override
-    public String nearString() {
-        int realCursor = cursor;
-        var printTokens = tokens;
-        var fs = fatherStream;
-        while (fs != null) {
-            realCursor += fs.cursor();
-            printTokens = fs.tokens;
-            fs = fs.fatherStream;
-        }
-        return Arrays.stream(printTokens).limit(realCursor).collect(Collectors.joining(" "));
     }
 
     @Override
@@ -314,13 +231,13 @@ public abstract class TokenCompileStream implements CompileStream {
     }
 
     @Override
-    public TokenItr tokenItr() {
-        return new TokenItr(tokens);
+    public DatabaseCompileStream.TokenItr tokenItr() {
+        return new DatabaseCompileStream.TokenItr(tokens);
     }
 
     @Override
-    public TokenItr tokenItr(int startIndex) {
-        return new TokenItr(tokens, startIndex);
+    public DatabaseCompileStream.TokenItr tokenItr(int startIndex) {
+        return new DatabaseCompileStream.TokenItr(tokens, startIndex);
     }
 
     @Override
@@ -333,8 +250,8 @@ public abstract class TokenCompileStream implements CompileStream {
         return new DescTokenItr(tokens, negativeIndex);
     }
 
-    public Database db() {
-        return database;
+    public void reset() {
+        cursor = 0;
     }
 
     protected record Symbol(int index, String content) {
@@ -343,6 +260,7 @@ public abstract class TokenCompileStream implements CompileStream {
             return "(symbol: '" + content + "' at index " + index + ")";
         }
     }
+
 
     public static class TokenItr implements Iterator<String> {
         protected final String[] tokens;

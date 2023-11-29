@@ -1,6 +1,6 @@
 package org.hashdb.ms.compiler.option;
 
-import org.hashdb.ms.compiler.TokenCompileStream;
+import org.hashdb.ms.compiler.DatabaseCompileStream;
 import org.hashdb.ms.exception.IllegalValueException;
 
 import java.util.Arrays;
@@ -19,7 +19,7 @@ public abstract class EnumOpCtx<E extends Enum<E>> extends ParseableOpCtx<E> imp
 
     abstract protected Class<? extends Enum<E>> getEnumClass();
     @Override
-    public OptionCtx<E> compile(String unknownValueToken, TokenCompileStream stream) {
+    public OptionCtx<E> compile(String unknownValueToken, DatabaseCompileStream stream) {
         // 使用默认值
         if(unknownValueToken.isEmpty() && useDefaultValueWhenEmpty()) {
             return this;

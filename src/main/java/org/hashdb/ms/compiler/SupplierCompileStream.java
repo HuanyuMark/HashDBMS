@@ -17,13 +17,13 @@ import java.util.Objects;
  * @version 0.0.1
  */
 @Slf4j
-public class SupplierCompileStream extends TokenCompileStream {
+public class SupplierCompileStream extends DatabaseCompileStream {
 
     private SupplierCompileStream(Database database, String command) {
         super(database, command);
     }
 
-    SupplierCompileStream(Database database, String[] tokens, TokenCompileStream fatherStream) {
+    SupplierCompileStream(Database database, String[] tokens, DatabaseCompileStream fatherStream) {
         super(database, tokens, fatherStream);
     }
 

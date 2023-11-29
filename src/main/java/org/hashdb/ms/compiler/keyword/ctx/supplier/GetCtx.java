@@ -25,13 +25,13 @@ public class GetCtx extends ReadSupplierCtx {
     }
 
     @Override
-    protected List<?> doQueryLike(String pattern) {
+    protected List<HValue<?>> doQueryLike(String pattern) {
         var limitOption = getOption(LimitOpCtx.class);
         return stream.db().getLike(pattern, limitOption == null ? null : limitOption.value());
     }
 
     @Override
-    protected Object doQuery(String key) {
-        return HValue.unwrapData(stream.db().get(CompileCtx.normalizeToQueryKey(key)));
+    protected HValue<?> doQuery(String key) {
+        return stream.db().get(key);
     }
 }

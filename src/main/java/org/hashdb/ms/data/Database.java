@@ -199,8 +199,8 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
         return table.get(key);
     }
 
-    public List<?> getLike(String pattern, Long limit) {
-        Stream<?> stream = table.values().parallelStream().filter(v -> v.key().matches(pattern)).map(HValue::data);
+    public List<HValue<?>> getLike(String pattern, Long limit) {
+        Stream<HValue<?>> stream = table.values().parallelStream().filter(v -> v.key().matches(pattern));
         if (limit != null) {
             return stream.limit(limit).toList();
         }

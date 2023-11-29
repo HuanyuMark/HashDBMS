@@ -1,6 +1,6 @@
 package org.hashdb.ms.compiler.option;
 
-import org.hashdb.ms.compiler.TokenCompileStream;
+import org.hashdb.ms.compiler.DatabaseCompileStream;
 import org.hashdb.ms.exception.CommandCompileException;
 import org.hashdb.ms.util.AtomLazy;
 import org.hashdb.ms.util.Lazy;
@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public enum Options {
     EXISTS(ExistsOpCtx.class, List.of("es")),
     LIMIT(LimitOpCtx.class, List.of("lm", "lmt")),
-    OLD(OldOpCtx.class, List.of()),
+    OLD(OldOpCtx.class, List.of("old")),
     /**
      * 使用默认优先级删除
      */
@@ -34,14 +34,17 @@ public enum Options {
     /**
      * 使用低优先级删除
      */
-    LExpire(LExpireOpCtx.class, List.of("lep")),
-    POP(PopOpCtx.class, List.of()),
+    LEXPIRE(LExpireOpCtx.class, List.of("lep")),
+    POP(PopOpCtx.class, List.of("pop")),
 
     COPY(CopyOpCtx.class, List.of("cp")),
 
     DESTRUCT(DestructOpCtx.class, List.of("dstc")),
-    EXPIRE_STRATEGY(ExpireStrategyOpCtx.class, List.of("eps"));
-
+    EXPIRE_STRATEGY(ExpireStrategyOpCtx.class, List.of("eps")),
+    DELETE(DeleteOpCtx.class, List.of("del")),
+    HDELETE(HDeleteOpCtx.class, List.of("hdel")),
+    LDELETE(LDeleteOpCtx.class, List.of("ldel")),
+    ;
     private static Map<String, Options> aliasMap;
 
     private final OptionCache optionCacheCell;
@@ -71,7 +74,7 @@ public enum Options {
     }
 
     @Nullable
-    public static OptionCtx<?> compile(@NotNull String unknownToken, TokenCompileStream stream) {
+    public static OptionCtx<?> compile(@NotNull String unknownToken, DatabaseCompileStream stream) {
         // "?????" 是未知的token
         if (unknownToken.charAt(0) != '-') {
             return null;
@@ -118,7 +121,7 @@ public enum Options {
             return option;
         }
 
-        public OptionCtx<?> create(String valueStr,int assignPos, TokenCompileStream stream) {
+        public OptionCtx<?> create(String valueStr,int assignPos, DatabaseCompileStream stream) {
             if (!FlyweightOpCtx.class.isAssignableFrom(clazz)) {
                 return create().prepareCompile(valueStr, assignPos, stream);
             }

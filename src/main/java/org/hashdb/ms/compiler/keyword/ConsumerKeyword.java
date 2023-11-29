@@ -3,13 +3,16 @@ package org.hashdb.ms.compiler.keyword;
 import lombok.SneakyThrows;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.consumer.ConsumerCtx;
-import org.hashdb.ms.compiler.keyword.ctx.consumer.OpsConsumerTask;
-import org.hashdb.ms.compiler.keyword.ctx.consumer.list.LPushCtx;
-import org.hashdb.ms.compiler.keyword.ctx.consumer.list.RPushCtx;
+import org.hashdb.ms.compiler.keyword.ctx.consumer.DelCtx;
+import org.hashdb.ms.compiler.keyword.ctx.consumer.GetCtx;
+import org.hashdb.ms.compiler.keyword.ctx.consumer.SetCtx;
+import org.hashdb.ms.compiler.keyword.ctx.consumer.list.*;
 import org.hashdb.ms.exception.StopComplieException;
 import org.hashdb.ms.util.ReflectCacheData;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.function.Function;
 
 /**
  * Date: 2023/11/25 0:49
@@ -21,7 +24,35 @@ import org.jetbrains.annotations.Nullable;
 public enum ConsumerKeyword implements Keyword<ConsumerKeyword> {
     PIPE(PipeCtx.class),
     LPUSH(LPushCtx.class),
-    RPUSH(RPushCtx.class);
+    RPUSH(RPushCtx.class),
+    LPOP(LPopCtx.class),
+    RPOP(RPopCtx.class),
+    /**
+     * 这些关键字在很多其它数据结构都会用到, 具有一定的模糊性
+     * 会导致编译器在编译时, 不可避免地转入解释模式(即使已经采用了预编译的手段尽力加快解释速度),
+     * 命令会在运行时, 根据管道从上一级命令中的返回值, 动态确认使用-
+     * 哪个关键字的解释器, 因为使用了解释模式, 且HashDB操作一个数据库,
+     * 使用的库级别的任务队列生产消费者模式进行操作
+     * 导致消费者线程在执行命令时, 要边执行边编译, 降低整个数据库
+     * 的数据吞吐量, 非常影响性能
+     * 所以, 建议使用各个数据类型提供的特化命令, 确保编译器完全使用编译模式
+     * @see #DEL
+     * @see #SET
+     * @see #GET
+     */
+    DEL(DelCtx.class),
+    SET(SetCtx.class),
+    GET(GetCtx.class),
+    LEN(SizeCtx.class),
+    SIZE(SizeCtx.class),
+    // 链表特化指令
+    LDEL(LDelCtx.class),
+    LSET(LSetCtx.class),
+    LGET(LGetGtx.class),
+    REVERSE(LReverseCtx.class),
+    TRIM(TrimCtx.class),
+    LPOPRPUSH(LPopRPush.class),
+    RPOPLPUSH(RPopLPush.class);
     private final ConsumerCtxConstructor compileCtxFactory;
 
     ConsumerKeyword(Class<? extends ConsumerCtx<?>> keywordCtxClass) {
@@ -30,7 +61,7 @@ public enum ConsumerKeyword implements Keyword<ConsumerKeyword> {
 
     public static @Nullable ConsumerCtxConstructor getCompileCtxConstructor(@NotNull String unknownToken) {
         ConsumerKeyword consumerKeyword = typeOfIgnoreCase_(unknownToken);
-        if(consumerKeyword == null) {
+        if (consumerKeyword == null) {
             return null;
         }
         return consumerKeyword.compileCtxFactory;
@@ -63,7 +94,7 @@ public enum ConsumerKeyword implements Keyword<ConsumerKeyword> {
         return typeOfIgnoreCase_(unknownToken);
     }
 
-    public static ConsumerKeyword typeOfIgnoreCase_(@NotNull String unknownToken) {
+    public static @Nullable ConsumerKeyword typeOfIgnoreCase_(@NotNull String unknownToken) {
         String normalizedStr = unknownToken.toUpperCase();
         try {
             ConsumerKeyword keyword = valueOf(normalizedStr);
@@ -107,6 +138,7 @@ public enum ConsumerKeyword implements Keyword<ConsumerKeyword> {
             super(supplierCtx);
             throw new UnsupportedOperationException();
         }
+
         @Override
         public ConsumerKeyword name() {
             throw new UnsupportedOperationException();
@@ -121,8 +153,9 @@ public enum ConsumerKeyword implements Keyword<ConsumerKeyword> {
         public Class<?> supplyType() {
             throw new UnsupportedOperationException();
         }
+
         @Override
-        protected OpsConsumerTask<Object, ?> compile() throws StopComplieException {
+        protected Function<Object, ?> compile() throws StopComplieException {
             throw new UnsupportedOperationException();
         }
     }
