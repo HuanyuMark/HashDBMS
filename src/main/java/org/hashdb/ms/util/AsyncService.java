@@ -4,7 +4,7 @@ import java.util.concurrent.*;
 import java.util.function.Supplier;
 /**
  * Date: 2023/11/14 13:37
- * 异步服务支持, 提供一个全局的公用线程池
+ * 提供一个全局的异步服务支持
  */
 public class AsyncService {
     private static final Lazy<ExecutorService> executorService = AtomLazy.of(()->{

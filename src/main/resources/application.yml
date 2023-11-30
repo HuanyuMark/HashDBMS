@@ -4,7 +4,7 @@ server:
 db:
   file:
   #  持久化文件根路径
-    filepath: E://hashdb
+    filepath: D://hashdb
   #  每块数据文件的大小， 单位为字节
     chunk-size: 1 * 1024 * 1024
   #  全量保存数据库的间隔， 单位为毫秒
