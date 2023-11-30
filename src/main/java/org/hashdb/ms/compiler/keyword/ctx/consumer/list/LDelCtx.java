@@ -3,10 +3,7 @@ package org.hashdb.ms.compiler.keyword.ctx.consumer.list;
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.*;
 
 /**
  * Date: 2023/11/29 11:11
@@ -27,6 +24,10 @@ public class LDelCtx extends RandomAccessCtx {
 
     @Override
     protected List<Object> access(List<Object> opeList, List<Long> indexes) {
+        if(opeList instanceof RandomAccess) {
+            return indexes.stream().map(i->opeList.remove(i.intValue())).toList();
+        }
+
         var result = new LinkedList<>();
         int elIndex;
         // 用尾遍历

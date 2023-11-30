@@ -61,6 +61,15 @@ public class LSetCtx extends MutableListCtx implements Precompilable {
             throw new CommandExecuteException("index '" + largestIndex + "' out of range"+stream.errToken(""));
         }
 
+        if(opsTarget instanceof RandomAccess) {
+            return indexValuePairs.stream().map(pair -> {
+                if (pair.valueOrSupplier instanceof SupplierCtx vs) {
+                    pair.valueOrSupplier = selectOne(getSuppliedValue(vs));
+                }
+                return opsTarget.set(((Number) (pair.indexOrSupplier)).intValue(), pair.valueOrSupplier);
+            }).toList();
+        }
+
         List<Object> result = new ArrayList<>();
         int elIndex;
         //尾遍历

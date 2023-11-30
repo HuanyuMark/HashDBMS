@@ -1,6 +1,6 @@
 package org.hashdb.ms.communication;
 
-import java.util.Date;
+import org.hashdb.ms.net.msg.Message;
 
 /**
  * Date: 2023/11/20 21:00
@@ -8,9 +8,6 @@ import java.util.Date;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public class EventMessage extends Message {
-
-
-
+public class EventMessage  {
 
 }

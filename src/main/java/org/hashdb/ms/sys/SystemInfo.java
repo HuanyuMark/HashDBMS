@@ -1,7 +1,6 @@
 package org.hashdb.ms.sys;
 
 import lombok.Getter;
-import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.DatabaseInfos;
 import org.hashdb.ms.data.PlainPair;
@@ -32,9 +31,16 @@ public class SystemInfo {
     private final Map<DatabaseInfos, Lazy<Database>> databaseInfosMap = new HashMap<>();
 
     private final Map<Lazy<Database>, DatabaseInfos> navigableDbInfosMap = new HashMap<>();
-
-    private static final Lazy<DBSystem> dbSystem = Lazy.of(() -> HashDBMSApp.ctx().getBean(DBSystem.class));
     public final Object SAVE_LOCK = new Object();
+
+    private DBSystem system;
+
+    public void setSystem(DBSystem system) {
+        if(this.system != null) {
+            throw new RuntimeException();
+        }
+        this.system = system;
+    }
 
     public SystemInfo() {
     }
@@ -92,7 +98,7 @@ public class SystemInfo {
             if (lazy.isCached()) {
                 dbName = lazy.get().getInfos().getName();
             } else {
-                dbName = dbSystem.get().getSystemInfo().getNavigableDbInfosMap().get(lazy).getName();
+                dbName = system.getSystemInfo().getNavigableDbInfosMap().get(lazy).getName();
             }
             return new PlainPair<>(entry.getKey(), dbName);
         }).collect(Collectors.toMap(PlainPair::key, PlainPair::value));

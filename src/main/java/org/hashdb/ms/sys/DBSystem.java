@@ -2,6 +2,7 @@ package org.hashdb.ms.sys;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.hashdb.ms.aspect.methodAccess.DisposableCall;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.exception.DatabaseClashException;
 import org.hashdb.ms.exception.NotFoundDatabaseException;
@@ -28,7 +29,7 @@ import java.util.Objects;
  */
 @Slf4j
 @Component
-public final class DBSystem extends BlockingQueueTaskConsumer implements InitializingBean, DisposableBean {
+public class DBSystem extends BlockingQueueTaskConsumer implements InitializingBean, DisposableBean {
     @Getter
     private SystemInfo systemInfo;
     private final PersistentService persistentService;
@@ -120,13 +121,18 @@ public final class DBSystem extends BlockingQueueTaskConsumer implements Initial
         return persistentService;
     }
 
+    @DisposableCall
+    void setSystemInfo(@NotNull SystemInfo systemInfo) {
+        this.systemInfo = systemInfo;
+        systemInfo.setSystem(this);
+    }
     /**
      * 初始化数据库
      */
     @Override
     public void afterPropertiesSet() throws Exception {
         // 扫描 系统信息,
-        systemInfo = persistentService.scanSystemInfo();
+        setSystemInfo(persistentService.scanSystemInfo());
     }
 
     /**

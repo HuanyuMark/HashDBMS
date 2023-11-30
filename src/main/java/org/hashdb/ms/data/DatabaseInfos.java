@@ -4,7 +4,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import org.hashdb.ms.util.JacksonSerializer;
+import org.hashdb.ms.util.JsonService;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -31,6 +31,6 @@ public class DatabaseInfos implements Serializable {
 
     @Override
     public String toString() {
-        return JacksonSerializer.stringfy(this);
+        return JsonService.stringfy(this);
     }
 }

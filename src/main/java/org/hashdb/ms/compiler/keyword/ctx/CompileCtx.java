@@ -14,7 +14,7 @@ import org.hashdb.ms.compiler.option.OptionCtx;
 import org.hashdb.ms.compiler.option.Options;
 import org.hashdb.ms.data.DataType;
 import org.hashdb.ms.exception.*;
-import org.hashdb.ms.util.JacksonSerializer;
+import org.hashdb.ms.util.JsonService;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -71,7 +71,7 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
                 }
                 Object value;
                 try {
-                    value = JacksonSerializer.parse(token, valueType.reflect().clazz());
+                    value = JsonService.parse(token, valueType.reflect().clazz());
                 } catch (JsonProcessingException e) {
                     SupplierCtx supplierCtx = compileInlineCommand();
                     if (supplierCtx == null) {
@@ -93,7 +93,7 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
             // 尝试转换一下
             Object value;
             try {
-                value = JacksonSerializer.parse(token);
+                value = JsonService.parse(token);
             } catch (JsonProcessingException e) {
                 // 可能是内联命令
                 SupplierCtx supplierCtx = compileInlineCommand();

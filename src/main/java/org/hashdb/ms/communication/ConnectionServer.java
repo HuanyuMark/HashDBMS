@@ -57,6 +57,7 @@ public class ConnectionServer implements InitializingBean {
         return AsyncService.submit(() -> Runners.everlasting(() -> {
             try {
                 var clientConnection = serverChannel.accept();
+                SocketAddress remoteAddress = clientConnection.getRemoteAddress();
 //                clientConnections.put(clientConnection.getRemoteAddress(), clientConnection);
                 AsyncService.submit(() -> {
                     while (clientConnection.isConnected()) {
@@ -69,7 +70,6 @@ public class ConnectionServer implements InitializingBean {
                             String o = new String(bytes);
                             if("close".equals(o)) {
                                 clientConnection.close();
-                                clientConnection.socket().close();
                             }
                             System.out.println("unRead" + unRead + " obj: " + o);
                             clientConnection.write(ByteBuffer.wrap("ok".getBytes()));

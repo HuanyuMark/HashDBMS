@@ -27,13 +27,15 @@ import java.util.Map;
  * @version 0.0.1
  */
 @Slf4j
-public class JacksonSerializer {
+public class JsonService {
     private static final ObjectMapper COMMON = new ObjectMapper();
     private static final Version JACKSON_SERIALIZER_VERSION = new Version(1, 0, 1, "dev compiler", "hashdb", "hashDBMS");
 
     private static final OneTimeLazy<?> configCommonObjectMapper = OneTimeLazy.of(()->{
         SimpleModule dataTypeModule = new SimpleModule("dataType", JACKSON_SERIALIZER_VERSION);
         DBRamConfig dbRamConfig = HashDBMSApp.ctx().getBean(DBRamConfig.class);
+        // jackson 默认使用 LikedHashMap 来存储 Object 型 Json, 其顺序与Json串中规定的顺序一致
+        // 如果不需要保持一致,则可以使用这个自定义的反序列化器, 将 Object 型映射的java对象改为 HashMap
         if(!dbRamConfig.isStoreLikeJsonSequence()) {
             dataTypeModule.addDeserializer(Map.class, new HashMapDeserializer());
             dataTypeModule.addDeserializer(List.class, new LinkedListDeserializer());

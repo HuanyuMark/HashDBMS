@@ -4,7 +4,6 @@ import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.DatabaseInfos;
 import org.hashdb.ms.exception.NotFoundDatabaseException;
 import org.hashdb.ms.sys.SystemInfo;
-import org.hashdb.ms.util.JacksonSerializer;
 
 import java.util.List;
 

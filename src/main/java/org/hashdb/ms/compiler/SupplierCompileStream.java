@@ -5,7 +5,7 @@ import org.hashdb.ms.compiler.keyword.SupplierKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.exception.CommandCompileException;
-import org.hashdb.ms.util.JacksonSerializer;
+import org.hashdb.ms.util.JsonService;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
@@ -54,6 +54,6 @@ public class SupplierCompileStream extends DatabaseCompileStream {
             return ok ? "SUCC": "FAIL";
         }
         Object normalizeValue = CompileStream.normalizeValue(result);
-        return JacksonSerializer.stringfy(normalizeValue == null ? "null" : normalizeValue);
+        return JsonService.stringfy(normalizeValue == null ? "null" : normalizeValue);
     }
 }

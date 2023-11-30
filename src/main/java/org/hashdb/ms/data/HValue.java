@@ -2,17 +2,13 @@ package org.hashdb.ms.data;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.config.DBRamConfig;
 import org.hashdb.ms.exception.DBInnerException;
 import org.hashdb.ms.exception.ServiceStoppedException;
 import org.hashdb.ms.util.AsyncService;
-import org.hashdb.ms.util.JacksonSerializer;
-import org.hashdb.ms.util.Lazy;
+import org.hashdb.ms.util.JsonService;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.springframework.aop.framework.ProxyFactory;
-import org.springframework.cglib.beans.ImmutableBean;
 
 import java.lang.reflect.Proxy;
 import java.util.Date;
@@ -29,7 +25,6 @@ import java.util.concurrent.ScheduledFuture;
  */
 @Slf4j
 public class HValue<T> implements Cloneable {
-    public final static Lazy<DBRamConfig> dbRamConfig = Lazy.of(() -> HashDBMSApp.ctx().getBean(DBRamConfig.class));
     public final static HValue<?> EMPTY = new HValue<>();
 
     public static <T> T unwrapData(@Nullable HValue<T> hValue) {
@@ -60,7 +55,7 @@ public class HValue<T> implements Cloneable {
      * 如果为高,则触发删除任务时, 将删除任务插入任务队列头部, 优先执行
      */
     @Getter
-    private OpsTaskPriority deletePriority = dbRamConfig.get().getExpiredKeyDeletePriority();
+    private OpsTaskPriority deletePriority = DBRamConfig.DEFAULT_EXPIRED_KEY_DELETE_PRIORITY.get();
     /**
      * 是否取消， 当该key过期时， 清除该key
      */
@@ -271,6 +266,6 @@ public class HValue<T> implements Cloneable {
 
     @Override
     public String toString() {
-        return JacksonSerializer.stringfy(this);
+        return JsonService.stringfy(this);
     }
 }

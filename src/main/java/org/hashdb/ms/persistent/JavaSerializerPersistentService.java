@@ -8,6 +8,7 @@ import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.StorableHValue;
 import org.hashdb.ms.exception.DBExternalException;
 import org.hashdb.ms.exception.NotFoundDatabaseException;
+import org.hashdb.ms.sys.DBSystem;
 import org.hashdb.ms.sys.StorableSystemInfo;
 import org.hashdb.ms.sys.SystemInfo;
 import org.hashdb.ms.util.AtomLazy;
@@ -28,6 +29,7 @@ import java.util.*;
 @Slf4j
 @Component
 public class JavaSerializerPersistentService extends FileSystemPersistentService {
+    private DBSystem dbSystem;
     public JavaSerializerPersistentService(DBFileConfig dbFileConfig) {
         super(dbFileConfig);
     }

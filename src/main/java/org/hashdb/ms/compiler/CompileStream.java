@@ -28,13 +28,13 @@ public interface CompileStream<R> {
             return hValue.data();
         }
         if(result instanceof List<?> ls){
-            return ls.stream().map(CompileStream::normalizeValue).toList();
+            return ls.parallelStream().map(CompileStream::normalizeValue).toList();
         }
         if(result instanceof Set<?> ls){
-            return ls.stream().map(CompileStream::normalizeValue).toList();
+            return ls.parallelStream().map(CompileStream::normalizeValue).toList();
         }
         if(result instanceof Map<?,?> map){
-            return map.entrySet().stream().map((entry)-> new PlainPair<>(entry.getKey(),normalizeValue(entry.getValue()))).collect(Collectors.toMap(PlainPair::key,PlainPair::value));
+            return map.entrySet().parallelStream().map((entry)-> new PlainPair<>(entry.getKey(),normalizeValue(entry.getValue()))).collect(Collectors.toMap(PlainPair::key,PlainPair::value));
         }
         return result;
     }

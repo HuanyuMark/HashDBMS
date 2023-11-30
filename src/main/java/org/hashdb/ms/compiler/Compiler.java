@@ -1,9 +1,9 @@
 package org.hashdb.ms.compiler;
 
-import org.hashdb.ms.compiler.keyword.ctx.sys.SystemCompileCtx;
-import org.hashdb.ms.data.Database;
 import org.hashdb.ms.exception.DBExternalException;
 import org.hashdb.ms.net.ConnectionSession;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Date: 2023/11/30 14:10
@@ -11,15 +11,16 @@ import org.hashdb.ms.net.ConnectionSession;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public class CompileStreamFactory {
+public class Compiler {
     private final ConnectionSession session;
 
-    public CompileStreamFactory(ConnectionSession session) {
+    protected Compiler(ConnectionSession session) {
         this.session = session;
     }
 
-    public static CompileStreamFactory create(ConnectionSession session) {
-        return new CompileStreamFactory(session);
+    @Contract(value = "_ -> new", pure = true)
+    public static @NotNull Compiler create(ConnectionSession session) {
+        return new Compiler(session);
     }
 
     public String run(String command) {

@@ -171,9 +171,9 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
         }
         // 模糊匹配 key
         String lastToken = stream.peekToken(-1, i -> new CommandCompileException(errorMsgSupplier.get()));
-        if (!SupplierKeyword.GET.match(lastToken)) {
-            throw new CommandCompileException(errorMsgSupplier.get());
-        }
+//        if (!SupplierKeyword.GET.match(lastToken)) {
+//            throw new CommandCompileException(errorMsgSupplier.get());
+//        }
         like = true;
     }
 }

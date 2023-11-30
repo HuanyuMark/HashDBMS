@@ -286,13 +286,14 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
      * @param pattern 正则表达式
      */
     public List<HValue<?>> delLike(String pattern, @Nullable Long limit) {
-        Stream<HValue<?>> stream = table.values().parallelStream()
-                .filter(value -> value.key().matches(pattern))
-                .peek(v -> table.remove(v.key()).cancelClear());
+        // 如果在filter后在peek里删除键, 会影响原集合, 在遍历时,改变原集合的结构, 会报并发修改异常
+        List<HValue<?>> matchedValues = table.values().parallelStream()
+                .filter(value -> value.key().matches(pattern)).toList();
+        matchedValues.parallelStream().forEach(v-> table.remove(v.key()).cancelClear());
         if (limit == null) {
-            return stream.toList();
+            return matchedValues;
         }
-        return stream.limit(limit).toList();
+        return matchedValues.stream().limit(limit).toList();
     }
 
     /**

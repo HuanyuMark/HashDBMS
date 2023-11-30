@@ -17,9 +17,16 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties("server")
 @EnableConfigurationProperties
 public class DBServerConfig {
-    private Integer port = 4090;
+    private int port = 4090;
+
+    private int maxConnections = 1_0000;
     @ConfigLoadOnly
-    public void setPort(Integer port) {
+    public void setPort(int port) {
         this.port = port;
+    }
+
+    @ConfigLoadOnly
+    public void setMaxConnections(int maxConnections) {
+        this.maxConnections = maxConnections;
     }
 }

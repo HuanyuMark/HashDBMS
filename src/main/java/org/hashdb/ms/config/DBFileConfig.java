@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.aspect.methodAccess.ConfigLoadOnly;
 import org.hashdb.ms.exception.RequiredConfigException;
 import org.hashdb.ms.persistent.FileUtils;
-import org.hashdb.ms.util.JacksonSerializer;
+import org.hashdb.ms.util.JsonService;
 import org.hashdb.ms.util.Lazy;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -13,7 +13,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Configuration;
 import org.springframework.expression.Expression;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
-import org.springframework.util.Assert;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -60,7 +59,7 @@ public class DBFileConfig implements InitializingBean {
                 () -> new RuntimeException("Create data file directory failed! may be it is existed but it isn`t a directory. root path: '" + rootDir
                         + "' .config path:" + filepath)
         );
-        log.info("db file config: {}", JacksonSerializer.stringfy(Map.of(
+        log.info("db file config: {}", JsonService.stringfy(Map.of(
                 "filepath", dbFileRootDir.get().getAbsolutePath(),
                 "chunkSize", chunkSize + " byte",
                 "saveInterval", chunkSize + " ms"

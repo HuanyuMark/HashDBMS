@@ -1,15 +1,12 @@
 package org.hashdb.ms.compiler;
 
 import org.hashdb.ms.HashDBMSApp;
-import org.hashdb.ms.compiler.keyword.CompilerNode;
 import org.hashdb.ms.compiler.keyword.SystemKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.sys.SystemCompileCtx;
-import org.hashdb.ms.data.Database;
 import org.hashdb.ms.exception.CommandCompileException;
-import org.hashdb.ms.exception.DBInnerException;
 import org.hashdb.ms.net.ConnectionSession;
 import org.hashdb.ms.sys.DBSystem;
-import org.hashdb.ms.util.JacksonSerializer;
+import org.hashdb.ms.util.JsonService;
 import org.hashdb.ms.util.Lazy;
 
 /**
@@ -64,6 +61,6 @@ public class SystemCompileStream extends CommonCompileStream<SystemCompileCtx<?>
             return ok ? "SUCC":"FAIL";
         }
         Object normalizeValue = CompileStream.normalizeValue(result);
-        return JacksonSerializer.stringfy(normalizeValue == null? "null": normalizeValue);
+        return JsonService.stringfy(normalizeValue == null? "null": normalizeValue);
     }
 }
