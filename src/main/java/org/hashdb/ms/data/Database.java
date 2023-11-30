@@ -5,6 +5,7 @@ import org.hashdb.ms.config.DBFileConfig;
 import org.hashdb.ms.exception.IllegalJavaClassStoredException;
 import org.hashdb.ms.exception.IncreaseUnsupportedException;
 import org.hashdb.ms.exception.ServiceStoppedException;
+import org.hashdb.ms.net.ConnectionSession;
 import org.hashdb.ms.persistent.PersistentService;
 import org.hashdb.ms.util.AsyncService;
 import org.hashdb.ms.util.BlockingQueueTaskConsumer;
@@ -14,6 +15,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -37,6 +39,20 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
     protected final HashMap<String, HValue<?>> table = new HashMap<>();
     protected final AtomicReference<ScheduledFuture<?>> saveTask = new AtomicReference<>();
     public final Object SAVE_TASK_LOCK = new Object();
+
+    private final AtomicInteger tackUpCount = new AtomicInteger(0);
+
+    public void restrain(ConnectionSession session) {
+        tackUpCount.incrementAndGet();
+    }
+
+    public void release(ConnectionSession session) {
+        tackUpCount.decrementAndGet();
+    }
+
+    public int getTackUpCount() {
+        return tackUpCount.get();
+    }
 
     public CompletableFuture<Boolean> startDaemon() {
         startSaveTask();

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.compiler.ConsumerCompileStream;
 import org.hashdb.ms.compiler.DatabaseCompileStream;
+import org.hashdb.ms.compiler.keyword.CompilerNode;
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.Keyword;
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
@@ -30,7 +31,7 @@ import java.util.function.Function;
  * @version 0.0.1
  */
 @Slf4j
-public abstract class CompileCtx<S extends DatabaseCompileStream> {
+public abstract class CompileCtx<S extends DatabaseCompileStream> implements CompilerNode {
     protected Map<Class<? extends OptionCtx<?>>, OptionCtx<?>> options;
 
 

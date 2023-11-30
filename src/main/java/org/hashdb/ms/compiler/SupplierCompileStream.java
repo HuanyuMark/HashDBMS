@@ -5,6 +5,7 @@ import org.hashdb.ms.compiler.keyword.SupplierKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.exception.CommandCompileException;
+import org.hashdb.ms.util.JacksonSerializer;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
@@ -19,8 +20,12 @@ import java.util.Objects;
 @Slf4j
 public class SupplierCompileStream extends DatabaseCompileStream {
 
-    private SupplierCompileStream(Database database, String command) {
+    SupplierCompileStream(Database database, String command) {
         super(database, command);
+    }
+
+    SupplierCompileStream(Database database, String @NotNull [] childTokens, DatabaseCompileStream fatherStream, boolean shouldNormalize) {
+        super(database, childTokens, fatherStream, shouldNormalize);
     }
 
     SupplierCompileStream(Database database, String[] tokens, DatabaseCompileStream fatherStream) {
@@ -41,5 +46,14 @@ public class SupplierCompileStream extends DatabaseCompileStream {
         next();
         commandContext.compileWithStream(this);
         return commandContext;
+    }
+
+    public String submit(){
+        Object result = database.submitOpsTaskSync(compile().compileResult());
+        if(result instanceof Boolean ok) {
+            return ok ? "SUCC": "FAIL";
+        }
+        Object normalizeValue = CompileStream.normalizeValue(result);
+        return JacksonSerializer.stringfy(normalizeValue == null ? "null" : normalizeValue);
     }
 }

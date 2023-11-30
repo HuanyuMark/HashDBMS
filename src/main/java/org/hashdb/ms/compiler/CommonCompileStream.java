@@ -19,7 +19,7 @@ import java.util.function.Function;
  * @version 0.0.1
  */
 @Slf4j
-public abstract class CommonCompileStream implements CompileStream {
+public abstract class CommonCompileStream<R> implements CompileStream<R> {
     protected Lazy<String> command;
     /**
      * 存放token的序列可以改成 {@link LinkedList},

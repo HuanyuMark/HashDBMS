@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
  * @version 0.0.1
  */
 @Slf4j
-public abstract class DatabaseCompileStream extends CommonCompileStream {
+public abstract class DatabaseCompileStream extends CommonCompileStream<CompileCtx<?>> {
 
     protected final Database database;
 
@@ -39,17 +39,20 @@ public abstract class DatabaseCompileStream extends CommonCompileStream {
     /**
      * 构造子流
      *
-     * @param database     数据库
-     * @param childTokens  子 tokens
-     * @param fatherStream 父 流
+     * @param database        数据库
+     * @param childTokens     子 tokens
+     * @param fatherStream    父 流
+     * @param shouldNormalize 是否需要规范化
      */
-    protected DatabaseCompileStream(Database database, String @NotNull [] childTokens, DatabaseCompileStream fatherStream) {
+    protected DatabaseCompileStream(Database database, String @NotNull [] childTokens, DatabaseCompileStream fatherStream, boolean shouldNormalize) {
         if (childTokens.length == 0) {
             log.error("compiler error: father tokens: {} child tokens: {}", childTokens, childTokens);
             throw new DBInnerException("see console. fail to extract child tokens");
         }
-        eraseParentheses(childTokens);
-        eraseLastSemicolon(childTokens);
+        if(shouldNormalize) {
+            eraseParentheses(childTokens);
+            eraseLastSemicolon(childTokens);
+        }
         this.command = Lazy.of(() -> String.join(" ", childTokens));
         this.tokens = childTokens;
         this.fatherStream = fatherStream;
@@ -57,6 +60,10 @@ public abstract class DatabaseCompileStream extends CommonCompileStream {
         if (log.isTraceEnabled()) {
             log.trace("open compile stream: {}", String.join(" ", tokens));
         }
+    }
+
+    protected DatabaseCompileStream(Database database, String @NotNull [] childTokens, DatabaseCompileStream fatherStream) {
+        this(database, childTokens, fatherStream, true);
     }
 
     /**
@@ -107,7 +114,4 @@ public abstract class DatabaseCompileStream extends CommonCompileStream {
     public Database db() {
         return database;
     }
-
-
-
 }

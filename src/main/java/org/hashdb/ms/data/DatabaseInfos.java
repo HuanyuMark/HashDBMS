@@ -1,5 +1,6 @@
 package org.hashdb.ms.data;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -16,6 +17,7 @@ import java.util.Date;
  * @version 0.0.1
  */
 @Getter
+@EqualsAndHashCode
 @RequiredArgsConstructor
 public class DatabaseInfos implements Serializable {
     @Serial

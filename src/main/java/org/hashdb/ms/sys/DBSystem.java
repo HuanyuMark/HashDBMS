@@ -1,19 +1,23 @@
 package org.hashdb.ms.sys;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.exception.DatabaseClashException;
 import org.hashdb.ms.exception.NotFoundDatabaseException;
 import org.hashdb.ms.persistent.PersistentService;
-import org.hashdb.ms.util.Lazy;
 import org.hashdb.ms.util.BlockingQueueTaskConsumer;
+import org.hashdb.ms.util.Lazy;
 import org.hashdb.ms.util.TimeCounter;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Component;
 
+import java.util.Date;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 
 /**
@@ -25,9 +29,7 @@ import java.util.Objects;
 @Slf4j
 @Component
 public final class DBSystem extends BlockingQueueTaskConsumer implements InitializingBean, DisposableBean {
-
-    private static final Lazy<DBSystem> INSTANCE = Lazy.of(()-> HashDBMSApp.ctx().getBean(DBSystem.class));
-
+    @Getter
     private SystemInfo systemInfo;
     private final PersistentService persistentService;
 
@@ -36,32 +38,58 @@ public final class DBSystem extends BlockingQueueTaskConsumer implements Initial
         startConsumeOpsTask();
     }
 
-    public static DBSystem instance(){
-        return INSTANCE.get();
-    }
-
     public Map<String, Lazy<Database>> getDatabaseNameMap() {
-        return systemInfo.dbNameMap();
+        return systemInfo.getDatabaseNameMap();
     }
 
     public Map<Integer, Lazy<Database>> getDatabaseIdMap() {
-        return systemInfo.dbIdMap();
+        return systemInfo.getDatabaseIdMap();
     }
 
     public void delDatabases(Database db) {
-        Lazy<Database> dbLazy = this.systemInfo.removeDatabase(db);
+        Lazy<Database> dbLazy = this.systemInfo.deleteDatabase(db);
         if (dbLazy == null) {
             throw NotFoundDatabaseException.of(db.getInfos().getName());
         }
         persistentService.deleteDatabase(db.getInfos().getName());
     }
+
     public void addDatabase(Database db) throws DatabaseClashException {
         Objects.requireNonNull(db);
-        if (this.systemInfo.dbNames().contains(db.getInfos().getName()) ||
-                this.systemInfo.dbIds().contains(db.getInfos().getId())) {
+        if (this.systemInfo.getDatabaseNameMap().containsKey(db.getInfos().getName()) ||
+                this.systemInfo.getDatabaseIdMap().containsKey(db.getInfos().getId())) {
             throw new DatabaseClashException("database '" + db + "' clash other database");
         }
         this.systemInfo.addDatabase(db);
+    }
+
+    public @NotNull Lazy<Database> newDatabase(@Nullable Integer id, @NotNull String name) {
+        Objects.requireNonNull(name);
+        if (id == null) {
+            Integer maxId;
+            try {
+                maxId = systemInfo.getDatabaseIdMap().lastKey();
+                id = maxId + 1;
+            } catch (NoSuchElementException e) {
+                id = 1;
+            }
+        } else {
+            if (this.systemInfo.getDatabaseIdMap().containsKey(id)) {
+                throw new DatabaseClashException("fail to create database. redundancy database id");
+            }
+        }
+        if(this.systemInfo.getDatabaseNameMap().containsKey(name)) {
+            throw new DatabaseClashException("fail to create database. redundancy database name");
+        }
+        Database newDb = new Database(id, name, new Date());
+        Lazy<Database> lazy = Lazy.of(() -> {
+            newDb.startDaemon().join();
+            return newDb;
+        });
+        this.systemInfo.addDatabase(newDb);
+        persistentService.persist(this.systemInfo);
+        persistentService.persist(newDb);
+        return lazy;
     }
 
     public void tryAddDatabase(Database db) {
@@ -73,19 +101,23 @@ public final class DBSystem extends BlockingQueueTaskConsumer implements Initial
     }
 
     public Database getDatabase(String name) throws NotFoundDatabaseException {
-        Lazy<Database> lazy = this.systemInfo.dbNameMap().get(name);
-        if(lazy == null) {
+        Lazy<Database> lazy = this.systemInfo.getDatabaseNameMap().get(name);
+        if (lazy == null) {
             throw NotFoundDatabaseException.of(name);
         }
         return lazy.get();
     }
 
     public Database getDatabase(Integer id) throws NotFoundDatabaseException {
-        Lazy<Database> lazy = this.systemInfo.dbIdMap().get(id);
-        if(lazy == null) {
-            throw NotFoundDatabaseException.of("id: '"+id+"'");
+        Lazy<Database> lazy = this.systemInfo.getDatabaseIdMap().get(id);
+        if (lazy == null) {
+            throw NotFoundDatabaseException.of("id: '" + id + "'");
         }
         return lazy.get();
+    }
+
+    public PersistentService getPersistentService() {
+        return persistentService;
     }
 
     /**
@@ -105,17 +137,17 @@ public final class DBSystem extends BlockingQueueTaskConsumer implements Initial
         log.info("closing DBMS ...");
         var DbmsCostTime = TimeCounter.start();
         persistentService.persist(systemInfo);
-        if(log.isTraceEnabled()) {
+        if (log.isTraceEnabled()) {
             log.trace("system info storing success");
         }
-        systemInfo.allDb().forEach(lazyDb -> {
+        systemInfo.getDatabaseInfosMap().values().forEach(lazyDb -> {
             if (!lazyDb.isCached()) {
                 return;
             }
             Database db = lazyDb.get();
             persistentService.persist(db);
-            if(log.isTraceEnabled()) {
-                log.trace("db '{}' storing success",db);
+            if (log.isTraceEnabled()) {
+                log.trace("db '{}' storing success", db);
             }
         });
         log.info("DBMS closed, cost {} ms", DbmsCostTime.stop());

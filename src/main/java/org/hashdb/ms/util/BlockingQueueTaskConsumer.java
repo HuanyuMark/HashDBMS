@@ -70,6 +70,24 @@ public class BlockingQueueTaskConsumer implements TaskConsumer {
         return consumeLoopResult.thenApply(v -> true);
     }
 
+    /**
+     * 立即停止消费者线程, 并清空任务队列
+     */
+    public boolean shutdownConsumer(){
+        opsTaskDeque.clear();
+        receiveNewTask.set(false);
+        CompletableFuture<?> oldLoop = opsTaskConsumeLoop.getAndSet(null);
+        if(oldLoop == null) {
+            return true;
+        }
+        oldLoop.cancel(true);
+        return true;
+    }
+
+    public int remainingTaskSize() {
+        return opsTaskDeque.size();
+    }
+
     @Override
     public <T> T submitOpsTaskSync(OpsTask<T> task, OpsTaskPriority priority) {
         checkTaskQueueConsumer();
@@ -78,7 +96,7 @@ public class BlockingQueueTaskConsumer implements TaskConsumer {
         } else {
             opsTaskDeque.addFirst(task);
         }
-        return task.result();
+        return task.future().join();
     }
 
     @Override

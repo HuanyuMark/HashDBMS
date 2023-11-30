@@ -7,8 +7,6 @@ import org.hashdb.ms.data.DatabaseInfos;
 import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.StorableHValue;
 import org.hashdb.ms.exception.DBExternalException;
-import org.hashdb.ms.exception.DBFileAccessFailedException;
-import org.hashdb.ms.exception.DBInnerException;
 import org.hashdb.ms.exception.NotFoundDatabaseException;
 import org.hashdb.ms.sys.StorableSystemInfo;
 import org.hashdb.ms.sys.SystemInfo;
@@ -18,7 +16,7 @@ import org.jetbrains.annotations.NotNull;
 import org.openjdk.jol.info.ClassLayout;
 import org.springframework.stereotype.Component;
 
-import java.io.*;
+import java.io.File;
 import java.util.*;
 
 /**
@@ -57,7 +55,7 @@ public class JavaSerializerPersistentService extends FileSystemPersistentService
                 writeObject(dbChunkFile, buffer);
                 buffer.clear();
             }
-            if(!buffer.isEmpty()) {
+            if (!buffer.isEmpty()) {
                 File dbChunkFile = DBFileFactory.newDBChunkFile(dbFileDir, chunkId);
                 writeObject(dbChunkFile, buffer);
                 buffer.clear();
@@ -177,16 +175,17 @@ public class JavaSerializerPersistentService extends FileSystemPersistentService
             if (files.length > 1) {
                 throw new DBExternalException("system info file is not unique");
             }
-            if(files.length == 1) {
+            if (files.length == 1) {
                 StorableSystemInfo storableSystemInfo = (StorableSystemInfo) readObject(files[0]);
-                return storableSystemInfo.restore();
+                return storableSystemInfo.restoreBy(dbFileConfig, this);
             }
-            if(log.isWarnEnabled()) {
-                log.warn("system info file not found. create by scanning db file root directory '"+dbFileConfig.getDbFileRootDir()+"'");
+            if (log.isWarnEnabled()) {
+                log.warn("system info file not found. create by scanning db file root directory '" + dbFileConfig.getDbFileRootDir() + "'");
             }
         }
         HashMap<String, Lazy<Database>> nameDbMap = new HashMap<>();
         HashMap<Integer, Lazy<Database>> idDbMap = new HashMap<>();
+        HashMap<DatabaseInfos, Lazy<Database>> infosDbMap = new HashMap<>();
         var databaseInfos = scanDatabaseInfos();
         databaseInfos.parallelStream().forEach(databaseInfo -> {
             AtomLazy<Database> atomLazy;
@@ -198,8 +197,9 @@ public class JavaSerializerPersistentService extends FileSystemPersistentService
             }
             nameDbMap.put(databaseInfo.getName(), atomLazy);
             idDbMap.put(databaseInfo.getId(), atomLazy);
+            infosDbMap.put(databaseInfo, atomLazy);
         });
-        var systemInfo = new SystemInfo(nameDbMap, idDbMap);
+        var systemInfo = new SystemInfo(nameDbMap, idDbMap, infosDbMap);
         persist(systemInfo);
         return systemInfo;
     }

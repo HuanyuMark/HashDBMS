@@ -1,5 +1,6 @@
 package org.hashdb.ms.util;
 
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
@@ -47,7 +48,12 @@ public class AtomLazy<T> extends Lazy<T> {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof AtomLazy<?> atomLazy)) return false;
+        if (!(o instanceof AtomLazy<?> atomLazy)) {
+            if(o instanceof Lazy<?> lazy) {
+                return Objects.equals(value, lazy.value);
+            }
+            return false;
+        };
         if (!super.equals(o)) return false;
 
         return value.equals(atomLazy.value);

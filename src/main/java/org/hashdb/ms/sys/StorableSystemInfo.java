@@ -1,20 +1,17 @@
 package org.hashdb.ms.sys;
 
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.HashDBMSApp;
+import org.hashdb.ms.config.DBFileConfig;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.PlainPair;
 import org.hashdb.ms.persistent.PersistentService;
 import org.hashdb.ms.util.AtomLazy;
-import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Date: 2023/11/27 23:34
@@ -29,8 +26,6 @@ public record StorableSystemInfo(
     @Serial
     private static final long serialVersionUID = 429452356L;
 
-    private static final Lazy<PersistentService> persistentService = Lazy.of(() -> HashDBMSApp.ctx().getBean(PersistentService.class));
-
     static {
         if (log.isTraceEnabled()) {
             log.info("serialVersionUID: {}", serialVersionUID);
@@ -38,20 +33,33 @@ public record StorableSystemInfo(
     }
 
     @NotNull
-    public SystemInfo restore() {
+    public SystemInfo restoreBy(DBFileConfig dbFileConfig, PersistentService persistentService) {
         var nameDbMap = databaseIdMap.entrySet().parallelStream().map(entry -> {
             var dbName = entry.getValue();
-            return new PlainPair<>(dbName, AtomLazy.of(() -> {
-                Database db = persistentService.get().scanDatabase(dbName);
-                db.startDaemon().join();
-                return db;
-            }));
+            AtomLazy<Database> atomLazy;
+            if (dbFileConfig.isLazyLoad()) {
+                atomLazy = AtomLazy.of(() -> {
+                    Database db = persistentService.scanDatabase(dbName);
+                    db.startDaemon().join();
+                    return db;
+                });
+            } else {
+                Database db = persistentService.scanDatabase(dbName);
+                atomLazy = AtomLazy.of(() -> {
+                    db.startDaemon().join();
+                    return db;
+                });
+            }
+            return new PlainPair<>(dbName,atomLazy);
         }).collect(Collectors.toMap(PlainPair::key, PlainPair::value));
         var idDbMap = databaseIdMap.entrySet().parallelStream().map(entry -> {
             var dbName = entry.getValue();
             var lazyDb = nameDbMap.get(dbName);
             return new PlainPair<>(entry.getKey(), lazyDb);
         }).collect(Collectors.toMap(PlainPair::key, PlainPair::value));
-        return new SystemInfo(nameDbMap, idDbMap);
+        var dbInfosMap = persistentService.scanDatabaseInfos().stream()
+                .map(info -> new PlainPair<>(info, nameDbMap.get(info.getName())))
+                .collect(Collectors.toMap(PlainPair::key, PlainPair::value));
+        return new SystemInfo(nameDbMap, idDbMap, dbInfosMap);
     }
 }

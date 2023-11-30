@@ -1,6 +1,15 @@
 package org.hashdb.ms.compiler;
 
-import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
+import org.hashdb.ms.HashDBMSApp;
+import org.hashdb.ms.compiler.keyword.CompilerNode;
+import org.hashdb.ms.compiler.keyword.SystemKeyword;
+import org.hashdb.ms.compiler.keyword.ctx.sys.SystemCompileCtx;
+import org.hashdb.ms.data.Database;
+import org.hashdb.ms.exception.CommandCompileException;
+import org.hashdb.ms.exception.DBInnerException;
+import org.hashdb.ms.net.ConnectionSession;
+import org.hashdb.ms.sys.DBSystem;
+import org.hashdb.ms.util.JacksonSerializer;
 import org.hashdb.ms.util.Lazy;
 
 /**
@@ -9,27 +18,52 @@ import org.hashdb.ms.util.Lazy;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public class SystemCompileStream extends CommonCompileStream {
-    public SystemCompileStream(String command) {
+public class SystemCompileStream extends CommonCompileStream<SystemCompileCtx<?>> {
+    private static final Lazy<DBSystem> SYSTEM =  Lazy.of(()-> HashDBMSApp.ctx().getBean(DBSystem.class));
+
+    protected final ConnectionSession session;
+
+    public ConnectionSession getSession() {
+        return session;
+    }
+
+    public SystemCompileStream(ConnectionSession session, String command) {
+        this.session = session;
         this.tokens = extractTokens(command);
+        if (tokens.length == 0) {
+            throw new CommandCompileException("illegal command '"+command+"'");
+        }
         this.command = Lazy.of(() -> String.join(" ", tokens));
         eraseLastSemicolon(tokens);
         eraseParentheses(tokens);
     }
 
     @Override
-    public String errToken(String token) {
-        return null;
-    }
-
-    @Override
-    public CompileCtx<?> compile() {
-        return null;
+    public SystemCompileCtx<?> compile() {
+        SystemCompileCtx<?> compileCtx = SystemKeyword.createCtx(token());
+        if (compileCtx == null) {
+            return null;
+        }
+        next();
+        compileCtx.interpretWith(this);
+        return compileCtx;
     }
 
     @Override
     public String nearString() {
-        return null;
+        return "";
     }
 
+    public String submit(){
+        SystemCompileCtx<?> compileCtx = compile();
+        if(compileCtx == null) {
+            return null;
+        }
+        Object result = compileCtx.result();
+        if(result instanceof Boolean ok){
+            return ok ? "SUCC":"FAIL";
+        }
+        Object normalizeValue = CompileStream.normalizeValue(result);
+        return JacksonSerializer.stringfy(normalizeValue == null? "null": normalizeValue);
+    }
 }
