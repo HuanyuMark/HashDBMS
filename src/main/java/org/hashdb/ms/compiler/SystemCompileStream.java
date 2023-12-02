@@ -15,10 +15,10 @@ import org.hashdb.ms.util.Lazy;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public class SystemCompileStream extends CommonCompileStream<SystemCompileCtx<?>> {
+public final class SystemCompileStream extends CommonCompileStream<SystemCompileCtx<?>> {
     private static final Lazy<DBSystem> SYSTEM =  Lazy.of(()-> HashDBMSApp.ctx().getBean(DBSystem.class));
 
-    protected final ConnectionSession session;
+    final ConnectionSession session;
 
     public ConnectionSession getSession() {
         return session;

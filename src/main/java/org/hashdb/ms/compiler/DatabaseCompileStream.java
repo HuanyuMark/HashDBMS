@@ -3,7 +3,7 @@ package org.hashdb.ms.compiler;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.data.Database;
-import org.hashdb.ms.exception.DBInnerException;
+import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 
@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
  * @version 0.0.1
  */
 @Slf4j
-public abstract class DatabaseCompileStream extends CommonCompileStream<CompileCtx<?>> {
+public abstract sealed class DatabaseCompileStream extends CommonCompileStream<CompileCtx<?>> permits ConsumerCompileStream, SupplierCompileStream {
 
     protected final Database database;
 
@@ -47,7 +47,7 @@ public abstract class DatabaseCompileStream extends CommonCompileStream<CompileC
     protected DatabaseCompileStream(Database database, String @NotNull [] childTokens, DatabaseCompileStream fatherStream, boolean shouldNormalize) {
         if (childTokens.length == 0) {
             log.error("compiler error: father tokens: {} child tokens: {}", childTokens, childTokens);
-            throw new DBInnerException("see console. fail to extract child tokens");
+            throw new DBSystemException("see console. fail to extract child tokens");
         }
         if(shouldNormalize) {
             eraseParentheses(childTokens);
@@ -75,7 +75,7 @@ public abstract class DatabaseCompileStream extends CommonCompileStream<CompileC
     public SupplierCompileStream forkSupplierCompileStream(int startTokenIndex, int endTokenIndex) {
         if (endTokenIndex < startTokenIndex) {
             log.error("endTokenIndex {} < startTokenIndex {}", endTokenIndex, startTokenIndex);
-            throw new DBInnerException();
+            throw new DBSystemException();
         }
         var childTokens = Arrays.stream(tokens).skip(startTokenIndex).limit(endTokenIndex - startTokenIndex + 1).toArray(String[]::new);
         return new SupplierCompileStream(database, childTokens, this);
@@ -84,7 +84,7 @@ public abstract class DatabaseCompileStream extends CommonCompileStream<CompileC
     public ConsumerCompileStream forkConsumerCompileStream(int startTokenIndex, int endTokenIndex, CompileCtx<?> fatherCompileCtx) {
         if (endTokenIndex < startTokenIndex) {
             log.error("endTokenIndex {} < startTokenIndex {}", endTokenIndex, startTokenIndex);
-            throw new DBInnerException();
+            throw new DBSystemException();
         }
         // 这里相当于取了字串, 那么母串里被摘出的token需要切掉吗?
         var childTokens = Arrays.stream(tokens).skip(startTokenIndex).limit(endTokenIndex - startTokenIndex + 1).toArray(String[]::new);

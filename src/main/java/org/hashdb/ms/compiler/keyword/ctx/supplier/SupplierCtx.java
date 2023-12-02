@@ -1,12 +1,11 @@
 package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
 import org.hashdb.ms.compiler.SupplierCompileStream;
-import org.hashdb.ms.compiler.keyword.Keyword;
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.option.OptionCtx;
 import org.hashdb.ms.data.OpsTask;
-import org.hashdb.ms.exception.DBInnerException;
+import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.exception.StopComplieException;
 
 import java.util.HashMap;
@@ -25,7 +24,7 @@ public abstract class SupplierCtx extends CompileCtx<SupplierCompileStream> {
 
     public OpsTask<?> compileWithStream(SupplierCompileStream compileStream) throws StopComplieException {
         if (compileResult != null) {
-            throw new DBInnerException(getClass().getSimpleName() + " is finish compilation");
+            throw new DBSystemException(getClass().getSimpleName() + " is finish compilation");
         }
         stream = compileStream;
         var supplierTask = compile();

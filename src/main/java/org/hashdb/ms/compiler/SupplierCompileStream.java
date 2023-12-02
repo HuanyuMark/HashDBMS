@@ -18,7 +18,7 @@ import java.util.Objects;
  * @version 0.0.1
  */
 @Slf4j
-public class SupplierCompileStream extends DatabaseCompileStream {
+public final class SupplierCompileStream extends DatabaseCompileStream {
 
     SupplierCompileStream(Database database, String command) {
         super(database, command);

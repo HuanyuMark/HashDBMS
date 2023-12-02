@@ -2,7 +2,7 @@ package org.hashdb.ms.compiler;
 
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.exception.CommandCompileException;
-import org.hashdb.ms.exception.DBExternalException;
+import org.hashdb.ms.exception.DBClientException;
 import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 
@@ -177,7 +177,7 @@ public abstract class CommonCompileStream<R> implements CompileStream<R> {
     }
 
     @Override
-    public String peekToken(int offset, Function<Integer, DBExternalException> outOfRange) {
+    public String peekToken(int offset, Function<Integer, DBClientException> outOfRange) {
         int i = cursor + offset;
         try {
             return tokens[i];
@@ -202,7 +202,7 @@ public abstract class CommonCompileStream<R> implements CompileStream<R> {
     }
 
     @Override
-    public String token(Function<Integer, DBExternalException> outOfRange) throws DBExternalException {
+    public String token(Function<Integer, DBClientException> outOfRange) throws DBClientException {
         try {
             return token();
         } catch (ArrayIndexOutOfBoundsException e) {

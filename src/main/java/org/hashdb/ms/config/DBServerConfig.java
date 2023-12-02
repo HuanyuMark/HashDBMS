@@ -20,7 +20,8 @@ public class DBServerConfig {
     private int port = 4090;
 
     private int maxConnections = 1_0000;
-    @ConfigLoadOnly
+
+    private long heartbeatInterval = 10_000;
     public void setPort(int port) {
         this.port = port;
     }
@@ -28,5 +29,10 @@ public class DBServerConfig {
     @ConfigLoadOnly
     public void setMaxConnections(int maxConnections) {
         this.maxConnections = maxConnections;
+    }
+
+    @ConfigLoadOnly
+    public void setHeartbeatInterval(long heartbeatInterval) {
+        this.heartbeatInterval = heartbeatInterval;
     }
 }

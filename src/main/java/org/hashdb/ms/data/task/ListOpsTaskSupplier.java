@@ -3,7 +3,7 @@ package org.hashdb.ms.data.task;
 import org.hashdb.ms.data.OpsTask;
 import org.hashdb.ms.data.PlainPair;
 import org.hashdb.ms.data.result.PopPushResult;
-import org.hashdb.ms.exception.DBExternalException;
+import org.hashdb.ms.exception.DBClientException;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
@@ -142,7 +142,7 @@ public class ListOpsTaskSupplier extends RefDataTypeOpsTaskSupplier {
         int largestIndex = values_.getLast().key();
         int smallestIndex = values_.getFirst().key();
         if (smallestIndex < 0 || largestIndex >= list_.size()) {
-            throw new DBExternalException(new IndexOutOfBoundsException());
+            throw new DBClientException(new IndexOutOfBoundsException());
         }
         return OpsTask.of(() -> {
             if (values_.isEmpty()) {
@@ -211,7 +211,7 @@ public class ListOpsTaskSupplier extends RefDataTypeOpsTaskSupplier {
         int largestIndex = result.getLast();
         int smallestIndex = result.getFirst();
         if (smallestIndex < 0 || largestIndex >= bound) {
-            throw new DBExternalException(new IndexOutOfBoundsException());
+            throw new DBClientException(new IndexOutOfBoundsException());
         }
         return result;
     }

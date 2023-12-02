@@ -9,5 +9,5 @@ import lombok.experimental.StandardException;
  * @version 0.0.1
  */
 @StandardException
-public class DatabaseInUseException extends DBExternalException {
+public class DatabaseInUseException extends DBClientException {
 }

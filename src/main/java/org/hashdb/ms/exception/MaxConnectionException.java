@@ -3,11 +3,11 @@ package org.hashdb.ms.exception;
 import lombok.experimental.StandardException;
 
 /**
- * Date: 2023/11/21 12:47
- * DB 外部的错误，是客户端不当操作引发的错误
+ * Date: 2023/12/3 2:07
+ *
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
 @StandardException
-public class DBExternalException extends RuntimeException{
+public class MaxConnectionException extends DBClientException {
 }

@@ -1,5 +1,7 @@
 package org.hashdb.ms.util;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.*;
 import java.util.function.Supplier;
 /**
@@ -34,8 +36,15 @@ public class AsyncService {
     public static <T> CompletableFuture<T> submit(Supplier<T> supplier){
         return CompletableFuture.supplyAsync(supplier, service());
     }
-    public static CompletableFuture<Void> submit(Runnable task){
+
+    public static List<? extends CompletableFuture<?>> submit(Supplier<?>... supplier){
+        return Arrays.stream(supplier).map(s-> CompletableFuture.supplyAsync(s, service())).toList();
+    }
+    public static CompletableFuture<?> submit(Runnable task){
         return CompletableFuture.runAsync(task, service());
+    }
+    public static List<? extends CompletableFuture<?>> submit(Runnable... task){
+        return Arrays.stream(task).map(AsyncService::submit).toList();
     }
     public static ScheduledFuture<?> setTimeout(Runnable runnable, long milliseconds) {
         return scheduledExecutorService.get().schedule(runnable, milliseconds, TimeUnit.MILLISECONDS);

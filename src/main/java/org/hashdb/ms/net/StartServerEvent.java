@@ -6,5 +6,5 @@ package org.hashdb.ms.net;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public class SpringReadyEvent {
+public class StartServerEvent {
 }

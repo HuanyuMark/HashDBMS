@@ -1,6 +1,6 @@
 package org.hashdb.ms.util;
 
-import org.hashdb.ms.exception.DBInnerException;
+import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.exception.WorkerInterruptedException;
 
 import java.util.concurrent.CompletableFuture;
@@ -23,7 +23,7 @@ public class Futures {
         } catch (InterruptedException e) {
             throw new WorkerInterruptedException(e);
         } catch (ExecutionException e) {
-            throw new DBInnerException(e);
+            throw new DBSystemException(e);
         }
     }
 }

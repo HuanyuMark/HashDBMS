@@ -1,7 +1,7 @@
 package org.hashdb.ms.compiler.option;
 
 import org.hashdb.ms.compiler.DatabaseCompileStream;
-import org.hashdb.ms.exception.DBExternalException;
+import org.hashdb.ms.exception.DBClientException;
 
 /**
  * Date: 2023/11/25 18:22
@@ -20,7 +20,7 @@ public abstract class IntegerOpCtx extends ParseableOpCtx<Integer> {
         try {
             value = Integer.valueOf(unknownValueToken);
         } catch (NumberFormatException e) {
-            throw new DBExternalException("can not parse string '"+ unknownValueToken +"' to integer. "+stream.errToken(unknownValueToken));
+            throw new DBClientException("can not parse string '"+ unknownValueToken +"' to integer. "+stream.errToken(unknownValueToken));
         }
         afterCompile(unknownValueToken, stream);
         return this;

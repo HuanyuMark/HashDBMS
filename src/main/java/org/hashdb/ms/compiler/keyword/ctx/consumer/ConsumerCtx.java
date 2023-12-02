@@ -6,9 +6,8 @@ import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.data.DataType;
 import org.hashdb.ms.data.HValue;
-import org.hashdb.ms.exception.CommandCompileException;
 import org.hashdb.ms.exception.CommandExecuteException;
-import org.hashdb.ms.exception.DBInnerException;
+import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.exception.StopComplieException;
 import org.jetbrains.annotations.NotNull;
 
@@ -39,7 +38,7 @@ public abstract class ConsumerCtx<I> extends CompileCtx<ConsumerCompileStream> {
 
     public Function<I, ?> compileWithStream(ConsumerCompileStream compileStream) throws StopComplieException {
         if (compileResult != null) {
-            throw new DBInnerException(getClass().getSimpleName() + " is finish compilation");
+            throw new DBSystemException(getClass().getSimpleName() + " is finish compilation");
         }
         this.stream = compileStream;
         compileResult = opsTarget -> consumeWithConsumer(compile().apply(opsTarget));

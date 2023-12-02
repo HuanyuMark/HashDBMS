@@ -9,5 +9,5 @@ import lombok.experimental.StandardException;
  * @version 0.0.1
  */
 @StandardException
-public class DatabaseClashException extends DBExternalException {
+public class DatabaseClashException extends DBClientException {
 }

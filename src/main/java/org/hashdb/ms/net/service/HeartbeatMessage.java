@@ -36,7 +36,7 @@ public class HeartbeatMessage extends ServiceMessage {
         this.ip = ip;
         this.port = port;
         this.beat = beat;
-        timestamp = System.currentTimeMillis();
+        setTimestamp(System.currentTimeMillis());
     }
 
     public HeartbeatMessage nextBeat() {

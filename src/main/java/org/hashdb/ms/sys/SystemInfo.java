@@ -4,7 +4,7 @@ import lombok.Getter;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.DatabaseInfos;
 import org.hashdb.ms.data.PlainPair;
-import org.hashdb.ms.exception.DBInnerException;
+import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.exception.DatabaseInUseException;
 import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
@@ -54,7 +54,7 @@ public class SystemInfo {
         Objects.requireNonNull(databaseIdMap);
         Objects.requireNonNull(databaseInfosMap);
         if (databaseIdMap.size() != databaseNameMap.size()) {
-            throw new DBInnerException();
+            throw new DBSystemException();
         }
         this.databaseNameMap.putAll(databaseNameMap);
         this.databaseIdMap.putAll(databaseIdMap);

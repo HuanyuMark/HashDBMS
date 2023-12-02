@@ -1,12 +1,8 @@
 package org.hashdb.ms.data;
 
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.HashDBMSApp;
-import org.hashdb.ms.config.DBRamConfig;
-import org.hashdb.ms.exception.DBInnerException;
+import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.exception.IllegalJavaClassStoredException;
-import org.hashdb.ms.util.Lazy;
-import org.hashdb.ms.util.OneTimeLazy;
 import org.hashdb.ms.util.ReflectCacheData;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -133,7 +129,7 @@ public enum DataType {
                 return constructor.newInstance();
             } catch (Throwable e) {
                 log.error("unexpected exception: {}",e.toString());
-                throw new DBInnerException(e);
+                throw new DBSystemException(e);
             }
         }
     }

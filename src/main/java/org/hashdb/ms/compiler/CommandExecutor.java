@@ -1,6 +1,6 @@
 package org.hashdb.ms.compiler;
 
-import org.hashdb.ms.exception.DBExternalException;
+import org.hashdb.ms.exception.DBClientException;
 import org.hashdb.ms.net.ConnectionSession;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -11,16 +11,16 @@ import org.jetbrains.annotations.NotNull;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public class Compiler {
+public class CommandExecutor {
     private final ConnectionSession session;
 
-    protected Compiler(ConnectionSession session) {
+    protected CommandExecutor(ConnectionSession session) {
         this.session = session;
     }
 
     @Contract(value = "_ -> new", pure = true)
-    public static @NotNull Compiler create(ConnectionSession session) {
-        return new Compiler(session);
+    public static @NotNull CommandExecutor create(ConnectionSession session) {
+        return new CommandExecutor(session);
     }
 
     public String run(String command) {
@@ -29,7 +29,7 @@ public class Compiler {
         if(execRes == null) {
             var db = session.getDatabase();
             if (db == null) {
-                throw new DBExternalException("No database selected");
+                throw new DBClientException("No database selected");
             }
             var supplierCompileStream = new SupplierCompileStream(db, compileStream.tokens, null, false);
             return supplierCompileStream.submit();

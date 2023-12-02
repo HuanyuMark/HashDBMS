@@ -1,6 +1,6 @@
 package org.hashdb.ms.data.task;
 
-import org.hashdb.ms.exception.DBExternalException;
+import org.hashdb.ms.exception.DBClientException;
 
 import java.util.List;
 import java.util.Objects;
@@ -50,7 +50,7 @@ public class ImmutableChecker {
 
     public static void check(List<?> container) {
         if (isUnmodifiableCollection(container)) {
-            throw new DBExternalException(new UnsupportedOperationException("List is not unmodifiable"));
+            throw new DBClientException(new UnsupportedOperationException("List is not unmodifiable"));
         }
     }
 }

@@ -1,10 +1,8 @@
 package org.hashdb.ms.compiler;
 
-import org.hashdb.ms.HashDBMSApp;
-import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.PlainPair;
-import org.hashdb.ms.exception.DBExternalException;
+import org.hashdb.ms.exception.DBClientException;
 
 import java.util.Iterator;
 import java.util.List;
@@ -49,7 +47,7 @@ public interface CompileStream<R> {
 
     String prevToken();
 
-    String peekToken(int offset, Function<Integer, DBExternalException> outOfRange);
+    String peekToken(int offset, Function<Integer, DBClientException> outOfRange);
 
     void next();
 
@@ -57,7 +55,7 @@ public interface CompileStream<R> {
 
     int cursor();
 
-    String token(Function<Integer, DBExternalException> outOfRange) throws DBExternalException;
+    String token(Function<Integer, DBClientException> outOfRange) throws DBClientException;
 
     String token() throws ArrayIndexOutOfBoundsException;
 

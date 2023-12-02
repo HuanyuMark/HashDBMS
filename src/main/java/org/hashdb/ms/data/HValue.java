@@ -3,7 +3,7 @@ package org.hashdb.ms.data;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.config.DBRamConfig;
-import org.hashdb.ms.exception.DBInnerException;
+import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.exception.ServiceStoppedException;
 import org.hashdb.ms.util.AsyncService;
 import org.hashdb.ms.util.JsonService;
@@ -172,7 +172,7 @@ public class HValue<T> implements Cloneable {
         this.expireDate = expireDate;
         this.expireMilliseconds = expireDate.getTime() - System.currentTimeMillis();
         if (isExpired()) {
-            throw new DBInnerException();
+            throw new DBSystemException();
         }
         // 如果不传值, 则不改变原优先级
         if (priority == null) {
@@ -226,7 +226,7 @@ public class HValue<T> implements Cloneable {
             Set<String> interceptedMethodNames = Set.of("cancelClear", "clearBy", "clone", "cloneDefault");
             return (HValue<T>) Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(), new Class[]{HValue.class}, (proxy, method, args) -> {
                 if (interceptedMethodNames.contains(method.getName())) {
-                    throw new DBInnerException(
+                    throw new DBSystemException(
                             new UnsupportedOperationException("can`t call method '" + method + "' of" +
                                     " cloned HValue")
                     );

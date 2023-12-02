@@ -1,6 +1,6 @@
 package org.hashdb.ms.persistent;
 
-import org.hashdb.ms.exception.DBExternalException;
+import org.hashdb.ms.exception.DBClientException;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
@@ -27,7 +27,7 @@ public class DBFileFactory {
     public static File loadIndexFile(File dbFileDir) {
         File[] files = dbFileDir.listFiles(f -> f.getName().equals(INDEX_FILE_NAME));
         if(files == null || files.length == 0) {
-            throw new DBExternalException(new FileNotFoundException("can not find database index file: '"+
+            throw new DBClientException(new FileNotFoundException("can not find database index file: '"+
                     Path.of(dbFileDir.getAbsolutePath(),INDEX_FILE_NAME) +"'"));
         }
         return files[0];

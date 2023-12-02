@@ -9,5 +9,5 @@ import lombok.experimental.StandardException;
  * @version 0.0.1
  */
 @StandardException
-public class ExcessiveConnectionsException extends DBExternalException {
+public class ExcessiveConnectionsException extends DBClientException {
 }

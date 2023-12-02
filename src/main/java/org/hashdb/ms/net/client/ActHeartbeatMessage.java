@@ -12,6 +12,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public class ActHeartbeatMessage extends HeartbeatMessage {
 
+
     @Override
     public MessageType getType() {
         return MessageType.ACT_HEARTBEAT;
@@ -21,6 +22,6 @@ public class ActHeartbeatMessage extends HeartbeatMessage {
         return heartbeatMessage.getIp().equals(ip) &&
                 port == heartbeatMessage.getPort() &&
                 beat == heartbeatMessage.getBeat() &&
-                timestamp != heartbeatMessage.getTimestamp();
+                getTimestamp() != heartbeatMessage.getTimestamp();
     }
 }

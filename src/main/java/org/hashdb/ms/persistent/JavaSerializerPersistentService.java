@@ -6,7 +6,7 @@ import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.DatabaseInfos;
 import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.StorableHValue;
-import org.hashdb.ms.exception.DBExternalException;
+import org.hashdb.ms.exception.DBClientException;
 import org.hashdb.ms.exception.NotFoundDatabaseException;
 import org.hashdb.ms.sys.DBSystem;
 import org.hashdb.ms.sys.StorableSystemInfo;
@@ -125,7 +125,7 @@ public class JavaSerializerPersistentService extends FileSystemPersistentService
             throw NotFoundDatabaseException.of(name);
         }
         if (!dbFileDir.isDirectory()) {
-            throw new DBExternalException("db file '" + dbFileDir.getAbsolutePath() + "' is not a directory");
+            throw new DBClientException("db file '" + dbFileDir.getAbsolutePath() + "' is not a directory");
         }
         return scanDatabaseInfo(dbFileDir);
     }
@@ -143,7 +143,7 @@ public class JavaSerializerPersistentService extends FileSystemPersistentService
             throw NotFoundDatabaseException.of(name);
         }
         if (!dbFileDir.isDirectory()) {
-            throw new DBExternalException("db file '" + dbFileDir.getAbsolutePath() + "' is not a directory");
+            throw new DBClientException("db file '" + dbFileDir.getAbsolutePath() + "' is not a directory");
         }
         return scanDatabase(dbFileDir);
     }
@@ -175,7 +175,7 @@ public class JavaSerializerPersistentService extends FileSystemPersistentService
         File[] files = dbFileConfig.getDbFileRootDir().listFiles(file -> dbFileConfig.getSystemInfoFileName().equals(file.getName()));
         if (files != null) {
             if (files.length > 1) {
-                throw new DBExternalException("system info file is not unique");
+                throw new DBClientException("system info file is not unique");
             }
             if (files.length == 1) {
                 StorableSystemInfo storableSystemInfo = (StorableSystemInfo) readObject(files[0]);

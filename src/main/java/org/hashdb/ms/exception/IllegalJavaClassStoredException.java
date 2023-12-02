@@ -9,7 +9,7 @@ import lombok.experimental.StandardException;
  * @version 0.0.1
  */
 @StandardException
-public class IllegalJavaClassStoredException extends DBInnerException{
+public class IllegalJavaClassStoredException extends DBSystemException {
     public static IllegalJavaClassStoredException of(Class<?> clazz) {
         return new IllegalJavaClassStoredException("can`t store java class '"+clazz+"'");
     }

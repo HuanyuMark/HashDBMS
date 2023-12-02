@@ -1,9 +1,7 @@
 package org.hashdb.ms.exception;
 
 import lombok.experimental.StandardException;
-import org.apache.logging.log4j.util.Strings;
 
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -13,7 +11,7 @@ import java.util.List;
  * @version 0.0.1
  */
 @StandardException
-public class RequiredConfigException extends DBExternalException{
+public class RequiredConfigException extends DBClientException {
     public static RequiredConfigException of(String key) {
         return of(List.of(key));
     }

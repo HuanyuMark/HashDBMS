@@ -5,12 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.config.DBFileConfig;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.exception.DBFileAccessFailedException;
-import org.hashdb.ms.exception.DBInnerException;
+import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.exception.NotFoundDatabaseException;
-import org.hashdb.ms.sys.SystemInfo;
 
 import java.io.*;
-import java.nio.file.FileSystem;
 import java.nio.file.Paths;
 import java.util.Objects;
 
@@ -69,7 +67,7 @@ public abstract class FileSystemPersistentService implements PersistentService {
         ) {
             return inputStream.readObject();
         } catch (IOException | ClassNotFoundException e) {
-            throw new DBInnerException(e);
+            throw new DBSystemException(e);
         }
     }
 

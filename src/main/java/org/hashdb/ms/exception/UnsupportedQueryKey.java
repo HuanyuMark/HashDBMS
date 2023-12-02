@@ -15,7 +15,7 @@ import java.util.List;
  * @version 0.0.1
  */
 @StandardException
-public class UnsupportedQueryKey extends DBExternalException {
+public class UnsupportedQueryKey extends DBClientException {
     @Contract("_ -> new")
     public static @NotNull UnsupportedQueryKey of(List<?> unsupportedKeys) {
         return new UnsupportedQueryKey("can not query key of these value: " + JsonService.stringfy(unsupportedKeys));

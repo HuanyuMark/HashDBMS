@@ -9,5 +9,5 @@ import lombok.experimental.StandardException;
  * @version 0.0.1
  */
 @StandardException
-public class ServiceStoppedException extends DBExternalException {
+public class ServiceStoppedException extends DBClientException {
 }

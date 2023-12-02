@@ -9,7 +9,7 @@ import lombok.experimental.StandardException;
  * @version 0.0.1
  */
 @StandardException
-public class NotFoundDatabaseException extends DBExternalException {
+public class NotFoundDatabaseException extends DBClientException {
     public static NotFoundDatabaseException of(String databaseName) {
         return new NotFoundDatabaseException("not found database: '"+databaseName+"'");
     }

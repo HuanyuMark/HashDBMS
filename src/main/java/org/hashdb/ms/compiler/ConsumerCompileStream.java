@@ -17,11 +17,11 @@ import java.util.Objects;
  * @version 0.0.1
  */
 @Slf4j
-public class ConsumerCompileStream extends DatabaseCompileStream {
+public final class ConsumerCompileStream extends DatabaseCompileStream {
 
     private final CompileCtx<?> fatherCompileCtx;
 
-    protected ConsumerCompileStream(Database database,
+    ConsumerCompileStream(Database database,
                                     String @NotNull [] childTokens,
                                     DatabaseCompileStream fatherSteam,
                                     CompileCtx<?> fatherCompileCtx) {

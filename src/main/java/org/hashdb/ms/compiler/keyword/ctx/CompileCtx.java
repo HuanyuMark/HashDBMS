@@ -147,7 +147,7 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
     protected static Object normalizeToOneValue(Object unknownValue) {
         try {
             return normalizeToOneValueOrElseThrow(unknownValue);
-        } catch (DBInnerException e) {
+        } catch (DBSystemException e) {
             return unknownValue;
         }
     }
@@ -171,7 +171,7 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
             DataType.typeOfRawValue(unknownValue);
         } catch (IllegalJavaClassStoredException e) {
             log.error("can not normalize : {}", unknownValue);
-            throw new DBInnerException("can not normalize: " + unknownValue);
+            throw new DBSystemException("can not normalize: " + unknownValue);
         }
         return unknownValue;
     }
@@ -328,7 +328,7 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
         filterAllKeywords(k -> new CommandCompileException("unexpected keyword: '" + k.name() + "'." + stream.errToken(k.name())));
     }
 
-    protected void filterAllKeywords(Function<Keyword<?>, DBExternalException> exceptionSupplier) throws ArrayIndexOutOfBoundsException {
+    protected void filterAllKeywords(Function<Keyword<?>, DBClientException> exceptionSupplier) throws ArrayIndexOutOfBoundsException {
         String token = stream.token();
         var supplierKeyword = SupplierKeyword.typeOfIgnoreCase_(token);
         if (supplierKeyword != null) {
@@ -345,7 +345,7 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
         try {
             token = stream.token();
         } catch (ArrayIndexOutOfBoundsException e) {
-            throw new DBInnerException(e);
+            throw new DBSystemException(e);
         }
         if (Options.isOption(token)) {
             throw new CommandCompileException("keyword '" + name() + "' can not support any options");
