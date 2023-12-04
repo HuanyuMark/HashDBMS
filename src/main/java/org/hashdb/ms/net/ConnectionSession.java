@@ -1,18 +1,19 @@
 package org.hashdb.ms.net;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.sun.jdi.connect.spi.ClosedConnectionException;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.config.DBServerConfig;
 import org.hashdb.ms.data.Database;
-import org.hashdb.ms.exception.ClosedConnectionException;
+import org.hashdb.ms.exception.ClosedConnectionWrapper;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.exception.IllegalMessageException;
-import org.hashdb.ms.net.client.ActHeartbeatMessage;
+import org.hashdb.ms.exception.WorkerInterruptedException;
 import org.hashdb.ms.net.client.AuthenticationMessage;
+import org.hashdb.ms.net.client.CloseMessage;
 import org.hashdb.ms.net.msg.Message;
-import org.hashdb.ms.net.msg.MessageType;
 import org.hashdb.ms.net.service.ActAuthenticationMessage;
 import org.hashdb.ms.net.service.HeartbeatMessage;
 import org.hashdb.ms.util.AsyncService;
@@ -25,7 +26,9 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.Arrays;
 import java.util.UUID;
+import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ScheduledFuture;
 
 /**
@@ -46,9 +49,24 @@ public class ConnectionSession implements AutoCloseable {
 
     private final ByteBuffer readBuffer = ByteBuffer.allocate(1024);
 
-    private HeartbeatMessage heartbeat;
+    private final BlockingDeque<Message> readDeque = new LinkedBlockingDeque<>();
 
-    private long lastSendTime;
+    private final BlockingDeque<Message> writeDeque = new LinkedBlockingDeque<>();
+
+    private final MessageConsumerChain chain = new MessageConsumerChain();
+
+    private record ResultWrapper(Object result) {
+    }
+
+    private final CompletableFuture<?> messageReader;
+
+    private final CompletableFuture<?> messageWriter;
+
+    private final CompletableFuture<?> messageConsumer;
+
+    private final HeartbeatMessage heartbeat;
+
+    private long lastInteractTime;
 
     private boolean aliveChecked = true;
 
@@ -59,19 +77,101 @@ public class ConnectionSession implements AutoCloseable {
      */
     private ScheduledFuture<?> aliveChecker;
 
+    private int failAliveCheckCount = 0;
+
     private volatile boolean closed = false;
 
-    boolean isConnected() {
-        return channel.isConnected();
+    {
+        // 认证
+        chain.add((msg, chain) -> {
+            if (!(msg instanceof AuthenticationMessage)) {
+                close();
+                return null;
+            }
+            chain.removeCurrent();
+            try {
+                send(new ActAuthenticationMessage());
+                startCheckAlive();
+            } catch (ClosedConnectionException e) {
+                log.error("closedConnection throw '{}'", e.toString());
+                throw ClosedConnectionWrapper.wrap(e);
+            }
+            return null;
+        });
+        // 生命周期
+        chain.add((msg, chain) -> {
+            lastInteractTime = System.currentTimeMillis();
+            // 心跳
+            actHeartbeat();
+            if (msg instanceof HeartbeatMessage) {
+                return null;
+            }
+            return chain.next();
+        });
+        // 处理关闭消息
+        chain.add((msg, chain) -> {
+            if (!(msg instanceof CloseMessage)) {
+                return chain.next();
+            }
+            close();
+            return null;
+        });
     }
 
     public ConnectionSession(@NotNull SocketChannel channel) {
         this.channel = channel;
         heartbeat = HeartbeatMessage.newBeat(channel.socket());
-        if (!auth()) {
-            close();
-        }
-        log.debug("new session {}",this);
+        messageWriter = AsyncService.submit(() -> {
+            while (true) {
+                try {
+                    Message msg = writeDeque.take();
+                    send0(msg);
+                } catch (ClosedConnectionException e) {
+                    log.error("closedConnection throw '{}'", e.toString());
+                    throw ClosedConnectionWrapper.wrap(e);
+                } catch (InterruptedException e) {
+                    log.error("messageSender throw '{}'", e.toString());
+                    throw new WorkerInterruptedException(e);
+                }
+            }
+        });
+        messageReader = AsyncService.submit(() -> {
+            while (true) {
+                try {
+                    Message msg = get();
+                    readDeque.add(msg);
+                } catch (ClosedConnectionException e) {
+                    log.error("messageReader throw '{}'", e.toString());
+                    throw ClosedConnectionWrapper.wrap(e);
+                }
+            }
+        });
+        messageConsumer = AsyncService.submit(() -> {
+            while (true) {
+                Message msg;
+                try {
+                    msg = readDeque.take();
+                } catch (InterruptedException e) {
+                    log.error("messageSender throw '{}'", e.toString());
+                    throw new WorkerInterruptedException(e);
+                }
+                try {
+                    chain.consume(msg);
+                } catch (ClosedConnectionException e) {
+                    log.error("closedConnection throw '{}'", e.toString());
+                    throw ClosedConnectionWrapper.wrap(e);
+                } catch (Exception e) {
+                    log.error("message consumer chain throw '{}'", e.toString());
+                    throw new DBSystemException(e);
+                }
+            }
+        });
+
+        log.info("new session {}", this);
+    }
+
+    boolean isConnected() {
+        return channel.isConnected();
     }
 
     public Database getDatabase() {
@@ -82,7 +182,7 @@ public class ConnectionSession implements AutoCloseable {
         if (database == null) {
             close();
         } else {
-            database.restrain(this);
+            database.restrain();
         }
         this.database = database;
     }
@@ -95,50 +195,51 @@ public class ConnectionSession implements AutoCloseable {
         readBuffer.clear();
         try {
             channel.close();
-        } catch (IOException ignores) {
+        } catch (IOException e) {
+            log.error("unexpected close() throw '{}'", e.toString());
+        }
+        if (database != null) {
+            database.release();
         }
         aliveChecker.cancel(true);
+        messageWriter.cancel(true);
+        messageReader.cancel(true);
+        messageConsumer.cancel(true);
         if (timeoutTask != null) {
             timeoutTask.cancel(true);
         }
-        if (database != null) {
-            database.release(this);
-        }
         closed = true;
-        log.debug("close session {}", this);
+        log.info("close session {}", this);
     }
 
     public void startCheckAlive() {
+        long heartbeatInterval = dbServerConfig.get().getHeartbeatInterval();
+        int timeoutRetry = dbServerConfig.get().getTimeoutRetry();
         aliveChecker = AsyncService.setInterval(() -> {
-            if (System.currentTimeMillis() - lastSendTime < dbServerConfig.get().getHeartbeatInterval()) {
-                if (timeoutTask != null) {
-                    timeoutTask.cancel(true);
-                }
+            if (System.currentTimeMillis() - lastInteractTime <= heartbeatInterval) {
+                actHeartbeat();
                 return;
             }
-            if (!aliveChecked || timeoutTask != null) {
-                close();
-                return;
-            }
-            aliveChecked = false;
-            timeoutTask = AsyncService.setTimeout(() -> {
-                ActHeartbeatMessage act;
+            if (aliveChecked) {
+                aliveChecked = false;
                 try {
-                    act = interact(heartbeat, ActHeartbeatMessage.class);
+                    send(heartbeat);
+                    heartbeat.next();
                 } catch (ClosedConnectionException e) {
-                    log.error("timeoutTask throw unexpected exception: {}", e.toString());
-                    return;
+                    log.warn("unexpected send heartbeat closed throw '{}'", e.toString());
+                    throw ClosedConnectionWrapper.wrap(e);
                 }
-                if (act.ack(heartbeat)) {
-                    aliveChecked = true;
-                    heartbeat = heartbeat.nextBeat();
-                }
-                timeoutTask = null;
-            }, dbServerConfig.get().getHeartbeatInterval());
-        }, dbServerConfig.get().getHeartbeatInterval());
+                return;
+            }
+            if (failAliveCheckCount++ < timeoutRetry) {
+                return;
+            }
+            log.info("inactive session");
+            close();
+        }, heartbeatInterval);
     }
 
-    public <T extends Message> T get(Class<T> messageClass) throws ClosedConnectionException, IllegalMessageException {
+    protected Message get() throws ClosedConnectionException, IllegalMessageException {
         if (closed || !channel.isConnected()) {
             throw new ClosedConnectionException("Connection closed");
         }
@@ -152,59 +253,41 @@ public class ConnectionSession implements AutoCloseable {
                 expectReadCount -= readCount;
             }
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new DBSystemException(e);
         }
+        var json = new String(Arrays.copyOf(readBuffer.array(), readBuffer.position()));
         try {
-            Message result = JsonService.parse(new String(Arrays.copyOf(readBuffer.array(), readBuffer.position())), Message.class);
+            Message result = JsonService.parse(json, Message.class);
             readBuffer.clear();
-            if(result == null) {
+            if (result == null) {
                 throw new IllegalMessageException("unexpected message type 'null'");
             }
-            if(messageClass.isAssignableFrom(result.getClass())) {
-                return (T) result;
-            }
-            throw new IllegalMessageException("unexpected message type '" + MessageType.typeOf(messageClass) + "'");
+            return result;
         } catch (JsonProcessingException e) {
             readBuffer.clear();
-            throw new IllegalMessageException("unexpected message type '" + MessageType.typeOf(messageClass) + "'");
+            throw new IllegalMessageException("unexpected message '" + json + "'");
         }
     }
 
     public void send(Message toSend) throws ClosedConnectionException {
+        writeDeque.add(toSend);
+    }
+
+    public void addMessageConsumer(MessageConsumer consumer) {
+        chain.add(consumer);
+    }
+
+    protected void send0(Message toSend) throws ClosedConnectionException {
         if (closed || !channel.isConnected()) {
             throw new ClosedConnectionException("Connection closed");
         }
         String data = JsonService.stringfy(toSend);
         try {
             channel.write(ByteBuffer.wrap(data.getBytes()));
-            lastSendTime = System.currentTimeMillis();
-            if (timeoutTask != null) {
-                timeoutTask.cancel(true);
-                timeoutTask = null;
-            }
+            lastInteractTime = System.currentTimeMillis();
         } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public <T extends Message> T interact(Message toSend, Class<T> returnMessage) throws ClosedConnectionException {
-        send(toSend);
-        return get(returnMessage);
-    }
-
-    public boolean auth() {
-        try {
-            AuthenticationMessage authenticationMessage = get(AuthenticationMessage.class);
-            // do authentication ...
-            send(new ActAuthenticationMessage());
-            startCheckAlive();
-        } catch (IllegalMessageException e) {
-            return false;
-        } catch (ClosedConnectionException e) {
-            log.error("auth() throw ConnectionClosedException: {}", e.toString());
             throw new DBSystemException(e);
         }
-        return true;
     }
 
     @Override
@@ -215,5 +298,14 @@ public class ConnectionSession implements AutoCloseable {
                 ", channel=" + channel +
                 ", closed=" + closed +
                 '}';
+    }
+
+    protected void actHeartbeat() {
+        aliveChecked = true;
+        failAliveCheckCount = 0;
+        if (timeoutTask != null) {
+            timeoutTask.cancel(true);
+            timeoutTask = null;
+        }
     }
 }

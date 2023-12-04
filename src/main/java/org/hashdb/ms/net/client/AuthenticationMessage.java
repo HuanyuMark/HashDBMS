@@ -2,11 +2,8 @@ package org.hashdb.ms.net.client;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.Getter;
 import org.hashdb.ms.net.msg.Message;
 import org.hashdb.ms.net.msg.MessageType;
-
-import java.util.UUID;
 
 /**
  * Date: 2023/12/1 3:08
@@ -14,6 +11,7 @@ import java.util.UUID;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
+@Data
 @EqualsAndHashCode(callSuper = true)
 public class AuthenticationMessage extends Message {
 

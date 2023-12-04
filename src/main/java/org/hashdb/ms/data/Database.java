@@ -4,8 +4,8 @@ import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.config.DBFileConfig;
 import org.hashdb.ms.exception.IllegalJavaClassStoredException;
 import org.hashdb.ms.exception.IncreaseUnsupportedException;
+import org.hashdb.ms.exception.LikePatternSyntaxException;
 import org.hashdb.ms.exception.ServiceStoppedException;
-import org.hashdb.ms.net.ConnectionSession;
 import org.hashdb.ms.persistent.PersistentService;
 import org.hashdb.ms.util.AsyncService;
 import org.hashdb.ms.util.BlockingQueueTaskConsumer;
@@ -18,6 +18,8 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import java.util.stream.Stream;
 
 /**
@@ -30,6 +32,10 @@ import java.util.stream.Stream;
  * @version 0.0.1
  */
 public class Database extends BlockingQueueTaskConsumer implements Iterable<HValue<?>>, IDatabase {
+
+    /**
+     * 数据库信息
+     */
     private final DatabaseInfos info;
     /**
      * 可以用 {@link String} 来当作键名来查询， 原因参见 {@link #get(String key)}
@@ -42,11 +48,11 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
 
     private final AtomicInteger tackUpCount = new AtomicInteger(0);
 
-    public void restrain(ConnectionSession session) {
+    public void restrain() {
         tackUpCount.incrementAndGet();
     }
 
-    public void release(ConnectionSession session) {
+    public void release() {
         tackUpCount.decrementAndGet();
     }
 
@@ -210,13 +216,18 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
     }
 
 
-
     public HValue<?> get(String key) {
         return table.get(key);
     }
 
-    public List<HValue<?>> getLike(String pattern, Long limit) {
-        Stream<HValue<?>> stream = table.values().parallelStream().filter(v -> v.key().matches(pattern));
+    public List<HValue<?>> getLike(Pattern pattern, Long limit) {
+        Stream<HValue<?>> stream = table.values().parallelStream().filter(v -> {
+            try {
+                return pattern.matcher(v.key()).matches();
+            } catch (PatternSyntaxException e) {
+                throw new LikePatternSyntaxException(e);
+            }
+        });
         if (limit != null) {
             return stream.limit(limit).toList();
         }
@@ -285,11 +296,17 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
      *
      * @param pattern 正则表达式
      */
-    public List<HValue<?>> delLike(String pattern, @Nullable Long limit) {
+    public List<HValue<?>> delLike(Pattern pattern, @Nullable Long limit) {
         // 如果在filter后在peek里删除键, 会影响原集合, 在遍历时,改变原集合的结构, 会报并发修改异常
         List<HValue<?>> matchedValues = table.values().parallelStream()
-                .filter(value -> value.key().matches(pattern)).toList();
-        matchedValues.parallelStream().forEach(v-> table.remove(v.key()).cancelClear());
+                .filter(value -> {
+                    try {
+                        return pattern.matcher(value.key()).matches();
+                    } catch (PatternSyntaxException e) {
+                        throw new LikePatternSyntaxException(e);
+                    }
+                }).toList();
+        matchedValues.parallelStream().forEach(v -> table.remove(v.key()).cancelClear());
         if (limit == null) {
             return matchedValues;
         }
@@ -367,6 +384,7 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
      * @param timestamp 在该时间戳过期
      * @param priority
      */
+    @Deprecated
     public void expireAt(String key, long timestamp, OpsTaskPriority priority) {
         HValue<?> value = table.get(key);
         if (value == null) {
@@ -384,9 +402,15 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
      * @param millis   多少毫秒后过期
      * @param priority
      */
-    public void expireLike(String pattern, Long millis, OpsTaskPriority priority) {
+    public void expireLike(Pattern pattern, Long millis, OpsTaskPriority priority) {
         table.values().parallelStream()
-                .filter(v -> v.key().matches(pattern))
+                .filter(v -> {
+                    try {
+                        return pattern.matcher(v.key()).matches();
+                    } catch (PatternSyntaxException e) {
+                        throw new LikePatternSyntaxException(e);
+                    }
+                })
                 .forEach(v -> {
                     v.clearBy(this, millis, priority);
                 });
@@ -400,14 +424,19 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
      * @param timestamp 到这个时间戳过期
      * @param priority
      */
-    public void expireAtLike(String pattern, long timestamp, OpsTaskPriority priority) {
+    public void expireAtLike(Pattern pattern, long timestamp, OpsTaskPriority priority) {
         table.values().parallelStream()
-                .filter(v -> v.key().matches(pattern))
+                .filter(v -> {
+                    try {
+                        return pattern.matcher(v.key()).matches();
+                    } catch (PatternSyntaxException e) {
+                        throw new LikePatternSyntaxException(e);
+                    }
+                })
                 .forEach(v -> {
                     v.clearBy(this, timestamp, priority);
                 });
     }
-
 
     /**
      * 等效于命令：
@@ -423,9 +452,15 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
      *
      * @param pattern 正则表达式
      */
-    public long countLike(String pattern) {
+    public long countLike(Pattern pattern) {
         return table.values().parallelStream()
-                .filter(v -> v.key().matches(pattern))
+                .filter(v -> {
+                    try {
+                        return pattern.matcher(v.key()).matches();
+                    } catch (PatternSyntaxException e) {
+                        throw new LikePatternSyntaxException(e);
+                    }
+                })
                 .count();
     }
 

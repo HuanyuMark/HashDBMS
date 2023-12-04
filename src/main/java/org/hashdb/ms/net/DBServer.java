@@ -1,13 +1,11 @@
 package org.hashdb.ms.net;
 
+import com.sun.jdi.connect.spi.ClosedConnectionException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.compiler.CommandExecutor;
 import org.hashdb.ms.config.DBServerConfig;
-import org.hashdb.ms.exception.ClosedConnectionException;
-import org.hashdb.ms.exception.DBClientException;
-import org.hashdb.ms.exception.MaxConnectionException;
-import org.hashdb.ms.net.client.CloseMessage;
+import org.hashdb.ms.exception.*;
 import org.hashdb.ms.net.client.CommandMessage;
 import org.hashdb.ms.net.msg.Message;
 import org.hashdb.ms.net.service.ActCommandMessage;
@@ -64,7 +62,7 @@ public class DBServer implements DisposableBean {
     private void start() throws IOException {
         while (true) {
             // 接收新链接
-            SocketChannel connection = serverChannel.accept();
+            var connection = serverChannel.accept();
             handleNewSession(connection);
         }
     }
@@ -72,45 +70,53 @@ public class DBServer implements DisposableBean {
     private void handleNewSession(SocketChannel con) {
         AsyncService.submit(() -> {
             // 新建新连接的会话上下文
-            try (ConnectionSession session = new ConnectionSession(con)) {
-                int newConnectionCount = connectionCount + 1;
-                if(newConnectionCount > serverConfig.getMaxConnections()) {
+            var session = new ConnectionSession(con);
+            int newConnectionCount = connectionCount + 1;
+            if (newConnectionCount > serverConfig.getMaxConnections()) {
+                try {
                     session.send(new ErrorMessage(new MaxConnectionException("out of max connection")));
-                    return;
+                } catch (ClosedConnectionException e) {
+                    throw ClosedConnectionWrapper.wrap(e);
                 }
-                connectionCount = newConnectionCount;
-
-                // 根据会话创建会话特化的编译器
-                CommandExecutor commandExecutor = CommandExecutor.create(session);
-                while (session.isConnected()) {
-                    // 接收命令消息
-                    Message message = session.get(Message.class);
-                    if(message instanceof CloseMessage) {
-                        break;
-                    }
-
-                    if(!(message instanceof CommandMessage commandMessage)) {
-                        throw new RuntimeException("unexpected message :"+message);
-                    }
-
-                    String result;
-                    try {
-                        // 取得命令运行结果
-                        result = commandExecutor.run(commandMessage.getCommand());
-                    } catch (DBClientException e) {
-                        // 如果有异常,就发送
-                        ErrorMessage errorMessage = new ErrorMessage(e);
-                        session.send(errorMessage);
-                        continue;
-                    } catch (Exception e) {
-                        log.error("unexpected error", e);
-                        break;
-                    }
-                    ActCommandMessage act = new ActCommandMessage(commandMessage, result);
-                    session.send(act);
-                }
-            } catch (ClosedConnectionException ignore) {
+                return;
             }
+            connectionCount = newConnectionCount;
+
+            // 根据会话创建会话特化的编译器
+            var commandExecutor = CommandExecutor.create(session);
+            // 添加命令消息的处理器
+            session.addMessageConsumer((msg, chain) -> {
+                if (!(msg instanceof CommandMessage commandMessage)) {
+                    return chain.next();
+                }
+
+                Message toSend;
+                try {
+                    // 取得命令运行结果
+                    log.info("run command |{}", commandMessage.getCommand());
+                    var result = commandExecutor.run(commandMessage.getCommand());
+                    log.info("send result |{}", result);
+                    toSend = new ActCommandMessage(commandMessage, result);
+                } catch (DBClientException e) {
+                    // 如果有异常,就发送
+                    toSend = new ErrorMessage(e);
+                    log.info("send error  |{}", toSend);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    log.error("command runner throw '{}'", e.toString());
+                    toSend = new ErrorMessage(new CommandExecuteException(e));
+                }
+                try {
+                    session.send(toSend);
+                } catch (ClosedConnectionException ex) {
+                    log.warn("unexpected send error msg closed throw '{}'", ex.toString());
+                    throw ClosedConnectionWrapper.wrap(ex);
+                } catch (Exception e) {
+                    log.error("unexpected error", e);
+                    throw new DBSystemException(e);
+                }
+                return null;
+            });
         });
     }
 
@@ -162,7 +168,7 @@ public class DBServer implements DisposableBean {
     }
 
 
-    private void demo(){
+    private void demo() {
 //        connectionHandler = start();
 //        connectionHandler.join();
 //        log.info("Server is ready");

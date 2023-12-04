@@ -1,17 +1,18 @@
 package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
 import org.hashdb.ms.compiler.keyword.KeywordModifier;
-import org.hashdb.ms.compiler.keyword.SupplierKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.option.LimitOpCtx;
 import org.hashdb.ms.data.task.ImmutableChecker;
 import org.hashdb.ms.exception.CommandCompileException;
-import org.hashdb.ms.exception.CommandExecuteException;
+import org.hashdb.ms.exception.LikePatternSyntaxException;
 import org.hashdb.ms.exception.UnsupportedQueryKey;
 
 import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 /**
  * Date: 2023/11/28 20:01
@@ -36,20 +37,24 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
     @Override
     protected Supplier<?> compile() {
         doCompile();
-        if(keyOrSupplier.isEmpty()) {
-            throw new CommandCompileException("keyword '"+name()+"' require at lease one key to query");
+        if (keyOrSupplier.isEmpty()) {
+            throw new CommandCompileException("keyword '" + name() + "' require at lease one key to query");
         }
         var limitOption = getOption(LimitOpCtx.class);
         return () -> {
             if (like) {
                 // 需要模糊匹配
                 var patternOrSupplier = keyOrSupplier.getFirst();
-                String pattern;
+                Pattern pattern;
                 if (patternOrSupplier instanceof SupplierCtx supplierCtx) {
                     // 有内联命令, 则执行其命令, 获取返回结果
-                    pattern = normalizeToQueryKey(getSuppliedValue(supplierCtx));
+                    try {
+                        pattern = Pattern.compile(normalizeToQueryKey(getSuppliedValue(supplierCtx)));
+                    } catch (PatternSyntaxException e) {
+                        throw new LikePatternSyntaxException(e);
+                    }
                 } else {
-                    pattern = ((String) patternOrSupplier);
+                    pattern = ((Pattern) patternOrSupplier);
                 }
                 return doQueryLike(pattern);
             }
@@ -73,7 +78,7 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
         };
     }
 
-    protected List<?> doQueryLike(String pattern){
+    protected List<?> doQueryLike(Pattern pattern) {
         throw new UnsupportedOperationException();
     }
 
@@ -88,6 +93,7 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
                 }
                 // 是不是关键字
                 filterAllKeywords();
+                filterAllOptions();
                 token = stream.token();
             } catch (ArrayIndexOutOfBoundsException e) {
                 // 所有token已解析完毕
@@ -125,8 +131,17 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
             })) {
                 return;
             }
-
-            keyOrSupplier.add(token);
+            if (like) {
+                try {
+                    // 提前编译, 并且校验语法错误
+                    Pattern pattern = Pattern.compile(token);
+                    keyOrSupplier.add(pattern);
+                } catch (PatternSyntaxException e) {
+                    throw new LikePatternSyntaxException(e);
+                }
+            } else {
+                keyOrSupplier.add(token);
+            }
             // 下一个token
             stream.next();
         }
@@ -164,7 +179,7 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
         if (modifier != KeywordModifier.LIKE) {
             return;
         }
-        Supplier<String> errorMsgSupplier = () -> "modifier keyword 'LIKE' should modify with keyword '"+name()+"'." + stream.errToken(stream.token());
+        Supplier<String> errorMsgSupplier = () -> "modifier keyword 'LIKE' should modify with keyword '" + name() + "'." + stream.errToken(stream.token());
         // 如果已经被修饰过了
         if (like) {
             throw new CommandCompileException(errorMsgSupplier.get());

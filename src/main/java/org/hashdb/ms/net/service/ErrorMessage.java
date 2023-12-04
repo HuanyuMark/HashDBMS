@@ -1,14 +1,11 @@
 package org.hashdb.ms.net.service;
 
+import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.Getter;
 import org.hashdb.ms.exception.DBClientException;
-import org.hashdb.ms.net.msg.Message;
 import org.hashdb.ms.net.msg.MessageType;
 import org.hashdb.ms.net.msg.ServiceMessage;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.UUID;
 
 /**
  * Date: 2023/12/1 16:19
@@ -16,7 +13,7 @@ import java.util.UUID;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-@Getter
+@Data
 @EqualsAndHashCode(callSuper = true)
 public class ErrorMessage extends ServiceMessage {
 

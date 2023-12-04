@@ -28,7 +28,7 @@ public class AsyncService {
                     System.err.printf("Thread: [%s] throw exception: %s\n", thread.getName(), e);
                 })
                .factory();
-        return Executors.newScheduledThreadPool(0,threadFactory);
+        return Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors()>>1,threadFactory);
     });
     public static ExecutorService service(){
         return executorService.get();

@@ -2,6 +2,7 @@ package org.hashdb.ms.config;
 
 import lombok.Getter;
 import org.hashdb.ms.aspect.methodAccess.ConfigLoadOnly;
+import org.slf4j.event.Level;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
@@ -22,6 +23,11 @@ public class DBServerConfig {
     private int maxConnections = 1_0000;
 
     private long heartbeatInterval = 10_000;
+
+    private int timeoutRetry = 3;
+
+    private Level logLevel = Level.INFO;
+
     public void setPort(int port) {
         this.port = port;
     }
@@ -34,5 +40,15 @@ public class DBServerConfig {
     @ConfigLoadOnly
     public void setHeartbeatInterval(long heartbeatInterval) {
         this.heartbeatInterval = heartbeatInterval;
+    }
+
+    @ConfigLoadOnly
+    public void setTimeoutRetry(int timeoutRetry) {
+        this.timeoutRetry = timeoutRetry;
+    }
+
+    @ConfigLoadOnly
+    public void setLogLevel(Level logLevel) {
+        this.logLevel = logLevel;
     }
 }

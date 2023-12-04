@@ -1,7 +1,9 @@
 server:
   port: 3050
   max-connections: 10000
-  heartbeat-interval: 10000
+  heartbeat-interval: 10_000
+  timeout-retry: 3
+  log-level: INFO
 
 db:
   file:

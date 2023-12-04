@@ -1,10 +1,11 @@
 package org.hashdb.ms.net.msg;
 
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.Date;
 import java.util.UUID;
 
 /**
@@ -13,7 +14,9 @@ import java.util.UUID;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode
 public abstract class Message implements Serializable, Cloneable {
     @Serial
     private static final long serialVersionUID = 31895374964L;
@@ -27,7 +30,7 @@ public abstract class Message implements Serializable, Cloneable {
     @Override
     public Message clone() {
         try {
-            return  (Message) super.clone();
+            return (Message) super.clone();
         } catch (CloneNotSupportedException e) {
             throw new AssertionError();
         }

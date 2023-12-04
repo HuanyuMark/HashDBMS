@@ -1,6 +1,7 @@
 package org.hashdb.ms.net.service;
 
-import lombok.Getter;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.hashdb.ms.net.msg.MessageType;
 import org.hashdb.ms.net.msg.ServiceMessage;
 
@@ -12,7 +13,8 @@ import java.net.Socket;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-@Getter
+@Data
+@EqualsAndHashCode(callSuper = true)
 public class HeartbeatMessage extends ServiceMessage {
 
     protected String ip;
@@ -39,11 +41,9 @@ public class HeartbeatMessage extends ServiceMessage {
         setTimestamp(System.currentTimeMillis());
     }
 
-    public HeartbeatMessage nextBeat() {
-        if (ip == null) {
-            throw new NullPointerException("ip is null");
-        }
-        return new HeartbeatMessage(ip, port, beat + 1);
+    public HeartbeatMessage next() {
+        ++beat;
+        return this;
     }
 
     @Override

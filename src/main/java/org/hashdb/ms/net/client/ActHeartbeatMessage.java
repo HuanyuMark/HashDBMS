@@ -1,5 +1,8 @@
 package org.hashdb.ms.net.client;
 
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import org.hashdb.ms.net.msg.MessageType;
 import org.hashdb.ms.net.service.HeartbeatMessage;
 import org.jetbrains.annotations.NotNull;
@@ -10,6 +13,9 @@ import org.jetbrains.annotations.NotNull;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
+@Getter
+@Setter
+@EqualsAndHashCode(callSuper = true)
 public class ActHeartbeatMessage extends HeartbeatMessage {
 
 
@@ -23,5 +29,17 @@ public class ActHeartbeatMessage extends HeartbeatMessage {
                 port == heartbeatMessage.getPort() &&
                 beat == heartbeatMessage.getBeat() &&
                 getTimestamp() != heartbeatMessage.getTimestamp();
+    }
+
+    @Override
+    public String toString() {
+        return "ActHeartbeatMessage{" +
+                "ip='" + ip + '\'' +
+                ", port=" + port +
+                ", beat=" + beat +
+                ", id=" + id +
+                ", timestamp=" + timestamp +
+                ", data='" + data + '\'' +
+                '}';
     }
 }

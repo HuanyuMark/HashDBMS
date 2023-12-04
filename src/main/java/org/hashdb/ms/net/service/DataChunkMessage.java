@@ -1,6 +1,7 @@
 package org.hashdb.ms.net.service;
 
-import lombok.Getter;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.hashdb.ms.net.msg.Message;
 import org.hashdb.ms.net.msg.MessageType;
 import org.hashdb.ms.net.msg.ServiceMessage;
@@ -14,7 +15,8 @@ import java.util.UUID;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-@Getter
+@Data
+@EqualsAndHashCode(callSuper = true)
 public class DataChunkMessage extends ServiceMessage {
 
     private final UUID ownerId;
@@ -26,6 +28,7 @@ public class DataChunkMessage extends ServiceMessage {
         this.chunkIndex = chunkIndex;
         setData(data);
     }
+
     @Override
     public MessageType getType() {
         return MessageType.DATA_CHUNK;
