@@ -1,9 +1,11 @@
 package org.hashdb.ms.persistent;
 
+import org.hashdb.ms.config.ReplicationConfig;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.DatabaseInfos;
 import org.hashdb.ms.exception.NotFoundDatabaseException;
 import org.hashdb.ms.sys.SystemInfo;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
@@ -23,6 +25,11 @@ public class JsonPersistentService implements PersistentService {
     public boolean persist(SystemInfo systemInfo) {
 //        JacksonSerializer.stringfy()
         return true;
+    }
+
+    @Override
+    public boolean persist(ReplicationConfig config) {
+        return false;
     }
 
     @Deprecated
@@ -53,5 +60,10 @@ public class JsonPersistentService implements PersistentService {
     @Override
     public boolean deleteDatabase(String name) {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public @NotNull ReplicationConfig scanReplicationConfig() {
+        return null;
     }
 }

@@ -6,6 +6,7 @@ import org.hashdb.ms.compiler.keyword.CompilerNode;
 import org.hashdb.ms.compiler.keyword.SystemKeyword;
 import org.hashdb.ms.sys.DBSystem;
 import org.hashdb.ms.util.Lazy;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Date: 2023/11/30 1:06
@@ -15,19 +16,21 @@ import org.hashdb.ms.util.Lazy;
  */
 public abstract class SystemCompileCtx<R> implements CompilerNode {
 
-    private static final Lazy<DBSystem> SYSTEM =  Lazy.of(()-> HashDBMSApp.ctx().getBean(DBSystem.class));
+    private static final Lazy<DBSystem> SYSTEM = Lazy.of(() -> HashDBMSApp.ctx().getBean(DBSystem.class));
 
-    protected static DBSystem system(){
+    protected static DBSystem system() {
         return SYSTEM.get();
     }
 
     protected R result;
+
     public <S extends SystemCompileCtx<R>> S interpretWith(SystemCompileStream stream) {
         result = doInterpret(stream);
         return (S) this;
-    };
+    }
 
-    public R result() {
+    @Nullable
+    public R getResult() {
         return result;
     }
 

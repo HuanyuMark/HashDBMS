@@ -48,10 +48,11 @@ public final class SupplierCompileStream extends DatabaseCompileStream {
         return commandContext;
     }
 
-    public String submit(){
+    @Override
+    public String submit() {
         Object result = database.submitOpsTaskSync(compile().compileResult());
-        if(result instanceof Boolean ok) {
-            return ok ? "SUCC": "FAIL";
+        if (result instanceof Boolean ok) {
+            return ok ? "\"SUCC\"" : "\"FAIL\"";
         }
         Object normalizeValue = CompileStream.normalizeValue(result);
         return JsonService.stringfy(normalizeValue == null ? "null" : normalizeValue);

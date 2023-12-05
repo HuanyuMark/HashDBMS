@@ -4,11 +4,13 @@ server:
   heartbeat-interval: 10_000
   timeout-retry: 3
   log-level: INFO
+  identity: MASTER
+  master: { host: 127.0.0.1, port: 3051 }
 
 db:
   file:
   #  持久化文件根路径
-    filepath: E://hashdb
+    path: E://hashdb
   #  每块数据文件的大小， 单位为字节
     chunk-size: 1 * 1024 * 1024
   #  全量保存数据库的间隔， 单位为毫秒
@@ -16,6 +18,8 @@ db:
   ram:
     expired-key-delete-priority: LOW
     store-like-json-sequence: false
+  aof:
+
 
 logging:
   level:

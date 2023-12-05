@@ -1,7 +1,7 @@
 package org.hashdb.ms.sys;
 
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.config.DBFileConfig;
+import org.hashdb.ms.config.HdbConfig;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.PlainPair;
 import org.hashdb.ms.persistent.PersistentService;
@@ -33,11 +33,11 @@ public record StorableSystemInfo(
     }
 
     @NotNull
-    public SystemInfo restoreBy(DBFileConfig dbFileConfig, PersistentService persistentService) {
+    public SystemInfo restoreBy(HdbConfig HDBConfig, PersistentService persistentService) {
         var nameDbMap = databaseIdMap.entrySet().parallelStream().map(entry -> {
             var dbName = entry.getValue();
             AtomLazy<Database> atomLazy;
-            if (dbFileConfig.isLazyLoad()) {
+            if (HDBConfig.isLazyLoad()) {
                 atomLazy = AtomLazy.of(() -> {
                     Database db = persistentService.scanDatabase(dbName);
                     db.startDaemon().join();
@@ -50,7 +50,7 @@ public record StorableSystemInfo(
                     return db;
                 });
             }
-            return new PlainPair<>(dbName,atomLazy);
+            return new PlainPair<>(dbName, atomLazy);
         }).collect(Collectors.toMap(PlainPair::key, PlainPair::value));
         var idDbMap = databaseIdMap.entrySet().parallelStream().map(entry -> {
             var dbName = entry.getValue();

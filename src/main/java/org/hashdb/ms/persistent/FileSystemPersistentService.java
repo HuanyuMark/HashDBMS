@@ -2,7 +2,7 @@ package org.hashdb.ms.persistent;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.config.DBFileConfig;
+import org.hashdb.ms.config.HdbConfig;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.exception.DBFileAccessFailedException;
 import org.hashdb.ms.exception.DBSystemException;
@@ -22,23 +22,24 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public abstract class FileSystemPersistentService implements PersistentService {
 
-    protected final DBFileConfig dbFileConfig;
+    protected final HdbConfig HDBConfig;
 
     protected File getDBFileDir(Database database) {
         return getDBFileDir(database.getInfos().getName());
     }
-    protected File getDBFileDir(String database){
-        String databaseDirPath = Paths.get(dbFileConfig.getDbFileRootDir().getAbsolutePath(), database).toString();
-        log.info("databaseDirPath: {}",databaseDirPath);
+
+    protected File getDBFileDir(String database) {
+        String databaseDirPath = Paths.get(HDBConfig.getRootDir().getAbsolutePath(), database).toString();
+        log.info("databaseDirPath: {}", databaseDirPath);
         return FileUtils.prepareDir(
                 databaseDirPath,
                 (dbDir) -> new DBFileAccessFailedException("can`t access db file dir: " + dbDir.getAbsolutePath())
         );
     }
 
-    protected File getSystemInfoFile(){
-        File dbFileRootDir = dbFileConfig.getDbFileRootDir();
-        return new File(dbFileRootDir, dbFileConfig.getSystemInfoFileName());
+    protected File getSystemInfoFile() {
+        File dbFileRootDir = HDBConfig.getRootDir();
+        return new File(dbFileRootDir, HDBConfig.getSystemInfoFileName());
     }
 
     /**
@@ -49,7 +50,7 @@ public abstract class FileSystemPersistentService implements PersistentService {
      */
     @Override
     public synchronized boolean deleteDatabase(String name) {
-        File dbFileDir = new File(dbFileConfig.getDbFileRootDir(), name);
+        File dbFileDir = new File(HDBConfig.getRootDir(), name);
         if (!dbFileDir.exists()) {
             throw new NotFoundDatabaseException("can not delete database. cause: not found database '" + name + "'");
         }
@@ -59,7 +60,7 @@ public abstract class FileSystemPersistentService implements PersistentService {
         throw new DBFileAccessFailedException("can not delete db file dir: " + dbFileDir.getAbsolutePath());
     }
 
-    protected static Object readObject(File file){
+    protected static Object readObject(File file) {
         Objects.requireNonNull(file);
         try (
                 FileInputStream is = new FileInputStream(file);
@@ -71,7 +72,7 @@ public abstract class FileSystemPersistentService implements PersistentService {
         }
     }
 
-    protected static boolean writeObject(File file, Object object){
+    protected static boolean writeObject(File file, Object object) {
         Objects.requireNonNull(file);
         try (
                 FileOutputStream fileOutputStream = new FileOutputStream(file);

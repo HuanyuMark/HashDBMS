@@ -8,6 +8,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Date: 2023/11/30 14:10
  * 每一个会话都需要有一个 SystemCompileStreamFactory 来生产 编译流
+ *
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
@@ -26,14 +27,14 @@ public class CommandExecutor {
     public String run(String command) {
         var compileStream = new SystemCompileStream(session, command);
         var execRes = compileStream.submit();
-        if(execRes == null) {
-            var db = session.getDatabase();
-            if (db == null) {
-                throw new DBClientException("No database selected");
-            }
-            var supplierCompileStream = new SupplierCompileStream(db, compileStream.tokens, null, false);
-            return supplierCompileStream.submit();
+        if (execRes != null) {
+            return execRes;
         }
-        return execRes;
+        var db = session.getDatabase();
+        if (db == null) {
+            throw new DBClientException("No database selected");
+        }
+        var supplierCompileStream = new SupplierCompileStream(db, compileStream.tokens, null, false);
+        return supplierCompileStream.submit();
     }
 }

@@ -3,7 +3,9 @@ package org.hashdb.ms.sys;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.aspect.methodAccess.DisposableCall;
+import org.hashdb.ms.config.ReplicationConfig;
 import org.hashdb.ms.data.Database;
+import org.hashdb.ms.event.ReplicationConfigLoadedEvent;
 import org.hashdb.ms.exception.DatabaseClashException;
 import org.hashdb.ms.exception.NotFoundDatabaseException;
 import org.hashdb.ms.persistent.PersistentService;
@@ -14,7 +16,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.stereotype.Component;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.Date;
 import java.util.Map;
@@ -28,14 +30,21 @@ import java.util.Objects;
  * @version 0.0.1
  */
 @Slf4j
-@Component
+//@Component
 public class DBSystem extends BlockingQueueTaskConsumer implements InitializingBean, DisposableBean {
     @Getter
     private SystemInfo systemInfo;
+
+    @Getter
+    private ReplicationConfig replicationConfig;
+
     private final PersistentService persistentService;
 
-    public DBSystem(PersistentService persistentService) {
+    private final ApplicationEventPublisher publisher;
+
+    public DBSystem(PersistentService persistentService, ApplicationEventPublisher publisher) {
         this.persistentService = persistentService;
+        this.publisher = publisher;
         startConsumeOpsTask();
     }
 
@@ -79,7 +88,7 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
                 throw new DatabaseClashException("fail to create database. redundancy database id");
             }
         }
-        if(this.systemInfo.getDatabaseNameMap().containsKey(name)) {
+        if (this.systemInfo.getDatabaseNameMap().containsKey(name)) {
             throw new DatabaseClashException("fail to create database. redundancy database name");
         }
         Database newDb = new Database(id, name, new Date());
@@ -126,6 +135,7 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
         this.systemInfo = systemInfo;
         systemInfo.setSystem(this);
     }
+
     /**
      * 初始化数据库
      */
@@ -133,6 +143,8 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
     public void afterPropertiesSet() throws Exception {
         // 扫描 系统信息,
         setSystemInfo(persistentService.scanSystemInfo());
+        replicationConfig = persistentService.scanReplicationConfig();
+        publisher.publishEvent(new ReplicationConfigLoadedEvent(replicationConfig));
     }
 
     /**

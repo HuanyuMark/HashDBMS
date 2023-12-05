@@ -3,8 +3,8 @@ package org.hashdb.ms.compiler.keyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.sys.DBCreateCtx;
 import org.hashdb.ms.compiler.keyword.ctx.sys.DBShowCtx;
-import org.hashdb.ms.compiler.keyword.ctx.sys.SystemCompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.sys.DBUseCtx;
+import org.hashdb.ms.compiler.keyword.ctx.sys.SystemCompileCtx;
 import org.hashdb.ms.util.ReflectCacheData;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -55,6 +55,6 @@ public enum SystemKeyword implements Keyword<SystemKeyword> {
 
     @Override
     public ReflectCacheData<? extends CompileCtx<?>> constructor() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 }

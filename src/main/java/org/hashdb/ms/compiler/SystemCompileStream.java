@@ -16,7 +16,7 @@ import org.hashdb.ms.util.Lazy;
  * @version 0.0.1
  */
 public final class SystemCompileStream extends CommonCompileStream<SystemCompileCtx<?>> {
-    private static final Lazy<DBSystem> SYSTEM =  Lazy.of(()-> HashDBMSApp.ctx().getBean(DBSystem.class));
+    private static final Lazy<DBSystem> SYSTEM = Lazy.of(() -> HashDBMSApp.ctx().getBean(DBSystem.class));
 
     final ConnectionSession session;
 
@@ -28,7 +28,7 @@ public final class SystemCompileStream extends CommonCompileStream<SystemCompile
         this.session = session;
         this.tokens = extractTokens(command);
         if (tokens.length == 0) {
-            throw new CommandCompileException("illegal command '"+command+"'");
+            throw new CommandCompileException("illegal command '" + command + "'");
         }
         this.command = Lazy.of(() -> String.join(" ", tokens));
         eraseLastSemicolon(tokens);
@@ -51,16 +51,17 @@ public final class SystemCompileStream extends CommonCompileStream<SystemCompile
         return "";
     }
 
-    public String submit(){
+    @Override
+    public String submit() {
         SystemCompileCtx<?> compileCtx = compile();
-        if(compileCtx == null) {
+        if (compileCtx == null) {
             return null;
         }
-        Object result = compileCtx.result();
-        if(result instanceof Boolean ok){
-            return ok ? "SUCC":"FAIL";
+        Object result = compileCtx.getResult();
+        if (result instanceof Boolean ok) {
+            return ok ? "SUCC" : "FAIL";
         }
         Object normalizeValue = CompileStream.normalizeValue(result);
-        return JsonService.stringfy(normalizeValue == null? "null": normalizeValue);
+        return JsonService.stringfy(normalizeValue == null ? "null" : normalizeValue);
     }
 }

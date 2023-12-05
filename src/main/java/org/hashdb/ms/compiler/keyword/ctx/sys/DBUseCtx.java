@@ -13,15 +13,16 @@ import org.hashdb.ms.exception.NotFoundDatabaseException;
  */
 public class DBUseCtx extends SystemCompileCtx<Boolean> {
 
-    Integer dbId;
-    String dbName;
+    protected Integer dbId;
+    protected String dbName;
 
     @Override
     public SystemKeyword name() {
         return SystemKeyword.DBUSE;
     }
+
     @Override
-    protected Boolean doInterpret(SystemCompileStream stream){
+    protected Boolean doInterpret(SystemCompileStream stream) {
         while (true) {
             String token;
             try {
@@ -29,30 +30,31 @@ public class DBUseCtx extends SystemCompileCtx<Boolean> {
             } catch (ArrayIndexOutOfBoundsException e) {
                 break;
             }
-            if(dbId != null) {
+            if (dbId != null) {
                 throw new CommandInterpretException("redundancy param: 'database id'");
             }
             try {
                 dbId = Integer.valueOf(token);
                 stream.next();
                 continue;
-            } catch (NumberFormatException ignore) {}
-            if(dbId != null) {
+            } catch (NumberFormatException ignore) {
+            }
+            if (dbId != null) {
                 throw new CommandInterpretException("redundancy param: 'database id'");
             }
             dbName = token;
             stream.next();
         }
-        if(dbId == null) {
-            if(dbName == null) {
-                throw new CommandInterpretException("keyword '"+name()+"' require param: database id(Integer) or name(String)");
+        if (dbId == null) {
+            if (dbName == null) {
+                throw new CommandInterpretException("keyword '" + name() + "' require param: database id(Integer) or name(String)");
             }
             stream.getSession().setDatabase(system().getDatabase(dbName));
             return Boolean.TRUE;
         }
-        if(dbName != null) {
+        if (dbName != null) {
             if (!system().getDatabaseNameMap().containsKey(dbName)) {
-                throw NotFoundDatabaseException.of("{\"id\":"+dbId+",\"name\":\""+dbName+"\"}");
+                throw NotFoundDatabaseException.of("{\"id\":" + dbId + ",\"name\":\"" + dbName + "\"}");
             }
         }
         stream.getSession().setDatabase(system().getDatabase(dbId));

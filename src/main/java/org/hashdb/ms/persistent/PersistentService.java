@@ -1,9 +1,11 @@
 package org.hashdb.ms.persistent;
 
+import org.hashdb.ms.config.ReplicationConfig;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.DatabaseInfos;
 import org.hashdb.ms.exception.NotFoundDatabaseException;
 import org.hashdb.ms.sys.SystemInfo;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
@@ -18,8 +20,12 @@ public interface PersistentService {
     boolean persist(Database database);
 
     boolean persist(SystemInfo systemInfo);
+
+    boolean persist(ReplicationConfig config);
+
     @Deprecated
     List<Database> scanDatabases();
+
     List<DatabaseInfos> scanDatabaseInfos();
 
     SystemInfo scanSystemInfo();
@@ -29,4 +35,7 @@ public interface PersistentService {
     Database scanDatabase(String name);
 
     boolean deleteDatabase(String name);
+
+    @NotNull
+    ReplicationConfig scanReplicationConfig();
 }

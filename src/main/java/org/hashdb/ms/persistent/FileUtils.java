@@ -16,7 +16,7 @@ import java.util.function.Supplier;
 public class FileUtils {
     public static @NotNull File prepareDir(String absPath, Function<File, RuntimeException> supplier) {
         File file = new File(absPath);
-        return prepareDir(file,supplier);
+        return prepareDir(file, supplier);
     }
 
     public static @NotNull File prepareDir(String absPath, Supplier<RuntimeException> supplier) {
@@ -25,8 +25,8 @@ public class FileUtils {
     }
 
     @Contract("_, _ -> param1")
-    public static @NotNull File prepareDir(@NotNull File file, Function<File,RuntimeException> supplier) {
-        if(!file.exists() && !file.mkdir()) {
+    public static @NotNull File prepareDir(@NotNull File file, Function<File, RuntimeException> supplier) {
+        if (!file.exists() && !file.mkdir()) {
             throw supplier.apply(file);
         }
         return file;
@@ -34,11 +34,11 @@ public class FileUtils {
 
     @Contract("_, _ -> param1")
     public static @NotNull File prepareDir(@NotNull File file, Supplier<RuntimeException> supplier) {
-        if(!file.exists()) {
-            if(!file.mkdir()) {
+        if (!file.exists()) {
+            if (!file.mkdirs()) {
                 throw supplier.get();
             }
-        } else if(!file.isDirectory()) {
+        } else if (!file.isDirectory()) {
             throw supplier.get();
         }
         return file;

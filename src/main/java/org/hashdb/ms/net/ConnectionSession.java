@@ -7,14 +7,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.config.DBServerConfig;
 import org.hashdb.ms.data.Database;
-import org.hashdb.ms.exception.ClosedConnectionWrapper;
-import org.hashdb.ms.exception.DBSystemException;
-import org.hashdb.ms.exception.IllegalMessageException;
-import org.hashdb.ms.exception.WorkerInterruptedException;
+import org.hashdb.ms.exception.*;
 import org.hashdb.ms.net.client.AuthenticationMessage;
 import org.hashdb.ms.net.client.CloseMessage;
 import org.hashdb.ms.net.msg.Message;
 import org.hashdb.ms.net.service.ActAuthenticationMessage;
+import org.hashdb.ms.net.service.ErrorMessage;
 import org.hashdb.ms.net.service.HeartbeatMessage;
 import org.hashdb.ms.util.AsyncService;
 import org.hashdb.ms.util.JsonService;
@@ -30,6 +28,7 @@ import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Date: 2023/11/24 16:01
@@ -40,8 +39,9 @@ import java.util.concurrent.ScheduledFuture;
 @Slf4j
 public class ConnectionSession implements AutoCloseable {
     private static final Lazy<DBServerConfig> dbServerConfig = Lazy.of(() -> HashDBMSApp.ctx().getBean(DBServerConfig.class));
-    private Database database;
 
+    private static final AtomicInteger connectionCount = new AtomicInteger(0);
+    private Database database;
     @Getter
     private final UUID id = UUID.randomUUID();
 
@@ -118,7 +118,8 @@ public class ConnectionSession implements AutoCloseable {
         });
     }
 
-    public ConnectionSession(@NotNull SocketChannel channel) {
+    @SuppressWarnings("InfiniteLoopStatement")
+    public ConnectionSession(@NotNull SocketChannel channel) throws MaxConnectionException {
         this.channel = channel;
         heartbeat = HeartbeatMessage.newBeat(channel.socket());
         messageWriter = AsyncService.submit(() -> {
@@ -167,7 +168,21 @@ public class ConnectionSession implements AutoCloseable {
             }
         });
 
-        log.info("new session {}", this);
+        if (connectionCount.getAndIncrement() > dbServerConfig.get().getMaxConnections()) {
+            connectionCount.set(dbServerConfig.get().getMaxConnections());
+            MaxConnectionException exception = new MaxConnectionException("out of max connection");
+            try {
+                send(new ErrorMessage(exception));
+            } catch (ClosedConnectionException e) {
+                throw ClosedConnectionWrapper.wrap(e);
+            }
+            close();
+            throw exception;
+        }
+
+        if (log.isInfoEnabled()) {
+            log.info("new session {}", this);
+        }
     }
 
     boolean isConnected() {
@@ -209,10 +224,12 @@ public class ConnectionSession implements AutoCloseable {
             timeoutTask.cancel(true);
         }
         closed = true;
-        log.info("close session {}", this);
+        if (log.isInfoEnabled()) {
+            log.info("close session {}", this);
+        }
     }
 
-    public void startCheckAlive() {
+    protected void startCheckAlive() {
         long heartbeatInterval = dbServerConfig.get().getHeartbeatInterval();
         int timeoutRetry = dbServerConfig.get().getTimeoutRetry();
         aliveChecker = AsyncService.setInterval(() -> {
@@ -234,7 +251,9 @@ public class ConnectionSession implements AutoCloseable {
             if (failAliveCheckCount++ < timeoutRetry) {
                 return;
             }
-            log.info("inactive session");
+            if (log.isInfoEnabled()) {
+                log.info("inactive session");
+            }
             close();
         }, heartbeatInterval);
     }
@@ -293,10 +312,8 @@ public class ConnectionSession implements AutoCloseable {
     @Override
     public String toString() {
         return "ConnectionSession{" +
-                "database=" + database +
                 ", id=" + id +
                 ", channel=" + channel +
-                ", closed=" + closed +
                 '}';
     }
 

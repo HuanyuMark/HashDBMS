@@ -1,6 +1,7 @@
 package org.hashdb.ms.config;
 
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.aspect.methodAccess.ConfigLoadOnly;
 import org.slf4j.event.Level;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -13,6 +14,7 @@ import org.springframework.context.annotation.Configuration;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
+@Slf4j
 @Getter
 @Configuration
 @ConfigurationProperties("server")
@@ -27,6 +29,7 @@ public class DBServerConfig {
     private int timeoutRetry = 3;
 
     private Level logLevel = Level.INFO;
+
 
     public void setPort(int port) {
         this.port = port;

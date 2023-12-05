@@ -1,7 +1,7 @@
 package org.hashdb.ms.data;
 
 import org.hashdb.ms.HashDBMSApp;
-import org.hashdb.ms.config.DBFileConfig;
+import org.hashdb.ms.config.HdbConfig;
 import org.hashdb.ms.exception.IllegalJavaClassStoredException;
 import org.hashdb.ms.exception.IncreaseUnsupportedException;
 import org.hashdb.ms.exception.LikePatternSyntaxException;
@@ -67,16 +67,16 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
 
     public boolean startSaveTask() {
         Supplier<ScheduledFuture<?>> saveTaskSupplier = () -> {
-            DBFileConfig dbFileConfig = HashDBMSApp.ctx().getBean(DBFileConfig.class);
+            HdbConfig HDBConfig = HashDBMSApp.ctx().getBean(HdbConfig.class);
             PersistentService persistentService = HashDBMSApp.ctx().getBean(PersistentService.class);
-            final long nextSaveTime = dbFileConfig.getSaveInterval() + info.getLastSaveTime().getTime();
+            final long nextSaveTime = HDBConfig.getSaveInterval() + info.getLastSaveTime().getTime();
             long initDelay = nextSaveTime - System.currentTimeMillis();
             if (initDelay < 0) {
-                initDelay += dbFileConfig.getSaveInterval();
+                initDelay += HDBConfig.getSaveInterval();
             }
             return AsyncService.setInterval(() -> {
                 persistentService.persist(this);
-            }, dbFileConfig.getSaveInterval(), initDelay);
+            }, HDBConfig.getSaveInterval(), initDelay);
         };
 
         saveTask.compareAndSet(null, saveTaskSupplier.get());

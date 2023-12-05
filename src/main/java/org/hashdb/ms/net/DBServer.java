@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.compiler.CommandExecutor;
 import org.hashdb.ms.config.DBServerConfig;
+import org.hashdb.ms.event.StartServerEvent;
 import org.hashdb.ms.exception.*;
 import org.hashdb.ms.net.client.CommandMessage;
 import org.hashdb.ms.net.msg.Message;
@@ -16,7 +17,6 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.context.event.EventListener;
-import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.net.BindException;
@@ -34,31 +34,32 @@ import java.util.concurrent.CompletableFuture;
  * @version 0.0.1
  */
 @Slf4j
-@Component
+//@Component
 @RequiredArgsConstructor
 public class DBServer implements DisposableBean {
     private ServerSocketChannel serverChannel;
 
     private final DBServerConfig serverConfig;
 
-    private CompletableFuture<?> connectionHandler;
-
-    private int connectionCount = 0;
-
     @EventListener(StartServerEvent.class)
-    public void ready() throws IOException {
+    public void startServer() {
         try {
-            serverChannel = ServerSocketChannel.open();
-            serverChannel.configureBlocking(true);
-            serverChannel.bind(new InetSocketAddress(serverConfig.getPort()));
-        } catch (BindException e) {
-            log.error("port {} is in use", serverConfig.getPort());
-            throw e;
+            try {
+                serverChannel = ServerSocketChannel.open();
+                serverChannel.configureBlocking(true);
+                serverChannel.bind(new InetSocketAddress(serverConfig.getPort()));
+            } catch (BindException e) {
+                log.error("port {} is in use", serverConfig.getPort());
+                throw e;
+            }
+            log.info("server is running at port: {}", serverConfig.getPort());
+            start();
+        } catch (IOException e) {
+            log.error("server start error", e);
         }
-        log.info("server is running at port: {}", serverConfig.getPort());
-        start();
     }
 
+    @SuppressWarnings("InfiniteLoopStatement")
     private void start() throws IOException {
         while (true) {
             // 接收新链接
@@ -70,17 +71,12 @@ public class DBServer implements DisposableBean {
     private void handleNewSession(SocketChannel con) {
         AsyncService.submit(() -> {
             // 新建新连接的会话上下文
-            var session = new ConnectionSession(con);
-            int newConnectionCount = connectionCount + 1;
-            if (newConnectionCount > serverConfig.getMaxConnections()) {
-                try {
-                    session.send(new ErrorMessage(new MaxConnectionException("out of max connection")));
-                } catch (ClosedConnectionException e) {
-                    throw ClosedConnectionWrapper.wrap(e);
-                }
+            ConnectionSession session;
+            try {
+                session = new ConnectionSession(con);
+            } catch (MaxConnectionException e) {
                 return;
             }
-            connectionCount = newConnectionCount;
 
             // 根据会话创建会话特化的编译器
             var commandExecutor = CommandExecutor.create(session);
@@ -122,7 +118,6 @@ public class DBServer implements DisposableBean {
 
     @Override
     public void destroy() throws Exception {
-//        connectionHandler.cancel(true);
         serverChannel.close();
     }
 

@@ -21,18 +21,18 @@ public interface CompileStream<R> {
 
     String errToken(String token);
 
-    static Object normalizeValue(Object result){
-        if(result instanceof HValue<?> hValue){
+    static Object normalizeValue(Object result) {
+        if (result instanceof HValue<?> hValue) {
             return hValue.data();
         }
-        if(result instanceof List<?> ls){
+        if (result instanceof List<?> ls) {
             return ls.parallelStream().map(CompileStream::normalizeValue).toList();
         }
-        if(result instanceof Set<?> ls){
+        if (result instanceof Set<?> ls) {
             return ls.parallelStream().map(CompileStream::normalizeValue).toList();
         }
-        if(result instanceof Map<?,?> map){
-            return map.entrySet().parallelStream().map((entry)-> new PlainPair<>(entry.getKey(),normalizeValue(entry.getValue()))).collect(Collectors.toMap(PlainPair::key,PlainPair::value));
+        if (result instanceof Map<?, ?> map) {
+            return map.entrySet().parallelStream().map((entry) -> new PlainPair<>(entry.getKey(), normalizeValue(entry.getValue()))).collect(Collectors.toMap(PlainPair::key, PlainPair::value));
         }
         return result;
     }
@@ -73,4 +73,5 @@ public interface CompileStream<R> {
 
     Iterator<String> descendingTokenItr(int negativeIndex);
 
+    String submit();
 }
