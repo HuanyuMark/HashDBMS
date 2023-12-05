@@ -41,6 +41,11 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
             throw new CommandCompileException("keyword '" + name() + "' require at lease one key to query");
         }
         var limitOption = getOption(LimitOpCtx.class);
+        return executor();
+    }
+
+    @Override
+    public Supplier<?> executor() {
         return () -> {
             if (like) {
                 // 需要模糊匹配

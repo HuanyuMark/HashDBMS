@@ -22,6 +22,9 @@ import java.util.function.Supplier;
  * @version 0.0.1
  */
 public class ExpireCtx extends SupplierCtx {
+    {
+        stream.toWrite();
+    }
 
     private final List<KeyCtx> keys = new LinkedList<>();
 
@@ -39,6 +42,11 @@ public class ExpireCtx extends SupplierCtx {
     protected Supplier<?> compile() throws StopComplieException {
         doCompile();
         beforeCompilePipe();
+        return executor();
+    }
+
+    @Override
+    public Supplier<?> executor() {
         return () -> keys.stream().map(keyCtx -> {
             String key;
             if (keyCtx.keyOrSupplier instanceof SupplierCtx supplierCtx) {

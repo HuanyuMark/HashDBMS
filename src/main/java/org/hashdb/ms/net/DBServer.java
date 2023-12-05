@@ -12,6 +12,7 @@ import org.hashdb.ms.net.msg.Message;
 import org.hashdb.ms.net.service.ActCommandMessage;
 import org.hashdb.ms.net.service.ErrorMessage;
 import org.hashdb.ms.util.AsyncService;
+import org.hashdb.ms.util.JsonService;
 import org.hashdb.ms.util.Runners;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -43,6 +44,7 @@ public class DBServer implements DisposableBean {
 
     @EventListener(StartServerEvent.class)
     public void startServer() {
+        JsonService.loadConfig();
         try {
             try {
                 serverChannel = ServerSocketChannel.open();

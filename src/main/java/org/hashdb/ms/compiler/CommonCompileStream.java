@@ -1,6 +1,7 @@
 package org.hashdb.ms.compiler;
 
 import lombok.extern.slf4j.Slf4j;
+import org.hashdb.ms.compiler.keyword.CompilerNode;
 import org.hashdb.ms.exception.CommandCompileException;
 import org.hashdb.ms.exception.DBClientException;
 import org.hashdb.ms.util.Lazy;
@@ -19,7 +20,8 @@ import java.util.function.Function;
  * @version 0.0.1
  */
 @Slf4j
-public abstract class CommonCompileStream<R> implements CompileStream<R> {
+public abstract class CommonCompileStream<R extends CompilerNode> implements CompileStream<R> {
+
     protected Lazy<String> command;
     /**
      * 存放token的序列可以改成 {@link LinkedList},
@@ -32,6 +34,8 @@ public abstract class CommonCompileStream<R> implements CompileStream<R> {
      */
     protected String[] tokens;
     protected int cursor = 0;
+
+    protected boolean write = false;
 
     /**
      * 解析命令字符串, 按照json字符串, 空格分割 的规则, 进行分割
@@ -316,5 +320,14 @@ public abstract class CommonCompileStream<R> implements CompileStream<R> {
         public int cursor() {
             return cursor;
         }
+    }
+
+    @Override
+    public boolean isWrite() {
+        return write;
+    }
+
+    public void toWrite() {
+        write = true;
     }
 }

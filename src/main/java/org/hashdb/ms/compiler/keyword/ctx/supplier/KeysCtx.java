@@ -2,8 +2,6 @@ package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
 import org.hashdb.ms.compiler.option.LimitOpCtx;
-import org.hashdb.ms.compiler.option.LongOpCtx;
-import org.hashdb.ms.compiler.option.Options;
 import org.hashdb.ms.data.task.ImmutableChecker;
 
 import java.util.function.Supplier;
@@ -12,12 +10,14 @@ import java.util.function.Supplier;
  * Date: 2023/11/24 16:20
  * 等效于命令:
  * KEYS $LIMIT
+ *
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
 public class KeysCtx extends SupplierCtx {
 
     private Long limit;
+
     @Override
     public SupplierKeyword name() {
         return SupplierKeyword.KEYS;
@@ -31,8 +31,13 @@ public class KeysCtx extends SupplierCtx {
     @Override
     public Supplier<?> compile() {
         doCompile();
-        return ()->{
-            if(limit == null) {
+        return executor();
+    }
+
+    @Override
+    public Supplier<?> executor() {
+        return () -> {
+            if (limit == null) {
                 return stream.db().keys();
             }
             return stream.db().keys().stream().limit(limit).toList();
@@ -41,7 +46,7 @@ public class KeysCtx extends SupplierCtx {
 
     private void doCompile() {
         while (true) {
-            if (compileOptions(op->{
+            if (compileOptions(op -> {
                 addOption(op);
                 return true;
             })) {
@@ -49,7 +54,7 @@ public class KeysCtx extends SupplierCtx {
             }
         }
         LimitOpCtx limitOpCtx = getOption(LimitOpCtx.class);
-        if(limitOpCtx == null) {
+        if (limitOpCtx == null) {
             return;
         }
         limit = limitOpCtx.value();

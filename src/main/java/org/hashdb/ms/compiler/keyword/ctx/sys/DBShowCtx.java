@@ -16,13 +16,19 @@ import java.util.Collection;
  */
 public class DBShowCtx extends SystemCompileCtx<Collection<DatabaseInfos>> {
     @Override
-    Collection<DatabaseInfos> doInterpret(SystemCompileStream stream) {
+    OpsTask<Collection<DatabaseInfos>> doCompile(SystemCompileStream stream) {
+        stream.toWrite();
         try {
             String token = stream.token();
             throw new CommandInterpretException("unknown token '" + token + "'");
         } catch (ArrayIndexOutOfBoundsException ignore) {
         }
-        return system().submitOpsTaskSync(OpsTask.of(() -> system().getSystemInfo().getDatabaseInfosMap().keySet()));
+        return executor();
+    }
+
+    @Override
+    public OpsTask<Collection<DatabaseInfos>> executor() {
+        return OpsTask.of(() -> system().getSystemInfo().getDatabaseInfosMap().keySet());
     }
 
     @Override

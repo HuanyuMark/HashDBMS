@@ -5,8 +5,6 @@ import org.hashdb.ms.compiler.option.LimitOpCtx;
 import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.task.ImmutableChecker;
 
-import java.util.LinkedList;
-import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -30,10 +28,15 @@ public class ValuesCtx extends SupplierCtx {
     @Override
     public Supplier<?> compile() {
         doCompile();
+        return executor();
+    }
+
+    @Override
+    public Supplier<?> executor() {
         LimitOpCtx limitOpCtx = getOption(LimitOpCtx.class);
-        return ()->{
+        return () -> {
             Stream<Object> stream = this.stream.db().values().stream().map(HValue::data);
-            if(limitOpCtx != null) {
+            if (limitOpCtx != null) {
                 return stream.limit(limitOpCtx.value()).toList();
             }
             return stream.toList();
@@ -51,7 +54,7 @@ public class ValuesCtx extends SupplierCtx {
                 return;
             }
 
-            if (compileOptions(op->{
+            if (compileOptions(op -> {
                 addOption(op);
                 return true;
             })) {

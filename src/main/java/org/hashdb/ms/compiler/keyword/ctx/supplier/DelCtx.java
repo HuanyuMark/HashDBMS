@@ -14,6 +14,10 @@ import java.util.regex.Pattern;
  * @version 0.0.1
  */
 public class DelCtx extends ReadSupplierCtx {
+    {
+        stream.toWrite();
+    }
+
     @Override
     public SupplierKeyword name() {
         return SupplierKeyword.DEL;

@@ -12,11 +12,13 @@ import java.util.function.Supplier;
 /**
  * Date: 2023/11/24 16:20
  * TYPE $KEY … $KEY
+ *
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
 public class TypeCtx extends SupplierCtx {
     private final List<Object> keyOrSupplier = new LinkedList<>();
+
     @Override
     public SupplierKeyword name() {
         return SupplierKeyword.TYPE;
@@ -31,7 +33,12 @@ public class TypeCtx extends SupplierCtx {
     public Supplier<?> compile() {
         doCompile();
         beforeCompilePipe();
-        return ()->keyOrSupplier.stream().map(keyOrSupplier->{
+        return executor();
+    }
+
+    @Override
+    public Supplier<?> executor() {
+        return () -> keyOrSupplier.stream().map(keyOrSupplier -> {
             Object toQuery;
             String key;
             if (keyOrSupplier instanceof SupplierCtx keySupplierCtx) {
@@ -48,7 +55,7 @@ public class TypeCtx extends SupplierCtx {
         }).toList();
     }
 
-    private void doCompile(){
+    private void doCompile() {
         while (true) {
             String token;
             try {
@@ -62,7 +69,7 @@ public class TypeCtx extends SupplierCtx {
                 return;
             }
             SupplierCtx supplierCtx = compileInlineCommand();
-            if(supplierCtx != null) {
+            if (supplierCtx != null) {
                 keyOrSupplier.add(supplierCtx);
                 continue;
             }
@@ -73,8 +80,8 @@ public class TypeCtx extends SupplierCtx {
 
     @Override
     protected void beforeCompilePipe() {
-        if(keyOrSupplier.isEmpty()) {
-            throw new CommandCompileException("keyword '"+name()+"' require at lease one key to query");
+        if (keyOrSupplier.isEmpty()) {
+            throw new CommandCompileException("keyword '" + name() + "' require at lease one key to query");
         }
     }
 }

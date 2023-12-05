@@ -1,6 +1,6 @@
 package org.hashdb.ms.compiler;
 
-import org.hashdb.ms.data.HValue;
+import org.hashdb.ms.compiler.keyword.ctx.sys.SystemCompileCtx;
 import org.hashdb.ms.exception.DBClientException;
 import org.hashdb.ms.net.ConnectionSession;
 import org.jetbrains.annotations.Contract;
@@ -25,9 +25,17 @@ public class CommandExecutor {
         return new CommandExecutor(session);
     }
 
+    /**
+     * 在本地立即执行命令
+     * 因为现在网络层需要提前编译命令, 分析命令是读还是写, 所以, 一般都不能直接在本地运行.
+     * 所以需要使用 {@link #compile(String command)} 提前编译命令, 拿到可传输的编译结果
+     * 再判断读/写, 再根据该服务器的主从属性, 决定是否要发送编译结果, 若发送, 则编译结果会在
+     * 接收端执行. 否则, 可以调用 {@link TransportableCompileResult#run()} 在本机立即执行
+     */
+    @Deprecated
     public String run(String command) {
         var compileStream = new SystemCompileStream(session, command);
-        var execRes = compileStream.submit();
+        var execRes = compileStream.run();
         if (execRes != null) {
             return execRes;
         }
@@ -36,14 +44,29 @@ public class CommandExecutor {
             throw new DBClientException("No database selected");
         }
         var supplierCompileStream = new SupplierCompileStream(db, compileStream.tokens, null, false);
-        return supplierCompileStream.submit();
+        return supplierCompileStream.run();
     }
 
-    public CompileResult compile(String command) {
-        return null;
+    /**
+     * 命令经过编译后, 就可以判断出命令的读写属性, 网络层需要使用该方法
+     *
+     * @param command 命令
+     * @return 可传输的编译结果
+     */
+    public TransportableCompileResult compile(String command) {
+        var compileStream = new SystemCompileStream(session, command);
+        SystemCompileCtx<?> systemCompileCtx = compileStream.compile();
+        if (systemCompileCtx != null) {
+            return new TransportableCompileResult(compileStream);
+        }
+        var db = session.getDatabase();
+        if (db == null) {
+            throw new DBClientException("No database selected");
+        }
+        var supplierCompileStream = new SupplierCompileStream(db, compileStream.tokens, null, false);
+        supplierCompileStream.compile();
+        return new TransportableCompileResult(supplierCompileStream);
     }
 
-    String decompile(HValue<?> value) {
-        return null;
-    }
+
 }

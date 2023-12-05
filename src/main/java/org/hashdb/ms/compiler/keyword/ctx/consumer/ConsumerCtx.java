@@ -1,5 +1,6 @@
 package org.hashdb.ms.compiler.keyword.ctx.consumer;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.compiler.ConsumerCompileStream;
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
@@ -23,8 +24,9 @@ import java.util.function.Function;
 @Slf4j
 public abstract class ConsumerCtx<I> extends CompileCtx<ConsumerCompileStream> {
 
+    @JsonIgnore
     protected final CompileCtx<?> fatherCompileCtx;
-
+    @JsonIgnore
     protected Function<I, ?> compileResult;
 
     protected ConsumerCtx(CompileCtx<?> fatherCompileCtx) {
@@ -45,14 +47,22 @@ public abstract class ConsumerCtx<I> extends CompileCtx<ConsumerCompileStream> {
         return compileResult;
     }
 
+    /**
+     * 编译, 并生成使用对应Ctx的执行器
+     */
     abstract protected Function<I, ?> compile() throws StopComplieException;
+
+    /**
+     * 不编译, 直接生成使用对应Ctx的执行器
+     */
+    abstract protected Function<I, ?> executor();
 
     public Object consume(I opsTarget) {
         if (opsTarget == null) {
-            throw new CommandExecuteException("keyword '" + name() + "' can not consume type: 'null' return from '"+stream.fatherCommand()+"'." + stream.errToken(stream.token()));
+            throw new CommandExecuteException("keyword '" + name() + "' can not consume type: 'null' return from '" + stream.fatherCommand() + "'." + stream.errToken(stream.token()));
         }
         if (!checkConsumeType(opsTarget)) {
-            throw new CommandExecuteException("keyword '" + name() + "' can not consume type: '" + DataType.typeOfRawValue(opsTarget) + "' return from '"+stream.fatherCommand()+"'." + stream.errToken(stream.token()));
+            throw new CommandExecuteException("keyword '" + name() + "' can not consume type: '" + DataType.typeOfRawValue(opsTarget) + "' return from '" + stream.fatherCommand() + "'." + stream.errToken(stream.token()));
         }
         return compileResult.apply(opsTarget);
     }

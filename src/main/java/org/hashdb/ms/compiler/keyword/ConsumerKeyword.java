@@ -36,6 +36,7 @@ public enum ConsumerKeyword implements Keyword<ConsumerKeyword> {
      * 导致消费者线程在执行命令时, 要边执行边编译, 降低整个数据库
      * 的数据吞吐量, 非常影响性能
      * 所以, 建议使用各个数据类型提供的特化命令, 确保编译器完全使用编译模式
+     *
      * @see #DEL
      * @see #SET
      * @see #GET
@@ -60,7 +61,7 @@ public enum ConsumerKeyword implements Keyword<ConsumerKeyword> {
     }
 
     public static @Nullable ConsumerCtxConstructor getCompileCtxConstructor(@NotNull String unknownToken) {
-        ConsumerKeyword consumerKeyword = typeOfIgnoreCase_(unknownToken);
+        ConsumerKeyword consumerKeyword = typeOfIgnoreCase(unknownToken);
         if (consumerKeyword == null) {
             return null;
         }
@@ -88,13 +89,8 @@ public enum ConsumerKeyword implements Keyword<ConsumerKeyword> {
         return compileCtxFactory == other;
     }
 
-    @Override
     @Nullable
-    public ConsumerKeyword typeOfIgnoreCase(@NotNull String unknownToken) {
-        return typeOfIgnoreCase_(unknownToken);
-    }
-
-    public static @Nullable ConsumerKeyword typeOfIgnoreCase_(@NotNull String unknownToken) {
+    public static ConsumerKeyword typeOfIgnoreCase(@NotNull String unknownToken) {
         String normalizedStr = unknownToken.toUpperCase();
         try {
             ConsumerKeyword keyword = valueOf(normalizedStr);
@@ -156,6 +152,11 @@ public enum ConsumerKeyword implements Keyword<ConsumerKeyword> {
 
         @Override
         protected Function<Object, ?> compile() throws StopComplieException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        protected Function<Object, ?> executor() {
             throw new UnsupportedOperationException();
         }
     }

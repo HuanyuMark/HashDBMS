@@ -3,9 +3,6 @@ package org.hashdb.ms.config;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.aspect.methodAccess.ConfigLoadOnly;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.Configuration;
 
 /**
  * Date: 2023/12/5 16:56
@@ -17,9 +14,9 @@ import org.springframework.context.annotation.Configuration;
  */
 @Slf4j
 @Getter
-@Configuration
-@ConfigurationProperties("db.aof")
-@EnableConfigurationProperties
+//@Configuration
+//@ConfigurationProperties("db.aof")
+//@EnableConfigurationProperties
 public class AofConfig extends PersistentConfig {
     @Override
     protected String rootDirName() {

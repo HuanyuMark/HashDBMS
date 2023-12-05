@@ -2,7 +2,6 @@ package org.hashdb.ms.compiler.keyword.ctx.consumer;
 
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
-import org.hashdb.ms.compiler.keyword.ctx.consumer.list.LDelCtx;
 import org.hashdb.ms.compiler.keyword.ctx.consumer.list.LSetCtx;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
 import org.hashdb.ms.exception.CommandCompileException;
@@ -16,6 +15,9 @@ import java.util.List;
  * @version 0.0.1
  */
 public class SetCtx extends InterpretCtx {
+    {
+        stream.toWrite();
+    }
 
     protected KeyValuePairPrecompileResult precompileResult;
 
@@ -58,16 +60,17 @@ public class SetCtx extends InterpretCtx {
                 stream.next();
                 filterAllKeywords();
             }
-            compileJsonValues((dataType,value)->{
+            compileJsonValues((dataType, value) -> {
                 pair.valueOrSupplier = value;
                 return false;
             });
             if (pair.valueOrSupplier == null) {
-                throw new CommandCompileException("keyword '"+name()+"' require key-value pair to operate");
+                throw new CommandCompileException("keyword '" + name() + "' require key-value pair to operate");
             }
             precompileResult.values.add(pair);
         }
     }
+
     public static class Pair {
         public Object keyOrSupplier;
         public Object valueOrSupplier;

@@ -2,6 +2,7 @@ package org.hashdb.ms.compiler.keyword.ctx.sys;
 
 import org.hashdb.ms.compiler.SystemCompileStream;
 import org.hashdb.ms.compiler.keyword.SystemKeyword;
+import org.hashdb.ms.data.OpsTask;
 import org.hashdb.ms.exception.CommandInterpretException;
 import org.hashdb.ms.exception.NotFoundDatabaseException;
 
@@ -12,7 +13,6 @@ import org.hashdb.ms.exception.NotFoundDatabaseException;
  * @version 0.0.1
  */
 public class DBUseCtx extends SystemCompileCtx<Boolean> {
-
     protected Integer dbId;
     protected String dbName;
 
@@ -21,8 +21,11 @@ public class DBUseCtx extends SystemCompileCtx<Boolean> {
         return SystemKeyword.DBUSE;
     }
 
+    private static final OpsTask<Boolean> PLACE_HOLDER = OpsTask.of(() -> true);
+
     @Override
-    protected Boolean doInterpret(SystemCompileStream stream) {
+    protected OpsTask<Boolean> doCompile(SystemCompileStream stream) {
+        stream.toWrite();
         while (true) {
             String token;
             try {
@@ -50,7 +53,7 @@ public class DBUseCtx extends SystemCompileCtx<Boolean> {
                 throw new CommandInterpretException("keyword '" + name() + "' require param: database id(Integer) or name(String)");
             }
             stream.getSession().setDatabase(system().getDatabase(dbName));
-            return Boolean.TRUE;
+            return PLACE_HOLDER;
         }
         if (dbName != null) {
             if (!system().getDatabaseNameMap().containsKey(dbName)) {
@@ -58,6 +61,11 @@ public class DBUseCtx extends SystemCompileCtx<Boolean> {
             }
         }
         stream.getSession().setDatabase(system().getDatabase(dbId));
-        return Boolean.TRUE;
+        return PLACE_HOLDER;
+    }
+
+    @Override
+    public OpsTask<Boolean> executor() {
+        return PLACE_HOLDER;
     }
 }

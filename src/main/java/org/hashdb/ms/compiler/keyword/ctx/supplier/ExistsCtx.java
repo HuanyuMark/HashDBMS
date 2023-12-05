@@ -1,10 +1,8 @@
 package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
-import org.hashdb.ms.exception.CommandExecuteException;
 import org.hashdb.ms.exception.UnsupportedQueryKey;
 
-import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -26,7 +24,12 @@ public class ExistsCtx extends SupplierCtx {
     @Override
     public Supplier<?> compile() {
         getCtx.compileWithStream(stream);
-        return ()->{
+        return executor();
+    }
+
+    @Override
+    public Supplier<?> executor() {
+        return () -> {
             int[] index = {0};
             return getCtx.keyOrSupplier.stream().flatMap(keyOfSupplier -> {
                 String key;
@@ -39,12 +42,11 @@ public class ExistsCtx extends SupplierCtx {
                 } else {
                     key = (String) keyOfSupplier;
                 }
-                if(stream.db().exists(key)) {
+                if (stream.db().exists(key)) {
                     return Stream.of(index[0]++);
                 }
                 return Stream.empty();
             }).toList();
         };
     }
-
 }

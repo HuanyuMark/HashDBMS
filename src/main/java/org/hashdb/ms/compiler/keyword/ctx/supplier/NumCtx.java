@@ -23,14 +23,20 @@ import java.util.function.Supplier;
 public abstract class NumCtx extends SupplierCtx {
 
     private final List<ArithmeticCtx> arithmeticCtxes = new LinkedList<>();
+
     @Override
     protected Supplier<?> compile() throws StopComplieException {
         doCompile();
         beforeCompilePipe();
+        return executor();
+    }
+
+    @Override
+    public Supplier<?> executor() {
         return () -> arithmeticCtxes.stream()
-                .map(arithmeticCtx->{
+                .map(arithmeticCtx -> {
                     String key;
-                    if(arithmeticCtx.keyOrSupplier instanceof SupplierCtx keySupplier) {
+                    if (arithmeticCtx.keyOrSupplier instanceof SupplierCtx keySupplier) {
                         arithmeticCtx.keyOrSupplier = getSuppliedValue(keySupplier);
                         try {
                             key = normalizeToQueryKey(arithmeticCtx.keyOrSupplier);
@@ -40,7 +46,7 @@ public abstract class NumCtx extends SupplierCtx {
                     } else {
                         key = ((String) arithmeticCtx.keyOrSupplier);
                     }
-                    if(arithmeticCtx.stepOrSupplier instanceof SupplierCtx stepSupplier) {
+                    if (arithmeticCtx.stepOrSupplier instanceof SupplierCtx stepSupplier) {
                         arithmeticCtx.stepOrSupplier = getSuppliedValue(stepSupplier);
                     }
                     return doArithmeticOps(
@@ -69,7 +75,7 @@ public abstract class NumCtx extends SupplierCtx {
 
             ArithmeticCtx arithmeticCtx = new ArithmeticCtx();
             SupplierCtx keySupplier = compileInlineCommand();
-            if(keySupplier != null) {
+            if (keySupplier != null) {
                 arithmeticCtx.keyOrSupplier = keySupplier;
                 token = stream.token();
             } else {
@@ -77,31 +83,31 @@ public abstract class NumCtx extends SupplierCtx {
                 try {
                     token = stream.nextToken();
                 } catch (ArrayIndexOutOfBoundsException e) {
-                    throw new CommandCompileException("keyword '"+name()+"' require key-step pair to operate a number");
+                    throw new CommandCompileException("keyword '" + name() + "' require key-step pair to operate a number");
                 }
             }
             SupplierCtx stepSupplier;
             try {
                 stepSupplier = compileInlineCommand();
             } catch (ArrayIndexOutOfBoundsException e) {
-                throw new CommandCompileException("keyword '"+name()+"' require key-step pair to operate a number");
+                throw new CommandCompileException("keyword '" + name() + "' require key-step pair to operate a number");
             }
-            if(stepSupplier!= null) {
+            if (stepSupplier != null) {
                 arithmeticCtx.stepOrSupplier = stepSupplier;
             } else {
-                if(!token.matches("-?(\\d+)?(\\.)?(\\d+)?") || ".".equals(token) || token.isEmpty()) {
-                                        throw new IncreaseUnsupportedException("can not parse step '"+token+"' to number."+stream.errToken(token));
+                if (!token.matches("-?(\\d+)?(\\.)?(\\d+)?") || ".".equals(token) || token.isEmpty()) {
+                    throw new IncreaseUnsupportedException("can not parse step '" + token + "' to number." + stream.errToken(token));
                 }
                 arithmeticCtx.stepOrSupplier = token;
                 stream.next();
             }
-            compileOptions(op->{
-                if(op instanceof ExpireOpCtx expireCtx) {
+            compileOptions(op -> {
+                if (op instanceof ExpireOpCtx expireCtx) {
                     arithmeticCtx.millis = expireCtx.value();
-                } else if(op instanceof HExpireOpCtx expireCtx) {
+                } else if (op instanceof HExpireOpCtx expireCtx) {
                     arithmeticCtx.millis = expireCtx.value();
                     arithmeticCtx.priority = OpsTaskPriority.HIGH;
-                } else if(op instanceof LExpireOpCtx expireCtx) {
+                } else if (op instanceof LExpireOpCtx expireCtx) {
                     arithmeticCtx.millis = expireCtx.value();
                     arithmeticCtx.priority = OpsTaskPriority.LOW;
                 }
@@ -114,24 +120,24 @@ public abstract class NumCtx extends SupplierCtx {
 
     @Override
     protected void beforeCompilePipe() {
-        if(arithmeticCtxes.isEmpty()) {
-            throw new IllegalJavaClassStoredException("keyword '"+name()+"' require at lease one key-step pair to operate a number");
+        if (arithmeticCtxes.isEmpty()) {
+            throw new IllegalJavaClassStoredException("keyword '" + name() + "' require at lease one key-step pair to operate a number");
         }
     }
 
     private @Nullable Object doArithmeticOps(String key, @NotNull Object stepValue, Long millis, OpsTaskPriority priority) {
         Object oneValue = normalizeToOneValueOrElseThrow(stepValue);
-        if(oneValue instanceof Double d) {
-            if(d.isInfinite()) {
+        if (oneValue instanceof Double d) {
+            if (d.isInfinite()) {
                 throw new IncreaseUnsupportedException("step '" + oneValue + "' should be a finite number");
             }
         }
-        if(oneValue instanceof Float f) {
-            if(f.isInfinite()) {
+        if (oneValue instanceof Float f) {
+            if (f.isInfinite()) {
                 throw new IncreaseUnsupportedException("step '" + oneValue + "' should be a finite number");
             }
         }
-        if(!(oneValue instanceof String step)) {
+        if (!(oneValue instanceof String step)) {
             throw new IncreaseUnsupportedException("step '" + oneValue + "' should be a number or number like string");
         }
         Number stepNumber;

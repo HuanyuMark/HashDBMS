@@ -23,6 +23,11 @@ public class CountCtx extends SupplierCtx {
 
     @Override
     public Supplier<?> compile() {
-        return ()->stream.db().count();
+        return executor();
+    }
+
+    @Override
+    public Supplier<?> executor() {
+        return () -> stream.db().count();
     }
 }

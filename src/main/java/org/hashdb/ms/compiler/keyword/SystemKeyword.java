@@ -1,6 +1,5 @@
 package org.hashdb.ms.compiler.keyword;
 
-import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.sys.DBCreateCtx;
 import org.hashdb.ms.compiler.keyword.ctx.sys.DBShowCtx;
 import org.hashdb.ms.compiler.keyword.ctx.sys.DBUseCtx;
@@ -27,7 +26,7 @@ public enum SystemKeyword implements Keyword<SystemKeyword> {
     }
 
     public static @Nullable SystemCompileCtx<?> createCtx(String unknownToken) {
-        SystemKeyword systemKeyword = typeOfIgnoreCase_(unknownToken);
+        SystemKeyword systemKeyword = typeOfIgnoreCase(unknownToken);
         if (systemKeyword == null) {
             return null;
         }
@@ -39,7 +38,8 @@ public enum SystemKeyword implements Keyword<SystemKeyword> {
         return name().equalsIgnoreCase(unknownToken);
     }
 
-    public static @Nullable SystemKeyword typeOfIgnoreCase_(@NotNull String unknownToken) {
+    @Nullable
+    public static SystemKeyword typeOfIgnoreCase(@NotNull String unknownToken) {
         String normalizedStr = unknownToken.toUpperCase();
         try {
             return valueOf(normalizedStr);
@@ -49,12 +49,7 @@ public enum SystemKeyword implements Keyword<SystemKeyword> {
     }
 
     @Override
-    public @Nullable SystemKeyword typeOfIgnoreCase(@NotNull String unknownToken) {
-        return typeOfIgnoreCase_(unknownToken);
-    }
-
-    @Override
-    public ReflectCacheData<? extends CompileCtx<?>> constructor() {
-        throw new UnsupportedOperationException();
+    public ReflectCacheData<? extends SystemCompileCtx<?>> constructor() {
+        return constructor;
     }
 }

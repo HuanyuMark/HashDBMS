@@ -6,7 +6,6 @@ import org.hashdb.ms.aspect.methodAccess.ConfigLoadOnly;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.exception.RequiredConfigException;
 import org.hashdb.ms.persistent.FileUtils;
-import org.hashdb.ms.util.JsonService;
 import org.hashdb.ms.util.Lazy;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.expression.Expression;
@@ -14,7 +13,6 @@ import org.springframework.expression.spel.standard.SpelExpressionParser;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.util.Map;
 
 /**
  * Date: 2023/12/5 17:09
@@ -68,11 +66,6 @@ public abstract class PersistentConfig implements InitializingBean {
             throw RequiredConfigException.of("db.file.path");
         }
         rootDir.get();
-        log.info("db file config: {}", JsonService.stringfy(Map.of(
-                "filepath", rootDir.get().getAbsolutePath(),
-                "chunkSize", chunkSize + " byte",
-                "saveInterval", chunkSize + " ms"
-        )));
     }
 
     public File getRootDir() {

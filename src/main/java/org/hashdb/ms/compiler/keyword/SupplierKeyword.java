@@ -1,8 +1,6 @@
 package org.hashdb.ms.compiler.keyword;
 
 import org.hashdb.ms.compiler.keyword.ctx.supplier.*;
-import org.hashdb.ms.compiler.keyword.ctx.supplier.IncCtx;
-import org.hashdb.ms.compiler.keyword.ctx.supplier.MulCtx;
 import org.hashdb.ms.util.ReflectCacheData;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -40,7 +38,7 @@ public enum SupplierKeyword implements Keyword<SupplierKeyword> {
     }
 
     public static ReflectCacheData<? extends SupplierCtx> getCompileCtxConstructor(@NotNull String unknownToken) {
-        SupplierKeyword supplierKeyword = typeOfIgnoreCase_(unknownToken);
+        SupplierKeyword supplierKeyword = typeOfIgnoreCase(unknownToken);
         if (supplierKeyword == null) {
             return null;
         }
@@ -75,12 +73,7 @@ public enum SupplierKeyword implements Keyword<SupplierKeyword> {
     }
 
     @Nullable
-    @Override
-    public SupplierKeyword typeOfIgnoreCase(@NotNull String unknownToken) {
-        return typeOfIgnoreCase_(unknownToken);
-    }
-
-    public static SupplierKeyword typeOfIgnoreCase_(@NotNull String unknownToken) {
+    public static SupplierKeyword typeOfIgnoreCase(@NotNull String unknownToken) {
         String normalizedStr = unknownToken.toUpperCase();
         try {
             return valueOf(normalizedStr);

@@ -20,6 +20,10 @@ import java.util.function.Supplier;
  * @version 0.0.1
  */
 public abstract class WriteSupplierCtx extends SupplierCtx {
+    {
+        stream.toWrite();
+    }
+
     protected final List<Pair> pairs = new LinkedList<>();
 
     @Override
@@ -105,6 +109,12 @@ public abstract class WriteSupplierCtx extends SupplierCtx {
     @Override
     public Supplier<?> compile() {
         doCompile();
+        return executor();
+    }
+
+
+    @Override
+    public Supplier<?> executor() {
         return () -> pairs.stream().map(pair -> {
             String key;
             Object value;

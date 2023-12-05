@@ -17,6 +17,9 @@ import java.util.stream.Stream;
  * @version 0.0.1
  */
 public abstract class PopPushCtx extends MutableListCtx {
+    {
+        stream.toWrite();
+    }
 
     protected Integer popCount = 1;
 

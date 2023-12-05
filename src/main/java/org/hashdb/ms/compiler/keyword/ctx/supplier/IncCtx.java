@@ -9,6 +9,10 @@ import org.hashdb.ms.compiler.keyword.SupplierKeyword;
  * @version 0.0.1
  */
 public class IncCtx extends NumCtx {
+    {
+        stream.toWrite();
+    }
+
     @Override
     public SupplierKeyword name() {
         return SupplierKeyword.INC;
@@ -16,7 +20,7 @@ public class IncCtx extends NumCtx {
 
     @Override
     Number newValue(Number n1, Number n2) {
-        if(n1 instanceof Long l1 && n2 instanceof Long l2) {
+        if (n1 instanceof Long l1 && n2 instanceof Long l2) {
             return l1 + l2;
         }
         return n1.doubleValue() + n2.doubleValue();
