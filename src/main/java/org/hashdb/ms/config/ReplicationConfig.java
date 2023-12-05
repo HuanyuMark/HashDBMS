@@ -20,7 +20,13 @@ public class ReplicationConfig {
     private ServerIdentity identity = ServerIdentity.MASTER;
 
     private ServerNode master;
+
     private List<ServerNode> slaves = new LinkedList<>();
+
+    /**
+     * sibling 本机的兄弟结
+     */
+    private List<ServerNode> siblings = new LinkedList<>();
 
     public void setIdentity(ServerIdentity identity) {
         this.identity = identity;

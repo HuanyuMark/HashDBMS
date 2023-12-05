@@ -31,7 +31,8 @@ public enum MessageType {
     CLOSE(CloseMessage.class),
     ERROR(ErrorMessage.class),
     COMMAND(CommandMessage.class),
-    ACK_COMMAND(ActCommandMessage.class);
+    ACK_COMMAND(ActCommandMessage.class),
+    REPLICATION(ReplicationMessage.class);
 
     private final MessageTypeDeserializer deserializer;
 

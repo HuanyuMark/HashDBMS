@@ -88,6 +88,11 @@ public class ConnectionSession implements AutoCloseable {
                 close();
                 return null;
             }
+
+            /**
+             *完成身份验证
+             */
+
             chain.removeCurrent();
             try {
                 send(new ActAuthenticationMessage());

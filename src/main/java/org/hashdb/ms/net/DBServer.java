@@ -59,11 +59,16 @@ public class DBServer implements DisposableBean {
         }
     }
 
+    /**
+     * 客户端发起连接：
+     * SocketChannel clientChannel = SocketChannel.open();
+     * clientChannel.bind(new InetSocketAddress(服务器ip, 服务器端口));
+     */
     @SuppressWarnings("InfiniteLoopStatement")
     private void start() throws IOException {
         while (true) {
             // 接收新链接
-            var connection = serverChannel.accept();
+            var connection = serverChannel.accept();          //这里的Connection是连接
             handleNewSession(connection);
         }
     }
@@ -71,7 +76,7 @@ public class DBServer implements DisposableBean {
     private void handleNewSession(SocketChannel con) {
         AsyncService.submit(() -> {
             // 新建新连接的会话上下文
-            ConnectionSession session;
+            ConnectionSession session;           //ConnectionSession是会话
             try {
                 session = new ConnectionSession(con);
             } catch (MaxConnectionException e) {

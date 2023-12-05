@@ -1,5 +1,6 @@
 package org.hashdb.ms.compiler;
 
+import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.exception.DBClientException;
 import org.hashdb.ms.net.ConnectionSession;
 import org.jetbrains.annotations.Contract;
@@ -36,5 +37,13 @@ public class CommandExecutor {
         }
         var supplierCompileStream = new SupplierCompileStream(db, compileStream.tokens, null, false);
         return supplierCompileStream.submit();
+    }
+
+    public CompileResult compile(String command) {
+        return null;
+    }
+
+    String decompile(HValue<?> value) {
+        return null;
     }
 }
