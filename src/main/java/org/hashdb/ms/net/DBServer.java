@@ -1,18 +1,19 @@
 package org.hashdb.ms.net;
 
 import com.sun.jdi.connect.spi.ClosedConnectionException;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.compiler.CommandExecutor;
 import org.hashdb.ms.config.DBServerConfig;
+import org.hashdb.ms.config.ReplicationConfig;
+import org.hashdb.ms.constant.ServerIdentity;
 import org.hashdb.ms.event.StartServerEvent;
 import org.hashdb.ms.exception.*;
 import org.hashdb.ms.net.client.CommandMessage;
 import org.hashdb.ms.net.msg.Message;
 import org.hashdb.ms.net.service.ActCommandMessage;
 import org.hashdb.ms.net.service.ErrorMessage;
+import org.hashdb.ms.sys.DBSystem;
 import org.hashdb.ms.util.AsyncService;
-import org.hashdb.ms.util.JsonService;
 import org.hashdb.ms.util.Runners;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -36,16 +37,23 @@ import java.util.concurrent.CompletableFuture;
  */
 @Slf4j
 //@Component
-@RequiredArgsConstructor
 public class DBServer implements DisposableBean {
     private ServerSocketChannel serverChannel;
 
     private final DBServerConfig serverConfig;
 
+    private final DBSystem dbSystem;
+
+    public DBServer(DBServerConfig serverConfig, DBSystem system) {
+        this.serverConfig = serverConfig;
+        this.dbSystem = system;
+    }
+
     @EventListener(StartServerEvent.class)
     public void startServer() {
-        JsonService.loadConfig();
-        try {
+        try {//开启服务器后先广播一次确认主机，然后再进行全量数据同步
+            beginReplication(msg = new verificateMasterMessage());
+
             try {
                 serverChannel = ServerSocketChannel.open();
                 serverChannel.configureBlocking(true);
@@ -74,6 +82,15 @@ public class DBServer implements DisposableBean {
             handleNewSession(connection);
         }
     }
+
+    private void beginReplication(verificateMasterMessage msg){
+        ReplicationConfig config = dbSystem.getReplicationConfig();
+        if(config.getIdentity() == ServerIdentity.MASTER){
+            //接受其他从机发来的连接
+        }else {
+            //从机向主机发起连接
+        }
+    };
 
     private void handleNewSession(SocketChannel con) {
         AsyncService.submit(() -> {
