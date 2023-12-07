@@ -38,12 +38,16 @@ import java.util.concurrent.CompletableFuture;
 @RequiredArgsConstructor
 public class DBServer implements DisposableBean {
     private ServerSocketChannel serverChannel;
-
+    private boolean isMain = false;        //默认所有机器都为从机
     private final DBServerConfig serverConfig;
 
     @EventListener(StartServerEvent.class)
     public void startServer() {
-        try {
+        try {//开启服务器后先广播一次确认主机，然后再进行全量数据同步
+            broadcast();
+            broadcast(DBServerConfig serverConfig, DecideMasterMessage msg){
+
+            };
             try {
                 serverChannel = ServerSocketChannel.open();
                 serverChannel.configureBlocking(true);
