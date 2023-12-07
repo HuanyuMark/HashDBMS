@@ -15,8 +15,9 @@ import java.util.List;
  * @version 0.0.1
  */
 @Data
-@Slf4j
+@Slf4j // 生成日志
 public class ReplicationConfig {
+
     private ServerIdentity identity = ServerIdentity.MASTER;
 
     private ServerNode master;

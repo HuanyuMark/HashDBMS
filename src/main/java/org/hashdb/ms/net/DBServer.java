@@ -1,10 +1,10 @@
 package org.hashdb.ms.net;
 
 import com.sun.jdi.connect.spi.ClosedConnectionException;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.compiler.CommandExecutor;
 import org.hashdb.ms.config.DBServerConfig;
+import org.hashdb.ms.config.ReplicationConfig;
 import org.hashdb.ms.event.StartServerEvent;
 import org.hashdb.ms.exception.*;
 import org.hashdb.ms.net.client.CommandMessage;
@@ -35,11 +35,17 @@ import java.util.concurrent.CompletableFuture;
  */
 @Slf4j
 //@Component
-@RequiredArgsConstructor
 public class DBServer implements DisposableBean {
     private ServerSocketChannel serverChannel;
 
     private final DBServerConfig serverConfig;
+
+    private final ReplicationConfig replicationConfig;
+
+    public DBServer(DBServerConfig serverConfig, ReplicationConfig replicationConfig) {
+        this.serverConfig = serverConfig;
+        this.replicationConfig = replicationConfig;
+    }
 
     @EventListener(StartServerEvent.class)
     public void startServer() {
