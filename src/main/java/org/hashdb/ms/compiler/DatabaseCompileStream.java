@@ -7,7 +7,7 @@ import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.*;
+import java.util.Arrays;
 import java.util.stream.Collectors;
 
 /**
@@ -49,7 +49,7 @@ public abstract sealed class DatabaseCompileStream extends CommonCompileStream<C
             log.error("compiler error: father tokens: {} child tokens: {}", childTokens, childTokens);
             throw new DBSystemException("see console. fail to extract child tokens");
         }
-        if(shouldNormalize) {
+        if (shouldNormalize) {
             eraseParentheses(childTokens);
             eraseLastSemicolon(childTokens);
         }
@@ -64,6 +64,10 @@ public abstract sealed class DatabaseCompileStream extends CommonCompileStream<C
 
     protected DatabaseCompileStream(Database database, String @NotNull [] childTokens, DatabaseCompileStream fatherStream) {
         this(database, childTokens, fatherStream, true);
+    }
+
+    protected DatabaseCompileStream(Database database) {
+        this.database = database;
     }
 
     /**
@@ -113,5 +117,17 @@ public abstract sealed class DatabaseCompileStream extends CommonCompileStream<C
 
     public Database db() {
         return database;
+    }
+
+    @Override
+    public void toWrite() {
+        // 不调用父流的toWrite,减小递归消耗. 所以要先探测
+        if (write) {
+            return;
+        }
+        write = true;
+        if (fatherStream != null) {
+            fatherStream.toWrite();
+        }
     }
 }

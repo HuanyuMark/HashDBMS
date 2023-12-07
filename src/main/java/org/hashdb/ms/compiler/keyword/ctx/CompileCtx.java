@@ -1,5 +1,7 @@
 package org.hashdb.ms.compiler.keyword.ctx;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.compiler.ConsumerCompileStream;
@@ -34,13 +36,14 @@ import java.util.function.Function;
 public abstract class CompileCtx<S extends DatabaseCompileStream> implements CompilerNode {
     protected Map<Class<? extends OptionCtx<?>>, OptionCtx<?>> options;
 
-
+    @JsonIgnore
     protected S stream;
     /**
      * 是否有管道符? 如果有, 则会有管道Ctx, 其会包装其它的 ConsumerCtx
      * 在当前 SupplierCtx的任务执行完后, 会接收这个Supplier 产生的结果
      * 当作ConsumerCtx的操作对象, 进行消费
      */
+    @JsonProperty
     protected ConsumerCtx<Object> consumerCtx;
 
     protected CompileCtx(Map<Class<? extends OptionCtx<?>>, OptionCtx<?>> initialOptions) {
@@ -176,6 +179,7 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
         return unknownValue;
     }
 
+    @Override
     abstract public Keyword<?> name();
 
     protected Object consumeWithConsumer(Object suppliedResult) {
@@ -197,8 +201,8 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
         return o;
     }
 
-    protected Object adaptSuppliedValueToOneRawValue(Object mayBeSupplier){
-        if(mayBeSupplier instanceof SupplierCtx s) {
+    protected Object adaptSuppliedValueToOneRawValue(Object mayBeSupplier) {
+        if (mayBeSupplier instanceof SupplierCtx s) {
             return getSuppliedValue(s);
         }
         return mayBeSupplier;
@@ -210,7 +214,7 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
         if (token.charAt(0) != '(') {
             return null;
         }
-        var inlineCmdCtx = SupplierKeyword.getCompileCtxConstructor(token.substring(token.lastIndexOf("(")+1));
+        var inlineCmdCtx = SupplierKeyword.getCompileCtxConstructor(token.substring(token.lastIndexOf("(") + 1));
         // 如果不是内联命令, 则返回null
         if (inlineCmdCtx == null) {
             return null;
@@ -330,11 +334,11 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
 
     protected void filterAllKeywords(Function<Keyword<?>, DBClientException> exceptionSupplier) throws ArrayIndexOutOfBoundsException {
         String token = stream.token();
-        var supplierKeyword = SupplierKeyword.typeOfIgnoreCase_(token);
+        var supplierKeyword = SupplierKeyword.typeOfIgnoreCase(token);
         if (supplierKeyword != null) {
             throw exceptionSupplier.apply(supplierKeyword);
         }
-        var consumerKeyword = ConsumerKeyword.typeOfIgnoreCase_(token);
+        var consumerKeyword = ConsumerKeyword.typeOfIgnoreCase(token);
         if (consumerKeyword != null) {
             throw exceptionSupplier.apply(consumerKeyword);
         }

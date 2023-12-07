@@ -15,8 +15,14 @@ public class KeyCtx extends SupplierCtx {
     public SupplierKeyword name() {
         return SupplierKeyword.KEY;
     }
+
     @Override
     public Supplier<?> compile() {
-    return null;
+        return null;
+    }
+
+    @Override
+    public Supplier<?> executor() {
+        return null;
     }
 }

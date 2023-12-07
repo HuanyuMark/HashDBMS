@@ -11,6 +11,10 @@ import java.util.function.Supplier;
  * @version 0.0.1
  */
 public class ClearCtx extends SupplierCtx {
+    {
+        stream.toWrite();
+    }
+
     @Override
     public SupplierKeyword name() {
         return SupplierKeyword.CLEAR;
@@ -23,7 +27,12 @@ public class ClearCtx extends SupplierCtx {
 
     @Override
     public Supplier<?> compile() {
-        return ()-> {
+        return executor();
+    }
+
+    @Override
+    public Supplier<?> executor() {
+        return () -> {
             stream.db().clear();
             return true;
         };

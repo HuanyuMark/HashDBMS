@@ -126,7 +126,6 @@ public class ConnectionSession implements AutoCloseable {
     @SuppressWarnings("InfiniteLoopStatement")
     public ConnectionSession(@NotNull SocketChannel channel) throws MaxConnectionException {
         this.channel = channel;
-        heartbeat = HeartbeatMessage.newBeat(channel.socket());
         messageWriter = AsyncService.submit(() -> {
             while (true) {
                 try {
@@ -184,6 +183,7 @@ public class ConnectionSession implements AutoCloseable {
             close();
             throw exception;
         }
+        heartbeat = HeartbeatMessage.newBeat(channel.socket());
 
         if (log.isInfoEnabled()) {
             log.info("new session {}", this);

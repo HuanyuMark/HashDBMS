@@ -1,9 +1,11 @@
 package org.hashdb.ms.compiler.keyword.ctx.sys;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.compiler.SystemCompileStream;
 import org.hashdb.ms.compiler.keyword.CompilerNode;
 import org.hashdb.ms.compiler.keyword.SystemKeyword;
+import org.hashdb.ms.data.OpsTask;
 import org.hashdb.ms.sys.DBSystem;
 import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.Nullable;
@@ -22,19 +24,23 @@ public abstract class SystemCompileCtx<R> implements CompilerNode {
         return SYSTEM.get();
     }
 
-    protected R result;
+    @JsonIgnore
+    protected OpsTask<R> result;
 
-    public <S extends SystemCompileCtx<R>> S interpretWith(SystemCompileStream stream) {
-        result = doInterpret(stream);
-        return (S) this;
-    }
-
-    @Nullable
-    public R getResult() {
+    public <S extends SystemCompileCtx<R>> OpsTask<R> compileWithStream(SystemCompileStream stream) {
+        result = doCompile(stream);
         return result;
     }
 
-    abstract R doInterpret(SystemCompileStream stream);
+    @Nullable
+    public OpsTask<R> getResult() {
+        return result;
+    }
 
+    abstract OpsTask<R> doCompile(SystemCompileStream stream);
+
+    abstract public OpsTask<R> executor();
+
+    @Override
     public abstract SystemKeyword name();
 }

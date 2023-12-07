@@ -7,11 +7,9 @@ import org.hashdb.ms.compiler.option.HDeleteOpCtx;
 import org.hashdb.ms.compiler.option.LDeleteOpCtx;
 import org.hashdb.ms.compiler.option.OptionCtx;
 import org.hashdb.ms.data.HValue;
-import org.hashdb.ms.data.OpsTask;
 import org.hashdb.ms.data.OpsTaskPriority;
 import org.hashdb.ms.data.task.ImmutableChecker;
 import org.hashdb.ms.exception.CommandCompileException;
-import org.hashdb.ms.exception.StopComplieException;
 
 import java.util.List;
 import java.util.function.Function;
@@ -23,6 +21,10 @@ import java.util.function.Function;
  * @version 0.0.1
  */
 public abstract class PopCtx extends MutableListCtx {
+    {
+        stream.toWrite();
+    }
+
     protected Boolean delete;
 
     protected int popCount = 1;
@@ -69,7 +71,7 @@ public abstract class PopCtx extends MutableListCtx {
             } catch (ArrayIndexOutOfBoundsException e) {
                 return;
             }
-            Function<OptionCtx<?>,Boolean> opFilter = op -> {
+            Function<OptionCtx<?>, Boolean> opFilter = op -> {
                 if (op instanceof DeleteOpCtx deleteOpCtx) {
                     delete = deleteOpCtx.value();
                 } else if (op instanceof HDeleteOpCtx deleteOpCtx) {
@@ -92,7 +94,7 @@ public abstract class PopCtx extends MutableListCtx {
                     return;
                 }
                 if (popCountSupplier == null) {
-                    throw new CommandCompileException("can not parse string '"+token+"'to integer."+stream.errToken(token));
+                    throw new CommandCompileException("can not parse string '" + token + "'to integer." + stream.errToken(token));
                 }
             }
             try {

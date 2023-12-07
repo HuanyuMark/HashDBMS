@@ -1,5 +1,6 @@
 package org.hashdb.ms.compiler;
 
+import org.hashdb.ms.compiler.keyword.CompilerNode;
 import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.PlainPair;
 import org.hashdb.ms.exception.DBClientException;
@@ -17,7 +18,7 @@ import java.util.stream.Collectors;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public interface CompileStream<R> {
+public interface CompileStream<R extends CompilerNode> {
 
     String errToken(String token);
 
@@ -73,5 +74,13 @@ public interface CompileStream<R> {
 
     Iterator<String> descendingTokenItr(int negativeIndex);
 
-    String submit();
+    default String run() {
+        return null;
+    }
+
+    boolean isWrite();
+
+    default String runWithExecutor() {
+        return null;
+    }
 }

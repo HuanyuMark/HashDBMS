@@ -1,5 +1,6 @@
 package org.hashdb.ms.compiler.keyword.ctx.sys;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.hashdb.ms.compiler.SystemCompileStream;
 import org.hashdb.ms.compiler.keyword.SystemKeyword;
 import org.hashdb.ms.data.OpsTask;
@@ -8,16 +9,20 @@ import org.hashdb.ms.exception.CommandInterpretException;
 /**
  * Date: 2023/11/30 14:46
  * CREATE $ID $NAME
+ *
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
 public class DBCreateCtx extends SystemCompileCtx<Boolean> {
 
+    @JsonProperty
     protected Integer id;
+
+    @JsonProperty
     protected String name;
 
     @Override
-    Boolean doInterpret(SystemCompileStream stream) {
+    OpsTask<Boolean> doCompile(SystemCompileStream stream) {
         while (true) {
             String token;
             try {
@@ -25,7 +30,7 @@ public class DBCreateCtx extends SystemCompileCtx<Boolean> {
             } catch (ArrayIndexOutOfBoundsException e) {
                 break;
             }
-            if(id != null) {
+            if (id != null) {
                 throw new CommandInterpretException("redundancy param: 'database id'");
             }
             try {
@@ -34,22 +39,28 @@ public class DBCreateCtx extends SystemCompileCtx<Boolean> {
             } catch (NumberFormatException e) {
                 try {
                     Double.parseDouble(token);
-                    throw new CommandInterpretException("keyword '"+name()+"' require integer param 'database id'");
-                } catch (NumberFormatException ignore) {}
-                if(name != null) {
+                    throw new CommandInterpretException("keyword '" + name() + "' require integer param 'database id'");
+                } catch (NumberFormatException ignore) {
+                }
+                if (name != null) {
                     throw new CommandInterpretException("redundancy param: 'database id'");
                 }
                 name = token;
                 stream.next();
             }
         }
-        if(name == null) {
-            throw new CommandInterpretException("keyword '"+name()+"' require param 'database name'");
+        if (name == null) {
+            throw new CommandInterpretException("keyword '" + name() + "' require param 'database name'");
         }
-        return system().submitOpsTaskSync(OpsTask.of(()->{
-            system().newDatabase(id,name);
+        return executor();
+    }
+
+    @Override
+    public OpsTask<Boolean> executor() {
+        return OpsTask.of(() -> {
+            system().newDatabase(id, name);
             return Boolean.TRUE;
-        }));
+        });
     }
 
     @Override

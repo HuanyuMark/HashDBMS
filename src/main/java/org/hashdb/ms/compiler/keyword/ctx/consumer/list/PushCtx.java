@@ -22,6 +22,9 @@ import java.util.Set;
  * @version 0.0.1
  */
 public abstract class PushCtx extends MutableListCtx {
+    {
+        stream.toWrite();
+    }
 
     protected final List<Object> values = new LinkedList<>();
 

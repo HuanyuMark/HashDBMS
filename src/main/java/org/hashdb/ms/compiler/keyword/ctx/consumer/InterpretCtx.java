@@ -26,8 +26,8 @@ public abstract class InterpretCtx extends ConsumerCtx<Object> {
     }
 
     @SuppressWarnings("unchecked")
-    public <V,P extends PrecompileResult<V>> P getPrecompileResult() {
-        return (P)precompileResult;
+    public <V, P extends PrecompileResult<V>> P getPrecompileResult() {
+        return (P) precompileResult;
     }
 
     @Override
@@ -44,6 +44,11 @@ public abstract class InterpretCtx extends ConsumerCtx<Object> {
     protected Function<Object, ?> compile() throws StopComplieException {
         doPrecompile();
         beforeCompilePipe();
+        return executor();
+    }
+
+    @Override
+    protected Function<Object, ?> executor() {
         return opsTarget -> {
             List<ConsumerCtx<?>> matched = consumerCtxCandidates.stream().filter(consumer -> {
                 try {

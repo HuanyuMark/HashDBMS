@@ -1,25 +1,27 @@
 package org.hashdb.ms.util;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.Version;
-import com.fasterxml.jackson.databind.DeserializationConfig;
+import com.fasterxml.jackson.core.*;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.HashDBMSApp;
+import org.hashdb.ms.compiler.keyword.CompilerNode;
+import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
+import org.hashdb.ms.compiler.keyword.SupplierKeyword;
+import org.hashdb.ms.compiler.keyword.SystemKeyword;
 import org.hashdb.ms.config.DBRamConfig;
 import org.hashdb.ms.exception.DBSystemException;
+import org.hashdb.ms.exception.IllegalCompilerNodeException;
 import org.hashdb.ms.exception.IllegalMessageException;
 import org.hashdb.ms.exception.IllegalMessageTypeException;
 import org.hashdb.ms.net.msg.Message;
 import org.hashdb.ms.net.msg.MessageType;
 import org.jetbrains.annotations.Nullable;
-import org.springframework.beans.BeanUtils;
-import org.springframework.cglib.beans.BeanMap;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -84,6 +86,7 @@ public class JsonService {
             dataTypeModule.addDeserializer(List.class, new LinkedListDeserializer());
         }
         dataTypeModule.addDeserializer(Message.class, new MessageDeserializer());
+        dataTypeModule.addDeserializer(CompilerNode.class, new CompilerNodeDeserializer());
         COMMON.registerModule(dataTypeModule);
     }
 
@@ -213,24 +216,66 @@ public class JsonService {
             return messageType.deserialize(rootNode.traverse(jp.getCodec()), rootNode, ctxt);
         }
 
-        @SuppressWarnings("unchecked")
-        public Message test(JsonParser jp, DeserializationContext ctxt) throws IOException {
-            Map<Object,Object> map = jp.readValueAs(Map.class);
-            Object unknownType = map.get("type");
-            if(!(unknownType instanceof String type)) {
-                throw new IllegalMessageException("illegal message type '"+unknownType+"'");
+    }
+
+    /**
+     * 反序列化各个编译结点
+     */
+    private static class CompilerNodeDeserializer extends StdDeserializer<CompilerNode> {
+        protected CompilerNodeDeserializer() {
+            super(CompilerNode.class);
+        }
+
+        @Override
+        public CompilerNode deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException, JacksonException {
+            JsonNode rootNode = jp.getCodec().readTree(jp);
+            JsonNode nameNode = rootNode.get("name");
+            if (nameNode == null) {
+                throw new IllegalCompilerNodeException("the name of compile node is required");
             }
-            MessageType messageType;
-            try {
-                messageType = MessageType.valueOf(type);
-            } catch (IllegalArgumentException e) {
-                throw new IllegalMessageTypeException("illegal message type '" + type + "'");
+            String name = nameNode.textValue();
+            JsonParser newRootNode = rootNode.traverse(jp.getCodec());
+            SupplierKeyword supplierKeyword = SupplierKeyword.typeOfIgnoreCase(name);
+            if (supplierKeyword != null) {
+                return JsonService.parse(newRootNode, supplierKeyword.constructor().clazz);
             }
-            var cacheData = messageType.getReflectCache();
-            Message message = cacheData.create();
-            BeanMap beanMap = BeanMap.create(message);
-            beanMap.putAll(map);
-            return message;
+            ConsumerKeyword consumerKeyword = ConsumerKeyword.typeOfIgnoreCase(name);
+            if (consumerKeyword != null) {
+                return JsonService.parse(newRootNode, consumerKeyword.constructor().clazz);
+            }
+            SystemKeyword systemKeyword = SystemKeyword.typeOfIgnoreCase(name);
+            if (systemKeyword != null) {
+                return JsonService.parse(newRootNode, systemKeyword.constructor().clazz);
+            }
+            throw new IllegalCompilerNodeException("illegal compiler node '" + name + "'");
+        }
+    }
+
+    private static class LazyDeserializer extends StdDeserializer<Lazy<?>> {
+        protected LazyDeserializer() {
+            super(Lazy.class);
+        }
+
+        @Override
+        public Lazy<?> deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException {
+            Object lazyCacheValue = JsonService.parse(jp, Object.class);
+            return Lazy.of(lazyCacheValue);
+        }
+    }
+
+    private static class LazySerializer extends StdSerializer<Lazy<?>> {
+        public LazySerializer() {
+            this(null);
+        }
+
+        public LazySerializer(Class<Lazy<?>> t) {
+            super(t);
+        }
+
+        @Override
+        public void serialize(Lazy<?> value, JsonGenerator gen, SerializerProvider provider) throws IOException {
+            Object result = value.get();
+            gen.writeObject(result);
         }
     }
 }

@@ -10,10 +10,10 @@ import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.OpsTaskPriority;
 import org.hashdb.ms.data.task.ImmutableChecker;
 import org.hashdb.ms.exception.CommandCompileException;
-import org.hashdb.ms.exception.StopComplieException;
 
-import java.util.*;
-import java.util.function.Function;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * Date: 2023/11/29 9:57
@@ -22,6 +22,9 @@ import java.util.function.Function;
  * @version 0.0.1
  */
 public class TrimCtx extends MutableListCtx {
+    {
+        stream.toWrite();
+    }
 
     protected boolean delete = false;
 
@@ -52,12 +55,12 @@ public class TrimCtx extends MutableListCtx {
     protected Object operateWithMutableList(List<Object> opsTarget) {
         long popCount;
         long limit;
-        if(limitOrSupplier instanceof SupplierCtx limitSupplier) {
+        if (limitOrSupplier instanceof SupplierCtx limitSupplier) {
             limitOrSupplier = (getSuppliedValue(limitSupplier));
         }
         limit = (Long) normalizeToOneValueOrElseThrow(limitOrSupplier);
 
-        if(limit << 1 < opsTarget.size()) {
+        if (limit << 1 < opsTarget.size()) {
             popCount = limit;
         } else {
             if (opsTarget.size() % 2 == 0) {
@@ -91,22 +94,22 @@ public class TrimCtx extends MutableListCtx {
             token = stream.token();
 
             limitOrSupplier = compileInlineCommand();
-            if(limitOrSupplier == null) {
+            if (limitOrSupplier == null) {
                 try {
                     limitOrSupplier = Long.valueOf(token);
-                    if(((Long)limitOrSupplier) < 0) {
-                        throw new CommandCompileException("keyword '"+name()+"' require a positive number as $COUNT limit");
+                    if (((Long) limitOrSupplier) < 0) {
+                        throw new CommandCompileException("keyword '" + name() + "' require a positive number as $COUNT limit");
                     }
                     stream.next();
                 } catch (NumberFormatException e) {
-                    throw new CommandCompileException("can not parse string '"+token+"' to number");
+                    throw new CommandCompileException("can not parse string '" + token + "' to number");
                 }
             }
 
             compileOptions(op -> {
                 if (op instanceof DeleteOpCtx deleteOpCtx) {
                     delete = true;
-                } else if(op instanceof HDeleteOpCtx deleteOpCtx) {
+                } else if (op instanceof HDeleteOpCtx deleteOpCtx) {
                     delete = true;
                     deletePriority = OpsTaskPriority.HIGH;
                 } else if (op instanceof LDeleteOpCtx deleteOpCtx) {

@@ -13,6 +13,10 @@ import java.util.List;
  * @version 0.0.1
  */
 public class DelCtx extends InterpretCtx {
+    {
+        stream.toWrite();
+    }
+
     protected DelCtx(CompileCtx<?> fatherCompileCtx) {
         super(fatherCompileCtx, List.of(new LDelCtx(fatherCompileCtx)));
     }

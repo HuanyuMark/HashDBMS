@@ -38,7 +38,7 @@ import java.util.concurrent.CompletableFuture;
 @RequiredArgsConstructor
 public class DBServer implements DisposableBean {
     private ServerSocketChannel serverChannel;
-    private boolean isMain = false;        //默认所有机器都为从机
+
     private final DBServerConfig serverConfig;
 
     @EventListener(StartServerEvent.class)

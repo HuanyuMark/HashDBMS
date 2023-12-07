@@ -9,6 +9,10 @@ import org.hashdb.ms.compiler.keyword.SupplierKeyword;
  * @version 0.0.1
  */
 public class MulCtx extends NumCtx {
+    {
+        stream.toWrite();
+    }
+
     @Override
     public SupplierKeyword name() {
         return SupplierKeyword.MUL;

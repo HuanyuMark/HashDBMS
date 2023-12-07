@@ -1,5 +1,6 @@
 package org.hashdb.ms;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.util.JsonService;
@@ -10,7 +11,6 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 
 import java.io.IOException;
-import java.util.List;
 
 /**
  * Date: ${DATE} ${TIME}
@@ -37,17 +37,26 @@ public class HashDBMSApp {
         }
     }
 
-    @Data
     public static class MyYamlConfig {
+        @JsonProperty
         String file;
-        List<String> strings;
+    }
 
-        List<MYConfig> myConfigs;
+    public static class MyYamlSubConfig extends MyYamlConfig {
+        @JsonProperty
+        String aabb;
+
+        @Override
+        public String toString() {
+            return "MyYamlSubConfig{" +
+                    "aabb='" + aabb + '\'' +
+                    ", file='" + file + '\'' +
+                    '}';
+        }
     }
 
     public static void main(String[] args) throws IOException {
         context = SpringApplication.run(HashDBMSApp.class, args);
-        JsonService.loadConfig();
         // 发布一个事件, 让其他模块可以感知到spring容器已经准备好了, context 已经有值了
         // 在idea中,点击左边的耳机符号,可以跳转到监听这个事件的事件监听器
 //        context.publishEvent(new StartServerEvent());
@@ -57,8 +66,11 @@ public class HashDBMSApp {
 //        String file = userDir + "/my.yml";
 //        YAMLMapper yamlMapper = new YAMLMapper();
 //
-//        MyYamlConfig myYamlConfig = new MyYamlConfig();
-//        myYamlConfig.setFile(userDir);
+        MyYamlSubConfig myYamlConfig = new MyYamlSubConfig();
+        myYamlConfig.file = userDir;
+        myYamlConfig.aabb = "aabb";
+        String stringfy = JsonService.stringfy(myYamlConfig);
+        MyYamlSubConfig parse = JsonService.parse(stringfy, MyYamlSubConfig.class);
 //        myYamlConfig.setMyConfigs(List.of(new MYConfig("zxczxc"), new MYConfig("45123")));
 //        myYamlConfig.setStrings(List.of("123", "456"));
 //        String toSave = yamlMapper.writeValueAsString(myYamlConfig);
@@ -68,6 +80,7 @@ public class HashDBMSApp {
 //        }
 //        MyYamlConfig c = yamlMapper.readValue(new FileReader(file), MyYamlConfig.class);
 //        log.info("MyYamlConfig: {}", c);
+        log.info("result: {} parse: {}", stringfy, parse);
     }
 
     public static ConfigurableApplicationContext ctx() {
