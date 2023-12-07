@@ -24,7 +24,7 @@ public class ReplicationConfig {
     private List<ServerNode> slaves = new LinkedList<>();
 
     /**
-     * sibling 本机的兄弟结
+     * sibling 本机的兄弟结点
      */
     private List<ServerNode> siblings = new LinkedList<>();
 
