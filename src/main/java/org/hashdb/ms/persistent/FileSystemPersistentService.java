@@ -24,12 +24,16 @@ public abstract class FileSystemPersistentService implements PersistentService {
 
     protected final HdbConfig HDBConfig;
 
-    protected File getDBFileDir(Database database) {
-        return getDBFileDir(database.getInfos().getName());
+    protected File getHDBFileDir(Database database) {
+        return getHDBFileDir(database.getInfos().getName());
     }
 
-    protected File getDBFileDir(String database) {
-        String databaseDirPath = Paths.get(HDBConfig.getRootDir().getAbsolutePath(), database).toString();
+    protected File getHDBFileDir(String database) {
+        return getDBFileDir(database, "hdb");
+    }
+
+    private File getDBFileDir(String database, String persistentFileCategory) {
+        String databaseDirPath = Paths.get(HDBConfig.getRootDir().getAbsolutePath(), database, persistentFileCategory).toString();
         log.info("databaseDirPath: {}", databaseDirPath);
         return FileUtils.prepareDir(
                 databaseDirPath,
@@ -37,9 +41,18 @@ public abstract class FileSystemPersistentService implements PersistentService {
         );
     }
 
+    protected File getAofFileDir(String database) {
+        return getDBFileDir(database, "aof");
+    }
+
     protected File getSystemInfoFile() {
         File dbFileRootDir = HDBConfig.getRootDir();
         return new File(dbFileRootDir, HDBConfig.getSystemInfoFileName());
+    }
+
+    protected File getPersistentConfigFile() {
+        File dbFileRootDir = HDBConfig.getRootDir();
+        return new File(dbFileRootDir, HDBConfig.getReplicationConfigFileName());
     }
 
     /**

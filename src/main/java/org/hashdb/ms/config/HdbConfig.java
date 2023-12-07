@@ -19,12 +19,8 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties("db.file")
 @EnableConfigurationProperties
 public class HdbConfig extends PersistentConfig {
-    @Override
-    protected String rootDirName() {
-        return "hdb";
-    }
-
     private final String systemInfoFileName = "sys.info";
+    private final String replicationConfigFileName = "replication.yml";
 
     /**
      * true:
@@ -36,7 +32,6 @@ public class HdbConfig extends PersistentConfig {
 
     private String replicationConfigPath = System.getProperty("user.dir");
 
-    private final String replicationConfigFileName = "replication.yml";
 
     @ConfigLoadOnly
     public void setLazyLoad(boolean lazyLoad) {

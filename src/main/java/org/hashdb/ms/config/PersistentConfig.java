@@ -27,7 +27,7 @@ public abstract class PersistentConfig implements InitializingBean {
     protected long chunkSize = 1 * 1024 * 1024;
     protected long saveInterval = 1000 * 60 * 60 * 24;
 
-    private final Lazy<File> rootDir = Lazy.of(() -> FileUtils.prepareDir(Path.of(path, rootDirName()).normalize().toFile(),
+    private final Lazy<File> rootDir = Lazy.of(() -> FileUtils.prepareDir(Path.of(path).normalize().toFile(),
             () -> new DBSystemException("Create persistent file directory failed! may be it is existed but it isn`t a directory. root path: '" + path + "'"))
     );
 
@@ -54,8 +54,6 @@ public abstract class PersistentConfig implements InitializingBean {
     public void setSaveInterval(String saveInterval) {
         this.saveInterval = PersistentConfig.parseToLong(saveInterval);
     }
-
-    abstract protected String rootDirName();
 
     /**
      * 属性注入完成后, 检查 dbFileDir 是否存在

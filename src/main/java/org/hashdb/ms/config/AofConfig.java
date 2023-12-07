@@ -18,11 +18,6 @@ import org.hashdb.ms.aspect.methodAccess.ConfigLoadOnly;
 //@ConfigurationProperties("db.aof")
 //@EnableConfigurationProperties
 public class AofConfig extends PersistentConfig {
-    @Override
-    protected String rootDirName() {
-        return "aof";
-    }
-
     /**
      * 是否开启aof持久化
      */

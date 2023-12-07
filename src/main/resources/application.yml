@@ -19,6 +19,7 @@ db:
     expired-key-delete-priority: LOW
     store-like-json-sequence: false
   aof:
+    path: E://hashdb
 
 
 logging:

@@ -91,8 +91,8 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
         if (this.systemInfo.getDatabaseNameMap().containsKey(name)) {
             throw new DatabaseClashException("fail to create database. redundancy database name");
         }
-        Database newDb = new Database(id, name, new Date());
-        Lazy<Database> lazy = Lazy.of(() -> {
+        var newDb = new Database(id, name, new Date());
+        var lazy = Lazy.of(() -> {
             newDb.startDaemon().join();
             return newDb;
         });
@@ -131,7 +131,7 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
     }
 
     @DisposableCall
-    void setSystemInfo(@NotNull SystemInfo systemInfo) {
+    private void setSystemInfo(@NotNull SystemInfo systemInfo) {
         this.systemInfo = systemInfo;
         systemInfo.setSystem(this);
     }
@@ -143,7 +143,9 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
     public void afterPropertiesSet() throws Exception {
         // 扫描 系统信息,
         setSystemInfo(persistentService.scanSystemInfo());
+        // 扫描 主从复制配置
         replicationConfig = persistentService.scanReplicationConfig();
+        // 通知 主从复制配置加载完成
         publisher.publishEvent(new ReplicationConfigLoadedEvent(replicationConfig));
     }
 
@@ -153,7 +155,7 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
     @Override
     public void destroy() throws Exception {
         log.info("closing DBMS ...");
-        var DbmsCostTime = TimeCounter.start();
+        var dbmsCostTime = TimeCounter.start();
         persistentService.persist(systemInfo);
         if (log.isTraceEnabled()) {
             log.trace("system info storing success");
@@ -168,6 +170,6 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
                 log.trace("db '{}' storing success", db);
             }
         });
-        log.info("DBMS closed, cost {} ms", DbmsCostTime.stop());
+        log.info("DBMS closed, cost {} ms", dbmsCostTime.stop());
     }
 }
