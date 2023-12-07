@@ -26,12 +26,6 @@ public record StorableSystemInfo(
     @Serial
     private static final long serialVersionUID = 429452356L;
 
-    static {
-        if (log.isTraceEnabled()) {
-            log.info("serialVersionUID: {}", serialVersionUID);
-        }
-    }
-
     @NotNull
     public SystemInfo restoreBy(HdbConfig HDBConfig, PersistentService persistentService) {
         var nameDbMap = databaseIdMap.entrySet().parallelStream().map(entry -> {

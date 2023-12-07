@@ -25,17 +25,13 @@ public class ActHeartbeatMessage extends HeartbeatMessage {
     }
 
     public boolean ack(@NotNull HeartbeatMessage heartbeatMessage) {
-        return heartbeatMessage.getIp().equals(ip) &&
-                port == heartbeatMessage.getPort() &&
-                beat == heartbeatMessage.getBeat() &&
+        return beat == heartbeatMessage.getBeat() &&
                 getTimestamp() != heartbeatMessage.getTimestamp();
     }
 
     @Override
     public String toString() {
         return "ActHeartbeatMessage{" +
-                "ip='" + ip + '\'' +
-                ", port=" + port +
                 ", beat=" + beat +
                 ", id=" + id +
                 ", timestamp=" + timestamp +

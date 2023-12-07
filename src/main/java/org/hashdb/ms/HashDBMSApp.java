@@ -3,7 +3,6 @@ package org.hashdb.ms;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.event.StartServerEvent;
 import org.hashdb.ms.util.JsonService;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -40,18 +39,17 @@ public class HashDBMSApp {
 
     public static class MyYamlConfig {
         @JsonProperty
-        String file;
+        private String file = System.getProperty("user.dir");
     }
 
     public static class MyYamlSubConfig extends MyYamlConfig {
         @JsonProperty
-        String aabb;
+        private String aabb = "aabb";
 
         @Override
         public String toString() {
             return "MyYamlSubConfig{" +
                     "aabb='" + aabb + '\'' +
-                    ", file='" + file + '\'' +
                     '}';
         }
     }
@@ -68,8 +66,6 @@ public class HashDBMSApp {
 //        YAMLMapper yamlMapper = new YAMLMapper();
 //
         MyYamlSubConfig myYamlConfig = new MyYamlSubConfig();
-        myYamlConfig.file = userDir;
-        myYamlConfig.aabb = "aabb";
         String stringfy = JsonService.stringfy(myYamlConfig);
         MyYamlSubConfig parse = JsonService.parse(stringfy, MyYamlSubConfig.class);
 //        myYamlConfig.setMyConfigs(List.of(new MYConfig("zxczxc"), new MYConfig("45123")));

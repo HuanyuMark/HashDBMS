@@ -4,8 +4,6 @@ import com.sun.jdi.connect.spi.ClosedConnectionException;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.compiler.CommandExecutor;
 import org.hashdb.ms.config.DBServerConfig;
-import org.hashdb.ms.config.ReplicationConfig;
-import org.hashdb.ms.constant.ServerIdentity;
 import org.hashdb.ms.event.StartServerEvent;
 import org.hashdb.ms.exception.*;
 import org.hashdb.ms.net.client.CommandMessage;
@@ -52,7 +50,7 @@ public class DBServer implements DisposableBean {
     @EventListener(StartServerEvent.class)
     public void startServer() {
         try {//开启服务器后先广播一次确认主机，然后再进行全量数据同步
-            beginReplication(msg = new verificateMasterMessage());
+//            beginReplication(msg = new verificateMasterMessage());
 
             try {
                 serverChannel = ServerSocketChannel.open();
@@ -83,14 +81,14 @@ public class DBServer implements DisposableBean {
         }
     }
 
-    private void beginReplication(verificateMasterMessage msg){
-        ReplicationConfig config = dbSystem.getReplicationConfig();
-        if(config.getIdentity() == ServerIdentity.MASTER){
-            //接受其他从机发来的连接
-        }else {
-            //从机向主机发起连接
-        }
-    };
+//    private void beginReplication(verificateMasterMessage msg){
+//        ReplicationConfig config = dbSystem.getReplicationConfig();
+//        if(config.getIdentity() == ServerIdentity.MASTER){
+//            //接受其他从机发来的连接
+//        }else {
+//            //从机向主机发起连接
+//        }
+//    };
 
     private void handleNewSession(SocketChannel con) {
         AsyncService.submit(() -> {

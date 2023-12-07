@@ -3,9 +3,8 @@ package org.hashdb.ms.net.msg;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonNode;
-import org.hashdb.ms.exception.IllegalMessageException;
-import org.hashdb.ms.net.client.AuthenticationMessage;
 import org.hashdb.ms.net.client.ActHeartbeatMessage;
+import org.hashdb.ms.net.client.AuthenticationMessage;
 import org.hashdb.ms.net.client.CloseMessage;
 import org.hashdb.ms.net.client.CommandMessage;
 import org.hashdb.ms.net.service.*;
@@ -32,7 +31,13 @@ public enum MessageType {
     ERROR(ErrorMessage.class),
     COMMAND(CommandMessage.class),
     ACK_COMMAND(ActCommandMessage.class),
-    REPLICATION(ReplicationMessage.class);
+    REPLICATION(ReplicationMessage.class),
+    REPL_HEARTBEAT(ReplicationHeartbeatMessage.class),
+    CONNECT_MASTER(ConnectMasterMessage.class),
+    ACT_CONNECT_MASTER(ActConnectMasterMessage.class),
+    SYNC(SyncMessage.class),
+    VOTE_MASTER(VoteMasterMessage.class),
+    CANDIDATE(CandidateMessage.class);
 
     private final MessageTypeDeserializer deserializer;
 
@@ -41,17 +46,17 @@ public enum MessageType {
     private static Map<Class<? extends Message>, MessageType> messageTypeMap;
 
     MessageType(Class<? extends Message> messageClass) {
-        registerMessageClass(messageClass,this);
+        registerMessageClass(messageClass, this);
         deserializer = null;
     }
 
-    MessageType( Class<? extends Message> messageClass,MessageTypeDeserializer deserializer) {
-        registerMessageClass(messageClass,this);
+    MessageType(Class<? extends Message> messageClass, MessageTypeDeserializer deserializer) {
+        registerMessageClass(messageClass, this);
         this.deserializer = deserializer;
     }
 
     private static void registerMessageClass(Class<? extends Message> messageClass, MessageType type) {
-        if(messageTypeMap == null) {
+        if (messageTypeMap == null) {
             messageTypeMap = new HashMap<>();
         }
         messageTypeMap.put(messageClass, type);

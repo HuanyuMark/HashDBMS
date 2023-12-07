@@ -17,29 +17,20 @@ import java.net.Socket;
 @EqualsAndHashCode(callSuper = true)
 public class HeartbeatMessage extends ServiceMessage {
 
-    protected String ip;
-
-    protected int port;
-
     protected long beat;
 
     public static HeartbeatMessage newBeat(Socket socket) {
         return new HeartbeatMessage(socket);
     }
 
+
     public HeartbeatMessage() {
     }
 
     protected HeartbeatMessage(Socket socket) {
-        this(socket.getInetAddress().getHostAddress(), socket.getPort(), 0);
+        beat = 0;
     }
 
-    protected HeartbeatMessage(String ip, int port, long beat) {
-        this.ip = ip;
-        this.port = port;
-        this.beat = beat;
-        setTimestamp(System.currentTimeMillis());
-    }
 
     public HeartbeatMessage next() {
         ++beat;
