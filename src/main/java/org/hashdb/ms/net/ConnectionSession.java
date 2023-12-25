@@ -8,6 +8,7 @@ import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.config.DBServerConfig;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.exception.*;
+import org.hashdb.ms.net.client.ActHeartbeatMessage;
 import org.hashdb.ms.net.client.AuthenticationMessage;
 import org.hashdb.ms.net.client.CloseMessage;
 import org.hashdb.ms.net.msg.Message;
@@ -92,7 +93,6 @@ public class ConnectionSession implements AutoCloseable {
             /**
              *完成身份验证
              */
-
             chain.removeCurrent();
             try {
                 send(new ActAuthenticationMessage());
@@ -108,7 +108,7 @@ public class ConnectionSession implements AutoCloseable {
             lastInteractTime = System.currentTimeMillis();
             // 心跳
             actHeartbeat();
-            if (msg instanceof HeartbeatMessage) {
+            if (msg instanceof ActHeartbeatMessage) {
                 return null;
             }
             return chain.next();
@@ -132,11 +132,13 @@ public class ConnectionSession implements AutoCloseable {
                     Message msg = writeDeque.take();
                     send0(msg);
                 } catch (ClosedConnectionException e) {
-                    log.error("closedConnection throw '{}'", e.toString());
+                    log.error("closedConnection throw ", e);
                     throw ClosedConnectionWrapper.wrap(e);
                 } catch (InterruptedException e) {
-                    log.error("messageSender throw '{}'", e.toString());
+                    log.error("messageWriter throw ", e);
                     throw new WorkerInterruptedException(e);
+                } catch (Exception e) {
+                    log.error("messageWriter throw ", e);
                 }
             }
         });
@@ -144,10 +146,13 @@ public class ConnectionSession implements AutoCloseable {
             while (true) {
                 try {
                     Message msg = get();
+//                    System.out.println("messageReader read msg: " + msg.getType());
                     readDeque.add(msg);
                 } catch (ClosedConnectionException e) {
                     log.error("messageReader throw '{}'", e.toString());
                     throw ClosedConnectionWrapper.wrap(e);
+                } catch (Exception e) {
+                    log.error("messageReader throw ", e);
                 }
             }
         });
@@ -157,10 +162,14 @@ public class ConnectionSession implements AutoCloseable {
                 try {
                     msg = readDeque.take();
                 } catch (InterruptedException e) {
-                    log.error("messageSender throw '{}'", e.toString());
+                    log.error("messageConsumer throw '{}'", e.toString());
                     throw new WorkerInterruptedException(e);
+                } catch (Exception e) {
+                    log.error("messageConsumer throw ", e);
+                    throw e;
                 }
                 try {
+//                    System.out.println("messageConsumer consume msg: " + msg.getType());
                     chain.consume(msg);
                 } catch (ClosedConnectionException e) {
                     log.error("closedConnection throw '{}'", e.toString());
@@ -289,7 +298,11 @@ public class ConnectionSession implements AutoCloseable {
             return result;
         } catch (JsonProcessingException e) {
             readBuffer.clear();
+            log.error("can not parse msg", e);
             throw new IllegalMessageException("unexpected message '" + json + "'");
+        } catch (Exception e) {
+            log.error("unexpected message '{}' throw '{}'", json, e.toString());
+            throw e;
         }
     }
 

@@ -1,5 +1,6 @@
 package org.hashdb.ms.compiler.keyword.ctx.consumer.list;
 
+import org.hashdb.ms.compiler.ConsumerCompileStream;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
 import org.hashdb.ms.compiler.option.DeleteOpCtx;
@@ -21,8 +22,11 @@ import java.util.function.Function;
  * @version 0.0.1
  */
 public abstract class PopCtx extends MutableListCtx {
-    {
-        stream.toWrite();
+
+    @Override
+    public void setStream(ConsumerCompileStream stream) {
+        super.setStream(stream);
+        stream().toWrite();
     }
 
     protected Boolean delete;
@@ -67,7 +71,7 @@ public abstract class PopCtx extends MutableListCtx {
                     return;
                 }
                 filterAllKeywords();
-                token = stream.token();
+                token = stream().token();
             } catch (ArrayIndexOutOfBoundsException e) {
                 return;
             }
@@ -86,7 +90,7 @@ public abstract class PopCtx extends MutableListCtx {
             };
             try {
                 popCount = Integer.parseInt(token);
-                stream.next();
+                stream().next();
             } catch (NumberFormatException e) {
                 try {
                     popCountSupplier = compileInlineCommand();
@@ -94,7 +98,7 @@ public abstract class PopCtx extends MutableListCtx {
                     return;
                 }
                 if (popCountSupplier == null) {
-                    throw new CommandCompileException("can not parse string '" + token + "'to integer." + stream.errToken(token));
+                    throw new CommandCompileException("can not parse string '" + token + "'to integer." + stream().errToken(token));
                 }
             }
             try {

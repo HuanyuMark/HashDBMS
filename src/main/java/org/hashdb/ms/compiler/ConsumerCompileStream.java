@@ -19,7 +19,7 @@ import java.util.Objects;
  */
 @Slf4j
 public final class ConsumerCompileStream extends DatabaseCompileStream {
-    private final Lazy<ConsumerCtx<?>> compileResult = Lazy.of(null);
+    private final Lazy<ConsumerCtx<?>> compileResult = Lazy.empty();
 
     private final CompileCtx<?> fatherCompileCtx;
 

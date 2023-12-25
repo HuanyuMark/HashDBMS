@@ -28,14 +28,14 @@ public abstract class SupplierCtx extends CompileCtx<SupplierCompileStream> {
         if (compileResult != null) {
             throw new DBSystemException(getClass().getSimpleName() + " is finish compilation");
         }
-        stream = compileStream;
+        setStream(compileStream);
         // 支持管道操作, 将原 生产型任务生产的 结果传给下一个消费者任务使用
         this.compileResult = OpsTask.of(() -> consumeWithConsumer(compile().get()));
         return this.compileResult;
     }
 
     public OpsTask<?> executeWithStream(SupplierCompileStream stream) {
-        this.stream = stream;
+        setStream(stream);
         this.compileResult = OpsTask.of(() -> consumeWithConsumer(executor().get()));
         return this.compileResult;
     }

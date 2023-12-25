@@ -2,6 +2,7 @@ package org.hashdb.ms.compiler;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
 import org.hashdb.ms.compiler.keyword.CompilerNode;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
 import org.hashdb.ms.compiler.keyword.ctx.sys.SystemCompileCtx;
@@ -11,6 +12,7 @@ import org.jetbrains.annotations.NotNull;
 
 public class TransportableCompileResult {
 
+    @Getter
     @JsonProperty
     private boolean write;
 
@@ -24,6 +26,9 @@ public class TransportableCompileResult {
     @JsonIgnore
     private CompileStream<?> stream;
 
+    /**
+     * 给json序列化预留的构造器
+     */
     protected TransportableCompileResult() {
     }
 
@@ -31,10 +36,6 @@ public class TransportableCompileResult {
         this.write = stream.isWrite();
         compilerCtx = stream.compile();
         this.stream = stream;
-    }
-
-    public boolean isWrite() {
-        return write;
     }
 
     /**

@@ -12,16 +12,19 @@ import org.hashdb.ms.net.service.ActCommandMessage;
 import org.hashdb.ms.net.service.ErrorMessage;
 import org.hashdb.ms.sys.DBSystem;
 import org.hashdb.ms.util.AsyncService;
+import org.hashdb.ms.util.JsonService;
 import org.hashdb.ms.util.Runners;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Arrays;
@@ -34,7 +37,7 @@ import java.util.concurrent.CompletableFuture;
  * @version 0.0.1
  */
 @Slf4j
-//@Component
+@Component
 public class DBServer implements DisposableBean {
     private ServerSocketChannel serverChannel;
 
@@ -49,6 +52,7 @@ public class DBServer implements DisposableBean {
 
     @EventListener(StartServerEvent.class)
     public void startServer() {
+        JsonService.loadConfig();
         try {//开启服务器后先广播一次确认主机，然后再进行全量数据同步
 //            beginReplication(msg = new verificateMasterMessage());
 
@@ -76,8 +80,12 @@ public class DBServer implements DisposableBean {
     private void start() throws IOException {
         while (true) {
             // 接收新链接
-            var connection = serverChannel.accept();          //这里的Connection是连接
-            handleNewSession(connection);
+            try {
+                var connection = serverChannel.accept();          //这里的Connection是连接
+                handleNewSession(connection);
+            } catch (AsynchronousCloseException e) {
+                break;
+            }
         }
     }
 

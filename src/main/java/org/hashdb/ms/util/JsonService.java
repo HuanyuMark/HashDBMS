@@ -75,7 +75,6 @@ public class JsonService {
         return parse(json, Object.class);
     }
 
-
     public static void loadConfig() {
         SimpleModule dataTypeModule = new SimpleModule("hashdb", JACKSON_SERIALIZER_VERSION);
         DBRamConfig dbRamConfig = HashDBMSApp.ctx().getBean(DBRamConfig.class);

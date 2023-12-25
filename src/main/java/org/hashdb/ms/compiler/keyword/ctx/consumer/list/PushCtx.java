@@ -1,5 +1,6 @@
 package org.hashdb.ms.compiler.keyword.ctx.consumer.list;
 
+import org.hashdb.ms.compiler.ConsumerCompileStream;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
 import org.hashdb.ms.compiler.option.DestructOpCtx;
@@ -22,7 +23,9 @@ import java.util.Set;
  * @version 0.0.1
  */
 public abstract class PushCtx extends MutableListCtx {
-    {
+    @Override
+    public void setStream(ConsumerCompileStream stream) {
+        super.setStream(stream);
         stream.toWrite();
     }
 
@@ -68,7 +71,7 @@ public abstract class PushCtx extends MutableListCtx {
             }
             if (ImmutableChecker.isUnmodifiableCollection(o.getClass())) {
                 throw new CommandExecuteException("keyword '" + name() + "' can not receive data type '" +
-                        List.of(DataType.MAP, DataType.ORDERED_MAP, DataType.BITMAP) + "'. " + stream.errToken(supplierCtx.command()));
+                        List.of(DataType.MAP, DataType.ORDERED_MAP, DataType.BITMAP) + "'. " + stream().errToken(supplierCtx.command()));
             }
         }
         return opsTarget.size();

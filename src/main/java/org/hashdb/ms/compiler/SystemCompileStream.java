@@ -107,6 +107,9 @@ public final class SystemCompileStream extends CommonCompileStream<SystemCompile
     public String runWithExecutor() {
         // 一般都是数据库系统的写命令, 所以就扔进队列里执行
         Object result = SYSTEM.get().submitOpsTaskSync(compileResult.executor());
+        if (result instanceof Boolean ok) {
+            return ok ? "SUCC" : "FAIL";
+        }
         Object normalizeValue = CompileStream.normalizeValue(result);
         return JsonService.stringfy(normalizeValue == null ? "null" : normalizeValue);
     }

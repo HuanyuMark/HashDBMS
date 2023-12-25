@@ -1,8 +1,5 @@
 package org.hashdb.ms.util;
 
-import com.fasterxml.jackson.annotation.JsonValue;
-
-import java.util.Collections;
 import java.util.Objects;
 import java.util.function.Supplier;
 
@@ -18,26 +15,34 @@ public class Lazy<T> {
     protected volatile T value;
 
     protected final Supplier<T> supplier;
+
     protected Lazy(Supplier<T> supplier) {
-        Objects.requireNonNull(supplier);
         this.supplier = supplier;
     }
 
     protected Lazy(T initValue) {
-        Objects.requireNonNull(initValue);
         value = initValue;
         this.supplier = () -> initValue;
     }
 
-    protected Lazy(){
-        supplier = ()->null;
+    protected Lazy() {
+        supplier = () -> null;
     }
+
     public static <T> Lazy<T> of(Supplier<T> supplier) {
+        Objects.requireNonNull(supplier);
         return new Lazy<>(supplier);
     }
+
     public static <T> Lazy<T> of(T value) {
+        Objects.requireNonNull(value);
         return new Lazy<>(value);
     }
+
+    public static <T> Lazy<T> empty() {
+        return new Lazy<>();
+    }
+
     /**
      * 线程不安全, {@link #supplier} 可能会被多次调用
      */
@@ -50,7 +55,7 @@ public class Lazy<T> {
     }
 
     public boolean isCached() {
-        return value!= null;
+        return value != null;
     }
 
     /**

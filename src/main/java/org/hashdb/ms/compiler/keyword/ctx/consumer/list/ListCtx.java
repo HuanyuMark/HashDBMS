@@ -64,20 +64,20 @@ public abstract class ListCtx extends ConsumerCtx<List<Object>> {
                 }
                 return operateWithMutableList((List<Object>) list);
             }
-            throw new CommandExecuteException("keyword '" + name() + "' can not consume return type from '" + stream.fatherCommand() + "'." + stream.errToken(""));
+            throw new CommandExecuteException("keyword '" + name() + "' can not consume return type from '" + stream().fatherCommand() + "'." + stream().errToken(""));
         };
     }
 
     protected Object selectOne(Object opsTarget) throws CommandExecuteException {
         Function<Collection<?>, Object> selectOne = collection -> {
             if (collection.isEmpty()) {
-                throw new CommandExecuteException("keyword '" + name() + "' can not consume return value '[]' from '" + stream.fatherCommand() + "'." + stream.errToken(""));
+                throw new CommandExecuteException("keyword '" + name() + "' can not consume return value '[]' from '" + stream().fatherCommand() + "'." + stream().errToken(""));
             }
             if (collection.size() == 1) {
                 Object one = collection.stream().limit(1).findFirst().orElseThrow();
                 return selectOne(one);
             }
-            throw new CommandExecuteException("can not select a unique operation target from '" + stream.fatherCommand() + "'." + stream.errToken(""));
+            throw new CommandExecuteException("can not select a unique operation target from '" + stream().fatherCommand() + "'." + stream().errToken(""));
         };
         if (ImmutableChecker.isUnmodifiableList(opsTarget.getClass()) ||
                 ImmutableChecker.isUnmodifiableSet(opsTarget.getClass())) {

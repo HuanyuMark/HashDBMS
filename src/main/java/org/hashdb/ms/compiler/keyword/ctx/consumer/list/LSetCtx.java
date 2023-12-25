@@ -54,14 +54,14 @@ public class LSetCtx extends MutableListCtx implements Precompilable {
         List<IndexValuePair> sortedIndexValuePairs = indexValuePairs.parallelStream().sorted().toList();
         Long smallestIndex = (Long) sortedIndexValuePairs.getFirst().indexOrSupplier;
         if (smallestIndex < 0) {
-            throw new CommandExecuteException("index '" + smallestIndex + "' out of range."+stream.errToken(""));
+            throw new CommandExecuteException("index '" + smallestIndex + "' out of range." + stream().errToken(""));
         }
         Long largestIndex = (Long) sortedIndexValuePairs.getLast().indexOrSupplier;
         if (largestIndex >= opsTarget.size()) {
-            throw new CommandExecuteException("index '" + largestIndex + "' out of range"+stream.errToken(""));
+            throw new CommandExecuteException("index '" + largestIndex + "' out of range" + stream().errToken(""));
         }
 
-        if(opsTarget instanceof RandomAccess) {
+        if (opsTarget instanceof RandomAccess) {
             return indexValuePairs.stream().map(pair -> {
                 if (pair.valueOrSupplier instanceof SupplierCtx vs) {
                     pair.valueOrSupplier = selectOne(getSuppliedValue(vs));
@@ -73,7 +73,7 @@ public class LSetCtx extends MutableListCtx implements Precompilable {
         List<Object> result = new ArrayList<>();
         int elIndex;
         //尾遍历
-        if(opsTarget.size() - smallestIndex < largestIndex) {
+        if (opsTarget.size() - smallestIndex < largestIndex) {
             elIndex = opsTarget.size() - 1;
             var elIter = (ListIterator<Object>) (opsTarget.reversed().listIterator());
             var indexIter = sortedIndexValuePairs.reversed().iterator();
@@ -140,18 +140,18 @@ public class LSetCtx extends MutableListCtx implements Precompilable {
                 }
                 filterAllKeywords();
                 filterAllOptions();
-                token = stream.token();
+                token = stream().token();
             } catch (ArrayIndexOutOfBoundsException e) {
                 return;
             }
             IndexValuePair pair = new IndexValuePair();
             try {
                 pair.indexOrSupplier = Long.parseLong(token);
-                stream.next();
+                stream().next();
             } catch (NumberFormatException e) {
                 SupplierCtx indexSupplier = compileInlineCommand();
                 if (indexSupplier == null) {
-                    throw new CommandCompileException("can not parse string '" + token + "' to number." + stream.errToken(token));
+                    throw new CommandCompileException("can not parse string '" + token + "' to number." + stream().errToken(token));
                 }
             }
             try {
@@ -183,7 +183,7 @@ public class LSetCtx extends MutableListCtx implements Precompilable {
         if (!(result_ instanceof KeyValuePairPrecompileResult result)) {
             throw new UnsupportedOperationException();
         }
-        stream = result.getPrecompileStream();
+        setStream(result.getPrecompileStream());
         consumerCtx = (ConsumerCtx<Object>) result.getPipeConsumer();
         var values = result.getValues();
         for (SetCtx.Pair pair : values) {
@@ -192,7 +192,7 @@ public class LSetCtx extends MutableListCtx implements Precompilable {
                 try {
                     indexValuePair.indexOrSupplier = Long.parseLong(keyStr);
                 } catch (NumberFormatException e) {
-                    throw new CommandInterpretException("can not parse string '" + keyStr + "' to number." + stream.errToken(keyStr));
+                    throw new CommandInterpretException("can not parse string '" + keyStr + "' to number." + stream().errToken(keyStr));
                 }
                 indexValuePair.valueOrSupplier = pair.valueOrSupplier;
             }

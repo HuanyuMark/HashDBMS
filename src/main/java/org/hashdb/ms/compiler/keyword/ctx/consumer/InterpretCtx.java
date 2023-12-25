@@ -65,15 +65,15 @@ public abstract class InterpretCtx extends ConsumerCtx<Object> {
             if (selected instanceof Precompilable precompilable) {
                 precompilable.compileWithPrecompileResult(getPrecompileResult());
             } else {
-                stream.reset();
-                selected.compileWithStream(stream);
+                stream().reset();
+                selected.compileWithStream(stream());
             }
             return selected.compile().apply(opsTarget);
         };
     }
 
     protected void doPrecompile() {
-        precompileResult = new PrecompileResult<>(stream);
+        precompileResult = new PrecompileResult<>(stream());
         while (true) {
             try {
                 if (compilePipe()) {
@@ -90,11 +90,11 @@ public abstract class InterpretCtx extends ConsumerCtx<Object> {
                 if (keySupplierCtx != null) {
                     getPrecompileResult().values.add(keySupplierCtx);
                 } else {
-                    String token = stream.token();
+                    String token = stream().token();
                     Object customized = compileRawString(token);
                     if (customized == null) {
                         getPrecompileResult().values.add(token);
-                        stream.next();
+                        stream().next();
                     } else {
                         getPrecompileResult().values.add(customized);
                     }

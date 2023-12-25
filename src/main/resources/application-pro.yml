@@ -1,0 +1,6 @@
+db:
+  file:
+  #  持久化文件根路径
+    path: /usr/share/hashdb/
+
+

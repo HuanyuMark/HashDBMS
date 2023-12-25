@@ -22,6 +22,6 @@ public class SetCtx extends WriteSupplierCtx {
 
     @Override
     protected @Nullable HValue<?> doMutation(String key, Object value, Long expireMillis, OpsTaskPriority priority) {
-        return stream.db().set(key, value, expireMillis, priority);
+        return stream().db().set(key, value, expireMillis, priority);
     }
 }

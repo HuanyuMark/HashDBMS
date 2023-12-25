@@ -21,7 +21,7 @@ import java.util.Objects;
 @Slf4j
 public final class SupplierCompileStream extends DatabaseCompileStream {
 
-    private final Lazy<SupplierCtx> compileResult = Lazy.of(null);
+    private final Lazy<SupplierCtx> compileResult = Lazy.empty();
 
     SupplierCompileStream(Database database, String command) {
         super(database, command);

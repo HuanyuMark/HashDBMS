@@ -35,7 +35,7 @@ public class ValuesCtx extends SupplierCtx {
     public Supplier<?> executor() {
         LimitOpCtx limitOpCtx = getOption(LimitOpCtx.class);
         return () -> {
-            Stream<Object> stream = this.stream.db().values().stream().map(HValue::data);
+            Stream<Object> stream = this.stream().db().values().stream().map(HValue::data);
             if (limitOpCtx != null) {
                 return stream.limit(limitOpCtx.value()).toList();
             }
@@ -60,7 +60,7 @@ public class ValuesCtx extends SupplierCtx {
             })) {
                 return;
             }
-            stream.next();
+            stream().next();
         }
     }
 }

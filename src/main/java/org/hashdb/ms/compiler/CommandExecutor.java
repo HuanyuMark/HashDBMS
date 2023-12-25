@@ -1,6 +1,5 @@
 package org.hashdb.ms.compiler;
 
-import org.hashdb.ms.compiler.keyword.ctx.sys.SystemCompileCtx;
 import org.hashdb.ms.exception.DBClientException;
 import org.hashdb.ms.net.ConnectionSession;
 import org.jetbrains.annotations.Contract;
@@ -55,7 +54,7 @@ public class CommandExecutor {
      */
     public TransportableCompileResult compile(String command) {
         var compileStream = new SystemCompileStream(session, command);
-        SystemCompileCtx<?> systemCompileCtx = compileStream.compile();
+        var systemCompileCtx = compileStream.compile();
         if (systemCompileCtx != null) {
             return new TransportableCompileResult(compileStream);
         }
@@ -64,9 +63,6 @@ public class CommandExecutor {
             throw new DBClientException("No database selected");
         }
         var supplierCompileStream = new SupplierCompileStream(db, compileStream.tokens, null, false);
-        supplierCompileStream.compile();
         return new TransportableCompileResult(supplierCompileStream);
     }
-
-
 }

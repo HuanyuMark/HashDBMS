@@ -72,8 +72,26 @@
                 <configuration>
                     <compilerArgs>--enable-preview</compilerArgs>
                     <compilerArgs>-parameters</compilerArgs>
+                    <release>${java.version}</release>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                    <agents>
+                        <agent>
+                            D:\myCode\apache-maven-3.8.7-bin\apache-maven-3.8.7\localRepository\org\openjdk\jol\jol-core\0.17
+                        </agent>
+                    </agents>
                 </configuration>
             </plugin>
         </plugins>

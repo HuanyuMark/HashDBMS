@@ -23,7 +23,7 @@ public class ExistsCtx extends SupplierCtx {
 
     @Override
     public Supplier<?> compile() {
-        getCtx.compileWithStream(stream);
+        getCtx.compileWithStream(stream());
         return executor();
     }
 
@@ -42,7 +42,7 @@ public class ExistsCtx extends SupplierCtx {
                 } else {
                     key = (String) keyOfSupplier;
                 }
-                if (stream.db().exists(key)) {
+                if (stream().db().exists(key)) {
                     return Stream.of(index[0]++);
                 }
                 return Stream.empty();

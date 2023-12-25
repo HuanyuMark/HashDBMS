@@ -51,7 +51,7 @@ public class TypeCtx extends SupplierCtx {
             } else {
                 key = ((String) keyOrSupplier);
             }
-            return stream.db().type(key);
+            return stream().db().type(key);
         }).toList();
     }
 
@@ -64,7 +64,7 @@ public class TypeCtx extends SupplierCtx {
                 }
                 filterAllKeywords();
                 filterAllOptions();
-                token = stream.token();
+                token = stream().token();
             } catch (ArrayIndexOutOfBoundsException e) {
                 return;
             }
@@ -74,7 +74,7 @@ public class TypeCtx extends SupplierCtx {
                 continue;
             }
             keyOrSupplier.add(token);
-            stream.next();
+            stream().next();
         }
     }
 

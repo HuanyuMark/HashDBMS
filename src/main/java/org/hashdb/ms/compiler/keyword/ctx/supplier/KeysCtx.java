@@ -38,9 +38,9 @@ public class KeysCtx extends SupplierCtx {
     public Supplier<?> executor() {
         return () -> {
             if (limit == null) {
-                return stream.db().keys();
+                return stream().db().keys();
             }
-            return stream.db().keys().stream().limit(limit).toList();
+            return stream().db().keys().stream().limit(limit).toList();
         };
     }
 

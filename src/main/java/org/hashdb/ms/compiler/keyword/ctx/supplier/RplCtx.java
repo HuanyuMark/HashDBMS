@@ -21,6 +21,6 @@ public class RplCtx extends WriteSupplierCtx {
 
     @Override
     protected @Nullable HValue<?> doMutation(String key, Object value, Long expireMillis, OpsTaskPriority priority) {
-        return stream.db().rpl(key, value, expireMillis, priority);
+        return stream().db().rpl(key, value, expireMillis, priority);
     }
 }

@@ -17,6 +17,7 @@ import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Component;
 
 import java.util.Date;
 import java.util.Map;
@@ -30,7 +31,7 @@ import java.util.Objects;
  * @version 0.0.1
  */
 @Slf4j
-//@Component
+@Component
 public class DBSystem extends BlockingQueueTaskConsumer implements InitializingBean, DisposableBean {
     @Getter
     private SystemInfo systemInfo;
@@ -64,14 +65,14 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
         persistentService.deleteDatabase(db.getInfos().getName());
     }
 
-    public void addDatabase(Database db) throws DatabaseClashException {
-        Objects.requireNonNull(db);
-        if (this.systemInfo.getDatabaseNameMap().containsKey(db.getInfos().getName()) ||
-                this.systemInfo.getDatabaseIdMap().containsKey(db.getInfos().getId())) {
-            throw new DatabaseClashException("database '" + db + "' clash other database");
-        }
-        this.systemInfo.addDatabase(db);
-    }
+//    public void addDatabase(Database db) throws DatabaseClashException {
+//        Objects.requireNonNull(db);
+//        if (this.systemInfo.getDatabaseNameMap().containsKey(db.getInfos().getName()) ||
+//                this.systemInfo.getDatabaseIdMap().containsKey(db.getInfos().getId())) {
+//            throw new DatabaseClashException("database '" + db + "' clash other database");
+//        }
+//        this.systemInfo.addDatabase(db);
+//    }
 
     public @NotNull Lazy<Database> newDatabase(@Nullable Integer id, @NotNull String name) {
         Objects.requireNonNull(name);
@@ -96,18 +97,10 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
             newDb.startDaemon().join();
             return newDb;
         });
-        this.systemInfo.addDatabase(newDb);
+        this.systemInfo.addDatabase(newDb.getInfos(), lazy);
         persistentService.persist(this.systemInfo);
         persistentService.persist(newDb);
         return lazy;
-    }
-
-    public void tryAddDatabase(Database db) {
-        try {
-            addDatabase(db);
-        } catch (DatabaseClashException e) {
-            log.warn("database '" + db + "' clash other database");
-        }
     }
 
     public Database getDatabase(String name) throws NotFoundDatabaseException {

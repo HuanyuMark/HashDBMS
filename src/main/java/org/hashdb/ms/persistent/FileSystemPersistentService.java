@@ -29,7 +29,9 @@ public abstract class FileSystemPersistentService implements PersistentService {
     }
 
     protected File getHDBFileDir(String database) {
-        return getDBFileDir(database, "hdb");
+        // TODO: 2023/12/26 把hdb的读写写完, 现在为了交差, 先这样写了
+        return getDBFileDir(database, "");
+//        return getDBFileDir(database, "hdb");
     }
 
     private File getDBFileDir(String database, String persistentFileCategory) {

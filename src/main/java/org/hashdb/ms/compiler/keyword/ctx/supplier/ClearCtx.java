@@ -1,5 +1,6 @@
 package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
+import org.hashdb.ms.compiler.SupplierCompileStream;
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
 
 import java.util.function.Supplier;
@@ -11,7 +12,9 @@ import java.util.function.Supplier;
  * @version 0.0.1
  */
 public class ClearCtx extends SupplierCtx {
-    {
+    @Override
+    public void setStream(SupplierCompileStream stream) {
+        super.setStream(stream);
         stream.toWrite();
     }
 
@@ -33,7 +36,7 @@ public class ClearCtx extends SupplierCtx {
     @Override
     public Supplier<?> executor() {
         return () -> {
-            stream.db().clear();
+            stream().db().clear();
             return true;
         };
     }

@@ -31,7 +31,7 @@ public enum DataType {
     BITMAP(BitSet.class, List.of("BMAP")),
     LIST(List.of(LinkedList.class, ArrayList.class), List.of("LIST", "LS")),
     NULL(List.of(Null.class), List.of());
-//    /**
+    //    /**
 //     * pipe 消费者可以消费这个类型, 其它的都不行
 //     */
 //    ANY(List.of(), List.of());
@@ -44,18 +44,18 @@ public enum DataType {
 
     static {
         // 配合配置项: dbRamConfig.isStoreLikeJsonSequence()
-        javaClassMap.put(LinkedHashMap.class,MAP);
+        javaClassMap.put(LinkedHashMap.class, MAP);
     }
 
     private static void registerClass(Class<?> clazz, DataType type) {
-        if(javaClassMap == null) {
+        if (javaClassMap == null) {
             javaClassMap = new HashMap<>();
         }
         javaClassMap.put(clazz, type);
     }
 
     private static void registerCommandSymbol(@NotNull List<String> symbols, DataType type) {
-        if(commandSymbolMap == null) {
+        if (commandSymbolMap == null) {
             commandSymbolMap = new HashMap<>();
         }
         symbols.forEach(symbol -> commandSymbolMap.put(symbol, type));
@@ -117,7 +117,8 @@ public enum DataType {
     private static final class Null {
         private Null() {
         }
-        public static final Null VALUE=init();
+
+        public static final Null VALUE = init();
 
         /**
          * 防止IDEA警告：实例化一个实用类
@@ -128,9 +129,13 @@ public enum DataType {
                 constructor.setAccessible(true);
                 return constructor.newInstance();
             } catch (Throwable e) {
-                log.error("unexpected exception: {}",e.toString());
+                log.error("unexpected exception: {}", e.toString());
                 throw new DBSystemException(e);
             }
         }
+    }
+
+    public boolean isAssignableFrom(@Nullable Object any) {
+        return any != null && reflectCacheData.clazz().isAssignableFrom(any.getClass());
     }
 }

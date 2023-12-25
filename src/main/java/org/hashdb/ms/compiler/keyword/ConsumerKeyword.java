@@ -128,7 +128,7 @@ public enum ConsumerKeyword implements Keyword<ConsumerKeyword> {
         }
     }
 
-    class PipeCtx extends ConsumerCtx<Object> {
+    static class PipeCtx extends ConsumerCtx<Object> {
 
         public PipeCtx(CompileCtx<?> supplierCtx) {
             super(supplierCtx);

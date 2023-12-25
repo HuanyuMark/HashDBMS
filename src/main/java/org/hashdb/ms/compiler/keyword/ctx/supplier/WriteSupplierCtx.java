@@ -1,5 +1,6 @@
 package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
+import org.hashdb.ms.compiler.SupplierCompileStream;
 import org.hashdb.ms.compiler.option.LongOpCtx;
 import org.hashdb.ms.compiler.option.Options;
 import org.hashdb.ms.data.HValue;
@@ -20,8 +21,10 @@ import java.util.function.Supplier;
  * @version 0.0.1
  */
 public abstract class WriteSupplierCtx extends SupplierCtx {
-    {
-        stream.toWrite();
+    @Override
+    public void setStream(SupplierCompileStream stream) {
+        super.setStream(stream);
+        stream().toWrite();
     }
 
     protected final List<Pair> pairs = new LinkedList<>();
@@ -56,20 +59,20 @@ public abstract class WriteSupplierCtx extends SupplierCtx {
             if (keySupplier != null) {
                 pair.keyOrSupplier = keySupplier;
             } else {
-                pair.keyOrSupplier = stream.token();
-                stream.next();
+                pair.keyOrSupplier = stream().token();
+                stream().next();
             }
 
             pair.valueCtx = new ValueCtx();
 
             // 探测一下, 有没有value
             try {
-                stream.token();
+                stream().token();
             } catch (ArrayIndexOutOfBoundsException e) {
-                stream.prev();
-                String errorToken = stream.token();
-                stream.next();
-                throw new CommandCompileException("keyword '" + name() + "' require key-value pair to write." + stream.errToken(errorToken));
+                stream().prev();
+                String errorToken = stream().token();
+                stream().next();
+                throw new CommandCompileException("keyword '" + name() + "' require key-value pair to write." + stream().errToken(errorToken));
             }
 
             // 有可能是内联命令
@@ -78,7 +81,7 @@ public abstract class WriteSupplierCtx extends SupplierCtx {
 //                if (!DataType.canStore(valueSupplier.supplyType())) {
 //                    throw new CommandExecuteException("can not store the return type of inline command: '" +
 //                            valueSupplier.command()
-//                            + "'." + stream.errToken(valueSupplier.command()));
+//                            + "'." +stream().errToken(valueSupplier.command()));
 //                }
                 pair.valueCtx.rawOrSupplier = valueSupplier;
             } else {

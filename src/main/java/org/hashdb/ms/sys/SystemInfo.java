@@ -1,6 +1,7 @@
 package org.hashdb.ms.sys;
 
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.DatabaseInfos;
 import org.hashdb.ms.data.PlainPair;
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
+@Slf4j
 @Getter
 public class SystemInfo {
     private final Map<String, Lazy<Database>> databaseNameMap = new HashMap<>();
@@ -36,7 +38,7 @@ public class SystemInfo {
     private DBSystem system;
 
     public void setSystem(DBSystem system) {
-        if(this.system != null) {
+        if (this.system != null) {
             throw new RuntimeException();
         }
         this.system = system;
@@ -64,20 +66,16 @@ public class SystemInfo {
         });
     }
 
-    void addDatabase(@NotNull Database database) {
-        addDatabase(database.getInfos(), Lazy.of(database));
-    }
-
     void addDatabase(@NotNull DatabaseInfos infos, @NotNull Lazy<Database> database) {
         databaseNameMap.put(infos.getName(), database);
         databaseIdMap.put(infos.getId(), database);
-        databaseInfosMap.put(infos,database);
+        databaseInfosMap.put(infos, database);
         navigableDbInfosMap.put(database, infos);
     }
 
     Lazy<Database> deleteDatabase(@NotNull Database database) {
-        if(database.getTackUpCount() != 0) {
-            throw new DatabaseInUseException(database+" in use");
+        if (database.getTackUpCount() != 0) {
+            throw new DatabaseInUseException(database + " in use");
         } else {
             database.shutdownConsumer();
         }
@@ -98,7 +96,7 @@ public class SystemInfo {
             if (lazy.isCached()) {
                 dbName = lazy.get().getInfos().getName();
             } else {
-                dbName = system.getSystemInfo().getNavigableDbInfosMap().get(lazy).getName();
+                dbName = navigableDbInfosMap.get(lazy).getName();
             }
             return new PlainPair<>(entry.getKey(), dbName);
         }).collect(Collectors.toMap(PlainPair::key, PlainPair::value));

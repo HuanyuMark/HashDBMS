@@ -99,7 +99,7 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
                 // 是不是关键字
                 filterAllKeywords();
                 filterAllOptions();
-                token = stream.token();
+                token = stream().token();
             } catch (ArrayIndexOutOfBoundsException e) {
                 // 所有token已解析完毕
                 return;
@@ -110,7 +110,7 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
             if (inlineSupplierCtx != null) {
                 keyOrSupplier.add(inlineSupplierCtx);
                 try {
-                    token = stream.token();
+                    token = stream().token();
                 } catch (ArrayIndexOutOfBoundsException e) {
                     return;
                 }
@@ -119,7 +119,7 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
             // 如果这个token是修饰符, 则将token更新为修饰符编译完的token的下一个token
             if (compileModifier()) {
                 try {
-                    token = stream.token();
+                    token = stream().token();
                 } catch (ArrayIndexOutOfBoundsException e) {
                     // 解析完成
                     return;
@@ -129,7 +129,7 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
             // 判断是不是配置项, 如果是, 则从现在的token开始, 将所有配置项编译完成后退出
             if (compileOptions(optionCtx -> {
                 if (keyOrSupplier.isEmpty()) {
-                    throw new CommandCompileException("key '" + name() + "' require key name to query." + stream.errToken(stream.token()));
+                    throw new CommandCompileException("key '" + name() + "' require key name to query." + stream().errToken(stream().token()));
                 }
                 addOption(optionCtx);
                 return true;
@@ -148,21 +148,21 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
                 keyOrSupplier.add(token);
             }
             // 下一个token
-            stream.next();
+            stream().next();
         }
     }
 
     @Override
     protected void beforeCompilePipe() {
         if (keyOrSupplier.isEmpty()) {
-            throw new CommandCompileException("key '" + name() + "' require key name to query." + stream.errToken(stream.token()));
+            throw new CommandCompileException("key '" + name() + "' require key name to query." + stream().errToken(stream().token()));
         }
     }
 
     protected boolean compileModifier() {
         KeywordModifier modifier;
         try {
-            modifier = KeywordModifier.of(stream.token());
+            modifier = KeywordModifier.of(stream().token());
         } catch (ArrayIndexOutOfBoundsException e) {
             return true;
         }
@@ -172,7 +172,7 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
             }
             case LIKE -> {
                 beforeCompileModifier(KeywordModifier.LIKE);
-                stream.next();
+                stream().next();
                 return true;
             }
             default ->
@@ -184,13 +184,13 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
         if (modifier != KeywordModifier.LIKE) {
             return;
         }
-        Supplier<String> errorMsgSupplier = () -> "modifier keyword 'LIKE' should modify with keyword '" + name() + "'." + stream.errToken(stream.token());
+        Supplier<String> errorMsgSupplier = () -> "modifier keyword 'LIKE' should modify with keyword '" + name() + "'." + stream().errToken(stream().token());
         // 如果已经被修饰过了
         if (like) {
             throw new CommandCompileException(errorMsgSupplier.get());
         }
         // 模糊匹配 key
-        String lastToken = stream.peekToken(-1, i -> new CommandCompileException(errorMsgSupplier.get()));
+        String lastToken = stream().peekToken(-1, i -> new CommandCompileException(errorMsgSupplier.get()));
 //        if (!SupplierKeyword.GET.match(lastToken)) {
 //            throw new CommandCompileException(errorMsgSupplier.get());
 //        }

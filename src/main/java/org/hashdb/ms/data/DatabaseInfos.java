@@ -33,4 +33,8 @@ public class DatabaseInfos implements Serializable {
     public String toString() {
         return JsonService.stringfy(this);
     }
+
+    public String getName() {
+        return name;
+    }
 }

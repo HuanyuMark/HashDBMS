@@ -42,7 +42,7 @@ public abstract class ConsumerCtx<I> extends CompileCtx<ConsumerCompileStream> {
         if (compileResult != null) {
             throw new DBSystemException(getClass().getSimpleName() + " is finish compilation");
         }
-        this.stream = compileStream;
+        setStream(compileStream);
         compileResult = opsTarget -> consumeWithConsumer(compile().apply(opsTarget));
         return compileResult;
     }
@@ -59,10 +59,10 @@ public abstract class ConsumerCtx<I> extends CompileCtx<ConsumerCompileStream> {
 
     public Object consume(I opsTarget) {
         if (opsTarget == null) {
-            throw new CommandExecuteException("keyword '" + name() + "' can not consume type: 'null' return from '" + stream.fatherCommand() + "'." + stream.errToken(stream.token()));
+            throw new CommandExecuteException("keyword '" + name() + "' can not consume type: 'null' return from '" + stream().fatherCommand() + "'." + stream().errToken(stream().token()));
         }
         if (!checkConsumeType(opsTarget)) {
-            throw new CommandExecuteException("keyword '" + name() + "' can not consume type: '" + DataType.typeOfRawValue(opsTarget) + "' return from '" + stream.fatherCommand() + "'." + stream.errToken(stream.token()));
+            throw new CommandExecuteException("keyword '" + name() + "' can not consume type: '" + DataType.typeOfRawValue(opsTarget) + "' return from '" + stream().fatherCommand() + "'." + stream().errToken(stream().token()));
         }
         return compileResult.apply(opsTarget);
     }

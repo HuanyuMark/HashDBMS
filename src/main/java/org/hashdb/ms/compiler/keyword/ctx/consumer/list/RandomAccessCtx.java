@@ -35,7 +35,7 @@ public abstract class RandomAccessCtx extends MutableListCtx implements Precompi
     @Override
     void beforeCompile() {
         // 如果不为空, 说明使用了解释模式, 通过解析预编译的结果已经生成了所有所需值
-        if(indexOrSuppliers.isEmpty()) {
+        if (indexOrSuppliers.isEmpty()) {
             doCompile();
             beforeCompileInlineCommand();
         }
@@ -53,11 +53,11 @@ public abstract class RandomAccessCtx extends MutableListCtx implements Precompi
             }
             return index < 0 ? opsList.size() + index : index;
         }).sorted().toList();
-        if(indexes.getFirst() < 0) {
-            throw new CommandInterpretException("index '"+indexes.getFirst()+"' out of range");
+        if (indexes.getFirst() < 0) {
+            throw new CommandInterpretException("index '" + indexes.getFirst() + "' out of range");
         }
-        if(indexes.getLast() >= opsList.size()) {
-            throw new CommandInterpretException("index '"+indexes.getLast()+"' out of range");
+        if (indexes.getLast() >= opsList.size()) {
+            throw new CommandInterpretException("index '" + indexes.getLast() + "' out of range");
         }
         return access(opsList, indexes);
     }
@@ -76,13 +76,13 @@ public abstract class RandomAccessCtx extends MutableListCtx implements Precompi
                 }
                 filterAllKeywords();
                 filterAllOptions();
-                token = stream.token();
+                token = stream().token();
             } catch (ArrayIndexOutOfBoundsException e) {
                 return;
             }
             try {
                 indexOrSuppliers.add(Long.parseLong(token));
-                stream.next();
+                stream().next();
             } catch (NumberFormatException e) {
                 SupplierCtx indexSupplier;
                 try {
@@ -111,17 +111,17 @@ public abstract class RandomAccessCtx extends MutableListCtx implements Precompi
     @Override
     @SuppressWarnings("unchecked")
     public void compileWithPrecompileResult(PrecompileResult<?> result) {
-        stream = result.getPrecompileStream();
+        setStream(result.getPrecompileStream());
         consumerCtx = (ConsumerCtx<Object>) result.getPipeConsumer();
         /*
-        *  String
-        *  OptionCtx
-        *  KeywordModifier
-        *  org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx
-        * */
-        List<Object> values = ((List<Object>)result.getValues());
+         *  String
+         *  OptionCtx
+         *  KeywordModifier
+         *  org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx
+         * */
+        List<Object> values = ((List<Object>) result.getValues());
         for (Object unknownTypeValue : values) {
-            if(unknownTypeValue instanceof String indexStr){
+            if (unknownTypeValue instanceof String indexStr) {
                 try {
                     indexOrSuppliers.add(Long.parseLong(indexStr));
                     continue;
@@ -129,11 +129,11 @@ public abstract class RandomAccessCtx extends MutableListCtx implements Precompi
                     throw new CommandInterpretException("can not parse index string '" + indexStr + "' to number");
                 }
             }
-            if(unknownTypeValue instanceof SupplierCtx indexSupplier) {
+            if (unknownTypeValue instanceof SupplierCtx indexSupplier) {
                 indexOrSuppliers.add(indexSupplier);
                 continue;
             }
-            throw new CommandInterpretException("keyword '"+name()+"' fail to interpret token '"+unknownTypeValue+"'");
+            throw new CommandInterpretException("keyword '" + name() + "' fail to interpret token '" + unknownTypeValue + "'");
         }
     }
 }

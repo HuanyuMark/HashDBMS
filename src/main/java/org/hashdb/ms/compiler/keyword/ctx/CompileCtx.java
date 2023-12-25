@@ -37,7 +37,7 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
     protected Map<Class<? extends OptionCtx<?>>, OptionCtx<?>> options;
 
     @JsonIgnore
-    protected S stream;
+    private S stream;
     /**
      * 是否有管道符? 如果有, 则会有管道Ctx, 其会包装其它的 ConsumerCtx
      * 在当前 SupplierCtx的任务执行完后, 会接收这个Supplier 产生的结果
@@ -85,6 +85,7 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
                     }
                     continue;
                 }
+
                 if (!vc.apply(valueType, value)) {
                     stream.next();
                     return;
@@ -94,6 +95,7 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
             }
 
             // 尝试转换一下
+            @Nullable
             Object value;
             try {
                 value = JsonService.parse(token);
@@ -111,17 +113,15 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
             DataType supposedType = DataType.typeOfRawValue(value);
             // 期望类型 是 集合类型, 且可变
             // 如果期望的类型是反序列化后返回的类型的父类, 则直接使用
-            if (supposedType.reflect().clazz().isAssignableFrom(value.getClass())) {
-                if (!vc.apply(supposedType, value)) {
-                    stream.next();
-                    return;
-                }
-                stream.next();
-                continue;
+            if (!supposedType.isAssignableFrom(value)) {// 如果序列化的值不满足需求, 则报错
+                throw new IllegalValueException("json value: '" + token + "' is unsupported to store in database");
             }
 
-            // 如果序列化的值不满足需求, 则报错
-            throw new IllegalValueException("json value: " + token + " is unsupported to store in database");
+            if (!vc.apply(supposedType, value)) {
+                stream.next();
+                return;
+            }
+            stream.next();
         }
     }
 
@@ -354,5 +354,14 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
         if (Options.isOption(token)) {
             throw new CommandCompileException("keyword '" + name() + "' can not support any options");
         }
+    }
+
+    public S stream() {
+        return stream;
+    }
+
+    @JsonIgnore
+    public void setStream(S stream) {
+        this.stream = stream;
     }
 }

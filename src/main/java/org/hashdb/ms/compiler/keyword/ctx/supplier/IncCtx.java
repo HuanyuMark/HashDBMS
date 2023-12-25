@@ -1,5 +1,6 @@
 package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
+import org.hashdb.ms.compiler.SupplierCompileStream;
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
 
 /**
@@ -9,7 +10,10 @@ import org.hashdb.ms.compiler.keyword.SupplierKeyword;
  * @version 0.0.1
  */
 public class IncCtx extends NumCtx {
-    {
+
+    @Override
+    public void setStream(SupplierCompileStream stream) {
+        super.setStream(stream);
         stream.toWrite();
     }
 

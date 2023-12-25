@@ -1,5 +1,6 @@
 package org.hashdb.ms.compiler.keyword.ctx.consumer;
 
+import org.hashdb.ms.compiler.ConsumerCompileStream;
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.consumer.list.LSetCtx;
@@ -15,7 +16,9 @@ import java.util.List;
  * @version 0.0.1
  */
 public class SetCtx extends InterpretCtx {
-    {
+    @Override
+    public void setStream(ConsumerCompileStream stream) {
+        super.setStream(stream);
         stream.toWrite();
     }
 
@@ -38,7 +41,7 @@ public class SetCtx extends InterpretCtx {
 
     @Override
     protected void doPrecompile() {
-        precompileResult = new KeyValuePairPrecompileResult(stream);
+        precompileResult = new KeyValuePairPrecompileResult(stream());
         while (true) {
             String token;
             try {
@@ -56,8 +59,8 @@ public class SetCtx extends InterpretCtx {
             if (keySupplier != null) {
                 pair.keyOrSupplier = keySupplier;
             } else {
-                pair.keyOrSupplier = stream.token();
-                stream.next();
+                pair.keyOrSupplier = stream().token();
+                stream().next();
                 filterAllKeywords();
             }
             compileJsonValues((dataType, value) -> {

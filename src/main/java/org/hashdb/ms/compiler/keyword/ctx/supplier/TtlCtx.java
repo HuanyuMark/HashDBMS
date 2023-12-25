@@ -20,7 +20,7 @@ public class TtlCtx extends ReadSupplierCtx {
 
     @Override
     protected Object doQuery(String key) {
-        return stream.db().ttl(key);
+        return stream().db().ttl(key);
     }
 
     @Override

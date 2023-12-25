@@ -68,7 +68,7 @@ public abstract class NumCtx extends SupplierCtx {
                 }
                 filterAllKeywords();
                 filterAllOptions();
-                token = stream.token();
+                token = stream().token();
             } catch (ArrayIndexOutOfBoundsException e) {
                 return;
             }
@@ -77,11 +77,11 @@ public abstract class NumCtx extends SupplierCtx {
             SupplierCtx keySupplier = compileInlineCommand();
             if (keySupplier != null) {
                 arithmeticCtx.keyOrSupplier = keySupplier;
-                token = stream.token();
+                token = stream().token();
             } else {
                 arithmeticCtx.keyOrSupplier = token;
                 try {
-                    token = stream.nextToken();
+                    token = stream().nextToken();
                 } catch (ArrayIndexOutOfBoundsException e) {
                     throw new CommandCompileException("keyword '" + name() + "' require key-step pair to operate a number");
                 }
@@ -96,10 +96,10 @@ public abstract class NumCtx extends SupplierCtx {
                 arithmeticCtx.stepOrSupplier = stepSupplier;
             } else {
                 if (!token.matches("-?(\\d+)?(\\.)?(\\d+)?") || ".".equals(token) || token.isEmpty()) {
-                    throw new IncreaseUnsupportedException("can not parse step '" + token + "' to number." + stream.errToken(token));
+                    throw new IncreaseUnsupportedException("can not parse step '" + token + "' to number." + stream().errToken(token));
                 }
                 arithmeticCtx.stepOrSupplier = token;
-                stream.next();
+                stream().next();
             }
             compileOptions(op -> {
                 if (op instanceof ExpireOpCtx expireCtx) {
@@ -151,7 +151,7 @@ public abstract class NumCtx extends SupplierCtx {
             throw new IncreaseUnsupportedException("step '" + step + "' must be a number");
         }
         @SuppressWarnings("unchecked")
-        HValue<Object> value = (HValue<Object>) stream.db().get(key);
+        HValue<Object> value = (HValue<Object>) stream().db().get(key);
         final DataType dataType = DataType.typeofHValue(value);
         switch (dataType) {
             case STRING -> {
@@ -178,7 +178,7 @@ public abstract class NumCtx extends SupplierCtx {
                 return oldValue;
             }
             case NULL -> {
-                stream.db().set(key, stepNumber, millis, priority);
+                stream().db().set(key, stepNumber, millis, priority);
                 return null;
             }
             default ->

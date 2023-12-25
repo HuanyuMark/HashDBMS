@@ -1,5 +1,6 @@
 package org.hashdb.ms.compiler.keyword.ctx.consumer.list;
 
+import org.hashdb.ms.compiler.ConsumerCompileStream;
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
@@ -22,8 +23,10 @@ import java.util.List;
  * @version 0.0.1
  */
 public class TrimCtx extends MutableListCtx {
-    {
-        stream.toWrite();
+    @Override
+    public void setStream(ConsumerCompileStream stream) {
+        super.setStream(stream);
+        stream().toWrite();
     }
 
     protected boolean delete = false;
@@ -91,7 +94,7 @@ public class TrimCtx extends MutableListCtx {
                 return;
             }
             filterAllKeywords();
-            token = stream.token();
+            token = stream().token();
 
             limitOrSupplier = compileInlineCommand();
             if (limitOrSupplier == null) {
@@ -100,7 +103,7 @@ public class TrimCtx extends MutableListCtx {
                     if (((Long) limitOrSupplier) < 0) {
                         throw new CommandCompileException("keyword '" + name() + "' require a positive number as $COUNT limit");
                     }
-                    stream.next();
+                    stream().next();
                 } catch (NumberFormatException e) {
                     throw new CommandCompileException("can not parse string '" + token + "' to number");
                 }

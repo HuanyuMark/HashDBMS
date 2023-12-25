@@ -28,6 +28,6 @@ public class CountCtx extends SupplierCtx {
 
     @Override
     public Supplier<?> executor() {
-        return () -> stream.db().count();
+        return () -> stream().db().count();
     }
 }

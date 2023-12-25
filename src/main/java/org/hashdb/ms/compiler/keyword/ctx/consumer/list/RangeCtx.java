@@ -3,12 +3,10 @@ package org.hashdb.ms.compiler.keyword.ctx.consumer.list;
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
-import org.hashdb.ms.data.DataType;
 import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.task.ImmutableChecker;
 import org.hashdb.ms.exception.CommandCompileException;
 import org.hashdb.ms.exception.CommandExecuteException;
-import org.hashdb.ms.exception.IllegalJavaClassStoredException;
 
 import java.util.List;
 
@@ -101,28 +99,28 @@ public class RangeCtx extends ListCtx {
                 }
                 filterAllKeywords();
                 filterAllOptions();
-                token = stream.token();
+                token = stream().token();
             } catch (ArrayIndexOutOfBoundsException e) {
                 return;
             }
             try {
                 startIndexOrSupplier = Long.valueOf(token);
-                stream.next();
+                stream().next();
             } catch (NumberFormatException e) {
                 startIndexOrSupplier = compileInlineCommand();
                 if (startIndexOrSupplier == null) {
-                    throw new CommandCompileException("can not parse string '" + token + "' to number." + stream.errToken(token));
+                    throw new CommandCompileException("can not parse string '" + token + "' to number." + stream().errToken(token));
                 }
             }
             try {
-                token = stream.token();
+                token = stream().token();
                 try {
                     endIndexOrSupplier = Long.valueOf(token);
-                    stream.next();
+                    stream().next();
                 } catch (NumberFormatException e) {
                     endIndexOrSupplier = compileInlineCommand();
                     if (endIndexOrSupplier == null) {
-                        throw new CommandCompileException("can not parse string '" + token + "' to number." + stream.errToken(token));
+                        throw new CommandCompileException("can not parse string '" + token + "' to number." + stream().errToken(token));
                     }
                 }
             } catch (ArrayIndexOutOfBoundsException e) {

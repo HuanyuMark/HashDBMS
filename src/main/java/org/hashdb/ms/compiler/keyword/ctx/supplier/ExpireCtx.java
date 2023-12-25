@@ -1,5 +1,6 @@
 package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
+import org.hashdb.ms.compiler.SupplierCompileStream;
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.option.*;
@@ -22,8 +23,10 @@ import java.util.function.Supplier;
  * @version 0.0.1
  */
 public class ExpireCtx extends SupplierCtx {
-    {
-        stream.toWrite();
+    @Override
+    public void setStream(SupplierCompileStream stream) {
+        super.setStream(stream);
+        stream().toWrite();
     }
 
     private final List<KeyCtx> keys = new LinkedList<>();
@@ -58,7 +61,7 @@ public class ExpireCtx extends SupplierCtx {
             } else {
                 key = ((String) keyCtx.keyOrSupplier);
             }
-            HValue<?> value = stream.db().get(key);
+            HValue<?> value = stream().db().get(key);
             if (value == null) {
                 if (keyCtx.keyOrSupplier instanceof SupplierCtx supplierCtx) {
                     throw new CommandExecuteException("key '" + key + "' return form inline command '" + supplierCtx.command() + "' not found");
@@ -67,9 +70,9 @@ public class ExpireCtx extends SupplierCtx {
             }
             long oldExpireTime = HValue.unwrapExpire(value);
             if (keyCtx.strategyOpCtx == null) {
-                ExpireStrategy.DEFAULT.exec(stream.db(), value, keyCtx.millis, keyCtx.deletePriority);
+                ExpireStrategy.DEFAULT.exec(stream().db(), value, keyCtx.millis, keyCtx.deletePriority);
             } else {
-                keyCtx.strategyOpCtx.value().exec(stream.db(), value, keyCtx.millis, keyCtx.deletePriority);
+                keyCtx.strategyOpCtx.value().exec(stream().db(), value, keyCtx.millis, keyCtx.deletePriority);
             }
             return oldExpireTime;
         }).toList();
@@ -84,7 +87,7 @@ public class ExpireCtx extends SupplierCtx {
                 }
                 filterAllKeywords();
                 filterAllOptions();
-                token = stream.token();
+                token = stream().token();
             } catch (ArrayIndexOutOfBoundsException e) {
                 return;
             }
@@ -94,13 +97,13 @@ public class ExpireCtx extends SupplierCtx {
             if (inlineSupplierCtx != null) {
                 keyCtx.keyOrSupplier = inlineSupplierCtx;
                 try {
-                    token = stream.token();
+                    token = stream().token();
                 } catch (ArrayIndexOutOfBoundsException e) {
                     return;
                 }
             } else {
                 keyCtx.keyOrSupplier = token;
-                stream.next();
+                stream().next();
             }
 
             compileOptions(op -> {
@@ -123,7 +126,7 @@ public class ExpireCtx extends SupplierCtx {
                         "expire time");
             }
             keys.add(keyCtx);
-            stream.next();
+            stream().next();
         }
     }
 
