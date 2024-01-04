@@ -23,6 +23,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Date: 2023/11/21 3:02
@@ -181,12 +182,13 @@ public class DefaultPersistentService extends FileSystemPersistentService {
 
         // 读取数据库的 HashTable 分块
         File[] dbChunkFile = DBFileFactory.loadDBChunkFile(dbFileDir);
-        Map<String, StorableHValue<?>> initEntries = new HashMap<>();
-        Arrays.stream(dbChunkFile).parallel().forEach(file -> {
-            @SuppressWarnings("unchecked")
-            Map<String, StorableHValue<?>> chunk = (Map<String, StorableHValue<?>>) readObject(file);
-            initEntries.putAll(chunk);
-        });
+        var initEntries = Arrays.stream(dbChunkFile)
+                .parallel().flatMap(file -> {
+                    @SuppressWarnings("unchecked")
+                    Map<String, StorableHValue<?>> chunk = (Map<String, StorableHValue<?>>) readObject(file);
+                    return chunk.entrySet().parallelStream();
+                })
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         return new Database(databaseInfos, initEntries);
     }
@@ -227,7 +229,7 @@ public class DefaultPersistentService extends FileSystemPersistentService {
             } else {
                 Database db = scanDatabase(databaseInfo.getName());
                 dbLoder = AtomLazy.of(() -> {
-                    db.startDaemon();
+                    db.startDaemon().join();
                     return db;
                 });
             }

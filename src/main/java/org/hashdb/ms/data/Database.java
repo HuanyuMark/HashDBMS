@@ -106,12 +106,12 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
         this(new DatabaseInfos(id, name, createTime), fromData);
     }
 
-    public Database(DatabaseInfos databaseInfos, @NotNull Map<String, StorableHValue<?>> fromData) {
+    public Database(DatabaseInfos databaseInfos, @NotNull Map<String, ? extends StorableHValue<?>> fromData) {
         this.info = databaseInfos;
         restoreAll(fromData);
     }
 
-    private Database restoreAll(Map<String, StorableHValue<?>> from) {
+    private Database restoreAll(Map<String, ? extends StorableHValue<?>> from) {
         for (var entry : from.entrySet()) {
             var key = entry.getKey();
             var value = entry.getValue();
