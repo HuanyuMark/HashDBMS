@@ -126,7 +126,7 @@ public abstract class NumCtx extends SupplierCtx {
     }
 
     private @Nullable Object doArithmeticOps(String key, @NotNull Object stepValue, Long millis, OpsTaskPriority priority) {
-        Object oneValue = normalizeToOneValueOrElseThrow(stepValue);
+        Object oneValue = selectOneKeyOrElseThrow(stepValue);
         if (oneValue instanceof Double d) {
             if (d.isInfinite()) {
                 throw new IncreaseUnsupportedException("step '" + oneValue + "' should be a finite number");

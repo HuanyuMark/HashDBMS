@@ -78,5 +78,4 @@ public class SetCtx extends InterpretCtx {
         public Object keyOrSupplier;
         public Object valueOrSupplier;
     }
-
 }

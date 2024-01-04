@@ -17,7 +17,7 @@ import org.hashdb.ms.util.Lazy;
  * @version 0.0.1
  */
 @Data
-public class TransportableConnectionSession {
+public class TransportableConnectionSession implements ReadonlyConnectionSession {
     private static final Lazy<DBSystem> SYSTEM = Lazy.of(() -> HashDBMSApp.ctx().getBean(DBSystem.class));
     @JsonProperty
     private int dbId;
@@ -39,6 +39,7 @@ public class TransportableConnectionSession {
         dbId = database.getInfos().getId();
     }
 
+    @Override
     public Database getDatabase() {
         return database != null ? database : SYSTEM.get().getDatabase(dbId);
     }

@@ -29,8 +29,10 @@ public abstract class SupplierCtx extends CompileCtx<SupplierCompileStream> {
             throw new DBSystemException(getClass().getSimpleName() + " is finish compilation");
         }
         setStream(compileStream);
+        // 必须要先在当前线程中编译, 提前发现编译错误
+        Supplier<?> supplierTask = compile();
         // 支持管道操作, 将原 生产型任务生产的 结果传给下一个消费者任务使用
-        this.compileResult = OpsTask.of(() -> consumeWithConsumer(compile().get()));
+        this.compileResult = OpsTask.of(() -> consumeWithConsumer(supplierTask.get()));
         return this.compileResult;
     }
 

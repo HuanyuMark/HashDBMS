@@ -47,7 +47,7 @@ public abstract class PopCtx extends MutableListCtx {
     }
 
     @Override
-    void beforeCompile() {
+    protected void beforeCompile() {
         doCompile();
     }
 

@@ -84,6 +84,8 @@ public class BlockingQueueTaskConsumer implements TaskConsumer {
         return true;
     }
 
+    // TODO: 2024/1/4 等待消费者线程将任务队列消费完毕后, 再停止消费者线程
+
     public int remainingTaskSize() {
         return opsTaskDeque.size();
     }

@@ -9,6 +9,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Constructor;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -31,10 +32,7 @@ public enum DataType {
     BITMAP(BitSet.class, List.of("BMAP")),
     LIST(List.of(LinkedList.class, ArrayList.class), List.of("LIST", "LS")),
     NULL(List.of(Null.class), List.of());
-    //    /**
-//     * pipe 消费者可以消费这个类型, 其它的都不行
-//     */
-//    ANY(List.of(), List.of());
+
     private final Set<Class<?>> javaClasses;
 
     private final ReflectCacheData<?> reflectCacheData;
@@ -45,6 +43,16 @@ public enum DataType {
     static {
         // 配合配置项: dbRamConfig.isStoreLikeJsonSequence()
         javaClassMap.put(LinkedHashMap.class, MAP);
+    }
+
+    public static class DataTypeConstructor<T> extends ReflectCacheData<T> {
+        public DataTypeConstructor(Class<? extends T> clazz) {
+            super(clazz);
+        }
+
+        public DataTypeConstructor(Class<? extends T> clazz, Function<Class<?>, Constructor<?>> constructorFinder) {
+            super(clazz, constructorFinder);
+        }
     }
 
     private static void registerClass(Class<?> clazz, DataType type) {
@@ -109,7 +117,7 @@ public enum DataType {
         return commandSymbol;
     }
 
-    public static boolean canStore(Class<?> clazz) {
+    public static boolean support(Class<?> clazz) {
         return javaClassMap.containsKey(clazz);
     }
 
@@ -135,7 +143,7 @@ public enum DataType {
         }
     }
 
-    public boolean isAssignableFrom(@Nullable Object any) {
+    public boolean support(@Nullable Object any) {
         return any != null && reflectCacheData.clazz().isAssignableFrom(any.getClass());
     }
 }

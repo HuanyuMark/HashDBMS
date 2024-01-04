@@ -74,7 +74,7 @@ public class SystemInfo {
     }
 
     Lazy<Database> deleteDatabase(@NotNull Database database) {
-        if (database.getTackUpCount() != 0) {
+        if (database.getUsingCount() != 0) {
             throw new DatabaseInUseException(database + " in use");
         } else {
             database.shutdownConsumer();

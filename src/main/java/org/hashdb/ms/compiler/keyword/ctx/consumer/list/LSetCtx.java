@@ -41,7 +41,7 @@ public class LSetCtx extends MutableListCtx implements Precompilable {
     }
 
     @Override
-    void beforeCompile() {
+    protected void beforeCompile() {
         if (indexValuePairs.isEmpty()) {
             doCompile();
             beforeCompileInlineCommand();
@@ -208,8 +208,8 @@ public class LSetCtx extends MutableListCtx implements Precompilable {
             if (indexOrSupplier instanceof SupplierCtx indexSupplier) {
                 indexOrSupplier = getSuppliedValue(indexSupplier);
             }
-            Object oneValue = normalizeToOneValueOrElseThrow(indexOrSupplier);
-            if (!(oneValue instanceof Long index)) {
+            Object indexKey = selectOneKeyOrElseThrow(indexOrSupplier);
+            if (!(indexKey instanceof Long index)) {
                 throw new StopComplieException("index must be a number");
             }
             indexOrSupplier = index;

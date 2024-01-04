@@ -50,7 +50,7 @@ public class TrimCtx extends MutableListCtx {
     }
 
     @Override
-    void beforeCompile() {
+    protected void beforeCompile() {
         doCompile();
     }
 
@@ -61,7 +61,7 @@ public class TrimCtx extends MutableListCtx {
         if (limitOrSupplier instanceof SupplierCtx limitSupplier) {
             limitOrSupplier = (getSuppliedValue(limitSupplier));
         }
-        limit = (Long) normalizeToOneValueOrElseThrow(limitOrSupplier);
+        limit = (Long) selectOneKeyOrElseThrow(limitOrSupplier);
 
         if (limit << 1 < opsTarget.size()) {
             popCount = limit;

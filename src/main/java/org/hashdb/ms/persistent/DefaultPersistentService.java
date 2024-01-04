@@ -217,16 +217,23 @@ public class DefaultPersistentService extends FileSystemPersistentService {
         HashMap<DatabaseInfos, Lazy<Database>> infosDbMap = new HashMap<>();
         var databaseInfos = scanDatabaseInfos();
         databaseInfos.parallelStream().forEach(databaseInfo -> {
-            AtomLazy<Database> atomLazy;
+            AtomLazy<Database> dbLoder;
             if (HDBConfig.isLazyLoad()) {
-                atomLazy = AtomLazy.of(() -> scanDatabase(databaseInfo.getName()));
+                dbLoder = AtomLazy.of(() -> {
+                    Database loadedDb = scanDatabase(databaseInfo.getName());
+                    loadedDb.startDaemon().join();
+                    return loadedDb;
+                });
             } else {
                 Database db = scanDatabase(databaseInfo.getName());
-                atomLazy = AtomLazy.of(() -> db);
+                dbLoder = AtomLazy.of(() -> {
+                    db.startDaemon();
+                    return db;
+                });
             }
-            nameDbMap.put(databaseInfo.getName(), atomLazy);
-            idDbMap.put(databaseInfo.getId(), atomLazy);
-            infosDbMap.put(databaseInfo, atomLazy);
+            nameDbMap.put(databaseInfo.getName(), dbLoder);
+            idDbMap.put(databaseInfo.getId(), dbLoder);
+            infosDbMap.put(databaseInfo, dbLoder);
         });
         var systemInfo = new SystemInfo(nameDbMap, idDbMap, infosDbMap);
         persist(systemInfo);

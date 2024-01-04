@@ -19,15 +19,16 @@ import org.hashdb.ms.util.AsyncService;
 import org.hashdb.ms.util.JsonService;
 import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.Arrays;
 import java.util.UUID;
-import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -38,10 +39,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @version 0.0.1
  */
 @Slf4j
-public class ConnectionSession implements AutoCloseable {
+public class ConnectionSession implements AutoCloseable, ReadonlyConnectionSession {
     private static final Lazy<DBServerConfig> dbServerConfig = Lazy.of(() -> HashDBMSApp.ctx().getBean(DBServerConfig.class));
 
     private static final AtomicInteger connectionCount = new AtomicInteger(0);
+    @Nullable
     private Database database;
     @Getter
     private final UUID id = UUID.randomUUID();
@@ -50,9 +52,9 @@ public class ConnectionSession implements AutoCloseable {
 
     private final ByteBuffer readBuffer = ByteBuffer.allocate(1024);
 
-    private final BlockingDeque<Message> readDeque = new LinkedBlockingDeque<>();
+    private final BlockingQueue<Message> readQueue = new LinkedBlockingQueue<>();
 
-    private final BlockingDeque<Message> writeDeque = new LinkedBlockingDeque<>();
+    private final BlockingQueue<Message> writeQueue = new LinkedBlockingQueue<>();
 
     private final MessageConsumerChain chain = new MessageConsumerChain();
 
@@ -63,7 +65,7 @@ public class ConnectionSession implements AutoCloseable {
 
     private final CompletableFuture<?> messageWriter;
 
-    private final CompletableFuture<?> messageConsumer;
+    private final CompletableFuture<?> messageConsumerDispatcher;
 
     private final HeartbeatMessage heartbeat;
 
@@ -98,7 +100,7 @@ public class ConnectionSession implements AutoCloseable {
                 send(new ActAuthenticationMessage());
                 startCheckAlive();
             } catch (ClosedConnectionException e) {
-                log.error("closedConnection throw '{}'", e.toString());
+                log.error("closedConnection throw", e);
                 throw ClosedConnectionWrapper.wrap(e);
             }
             return null;
@@ -129,13 +131,17 @@ public class ConnectionSession implements AutoCloseable {
         messageWriter = AsyncService.submit(() -> {
             while (true) {
                 try {
-                    Message msg = writeDeque.take();
+                    Message msg = writeQueue.take();
                     send0(msg);
                 } catch (ClosedConnectionException e) {
-                    log.error("closedConnection throw ", e);
+                    if (log.isTraceEnabled()) {
+                        log.error("messageWriter throw ", e);
+                    }
                     throw ClosedConnectionWrapper.wrap(e);
                 } catch (InterruptedException e) {
-                    log.error("messageWriter throw ", e);
+                    if (log.isTraceEnabled()) {
+                        log.error("messageWriter throw ", e);
+                    }
                     throw new WorkerInterruptedException(e);
                 } catch (Exception e) {
                     log.error("messageWriter throw ", e);
@@ -147,7 +153,7 @@ public class ConnectionSession implements AutoCloseable {
                 try {
                     Message msg = get();
 //                    System.out.println("messageReader read msg: " + msg.getType());
-                    readDeque.add(msg);
+                    readQueue.add(msg);
                 } catch (ClosedConnectionException e) {
                     log.error("messageReader throw '{}'", e.toString());
                     throw ClosedConnectionWrapper.wrap(e);
@@ -156,13 +162,13 @@ public class ConnectionSession implements AutoCloseable {
                 }
             }
         });
-        messageConsumer = AsyncService.submit(() -> {
+        messageConsumerDispatcher = AsyncService.submit(() -> {
             while (true) {
                 Message msg;
                 try {
-                    msg = readDeque.take();
+                    msg = readQueue.take();
                 } catch (InterruptedException e) {
-                    log.error("messageConsumer throw '{}'", e.toString());
+                    log.error("messageConsumer throw", e);
                     throw new WorkerInterruptedException(e);
                 } catch (Exception e) {
                     log.error("messageConsumer throw ", e);
@@ -172,10 +178,10 @@ public class ConnectionSession implements AutoCloseable {
 //                    System.out.println("messageConsumer consume msg: " + msg.getType());
                     chain.consume(msg);
                 } catch (ClosedConnectionException e) {
-                    log.error("closedConnection throw '{}'", e.toString());
+                    log.error("closedConnection throw", e);
                     throw ClosedConnectionWrapper.wrap(e);
                 } catch (Exception e) {
-                    log.error("message consumer chain throw '{}'", e.toString());
+                    log.error("message consumer chain throw", e);
                     throw new DBSystemException(e);
                 }
             }
@@ -203,6 +209,7 @@ public class ConnectionSession implements AutoCloseable {
         return channel.isConnected();
     }
 
+    @Override
     public Database getDatabase() {
         return database;
     }
@@ -211,7 +218,7 @@ public class ConnectionSession implements AutoCloseable {
         if (database == null) {
             close();
         } else {
-            database.restrain();
+            database.use();
         }
         this.database = database;
     }
@@ -221,11 +228,10 @@ public class ConnectionSession implements AutoCloseable {
         if (closed) {
             return;
         }
-        readBuffer.clear();
         try {
             channel.close();
         } catch (IOException e) {
-            log.error("unexpected close() throw '{}'", e.toString());
+            log.error("unexpected close() throw", e);
         }
         if (database != null) {
             database.release();
@@ -233,7 +239,7 @@ public class ConnectionSession implements AutoCloseable {
         aliveChecker.cancel(true);
         messageWriter.cancel(true);
         messageReader.cancel(true);
-        messageConsumer.cancel(true);
+        messageConsumerDispatcher.cancel(true);
         if (timeoutTask != null) {
             timeoutTask.cancel(true);
         }
@@ -277,14 +283,15 @@ public class ConnectionSession implements AutoCloseable {
             throw new ClosedConnectionException("Connection closed");
         }
         try {
-            int readCount;
-            int expectReadCount = readBuffer.position();
-            while ((readCount = channel.read(readBuffer)) <= expectReadCount) {
-                if (readCount == -1) {
-                    throw new IllegalStateException("no data can read in read buffer");
-                }
-                expectReadCount -= readCount;
-            }
+            channel.read(readBuffer);
+//            int readCount;
+//            int expectReadCount = readBuffer.position();
+//            while ((readCount = channel.read(readBuffer)) <= expectReadCount) {
+//                if (readCount == -1) {
+//                    throw new IllegalStateException("no data can read in read buffer");
+//                }
+//                expectReadCount -= readCount;
+//            }
         } catch (IOException e) {
             throw new DBSystemException(e);
         }
@@ -307,7 +314,7 @@ public class ConnectionSession implements AutoCloseable {
     }
 
     public void send(Message toSend) throws ClosedConnectionException {
-        writeDeque.add(toSend);
+        writeQueue.add(toSend);
     }
 
     public void addMessageConsumer(MessageConsumer consumer) {

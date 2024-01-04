@@ -45,10 +45,10 @@ public class TransportableCompileResult {
      */
     public String run(TransportableConnectionSession session) {
         if (compilerCtx instanceof SupplierCtx supplierCtx) {
-            return SupplierCompileStream.createWithTransportable(session.getDatabase(), supplierCtx).runWithExecutor();
+            return SupplierCompileStream.createWithTransportable(supplierCtx, session).runWithExecutor();
         }
         if (compilerCtx instanceof SystemCompileCtx<?> systemCompileCtx) {
-            return SystemCompileStream.createWithTransportable(systemCompileCtx).runWithExecutor();
+            return SystemCompileStream.createWithTransportable(systemCompileCtx, session).runWithExecutor();
         }
         throw new DBSystemException("Unknown compiler context type: " + compilerCtx.getClass().getName());
     }

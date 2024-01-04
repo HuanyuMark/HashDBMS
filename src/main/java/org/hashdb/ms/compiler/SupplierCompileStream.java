@@ -5,6 +5,7 @@ import org.hashdb.ms.compiler.keyword.SupplierKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.exception.UnknownTokenException;
+import org.hashdb.ms.net.TransportableConnectionSession;
 import org.hashdb.ms.util.JsonService;
 import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
@@ -40,8 +41,8 @@ public final class SupplierCompileStream extends DatabaseCompileStream {
         compileResult.computedWith(supplierCtx);
     }
 
-    static SupplierCompileStream createWithTransportable(Database database, SupplierCtx supplierCtx) {
-        return new SupplierCompileStream(database, supplierCtx);
+    static SupplierCompileStream createWithTransportable(SupplierCtx supplierCtx, TransportableConnectionSession session) {
+        return new SupplierCompileStream(session.getDatabase(), supplierCtx);
     }
 
     public static @NotNull SupplierCompileStream open(Database db, @NotNull String command) {

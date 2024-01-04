@@ -13,8 +13,6 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 
-import java.io.IOException;
-
 /**
  * Date: ${DATE} ${TIME}
  *
@@ -71,7 +69,7 @@ public class HashDBMSApp implements ApplicationContextAware {
         }
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
         SpringApplication.run(HashDBMSApp.class, args);
         // 发布一个事件, 让其他模块可以感知到spring容器已经准备好了, context 已经有值了
         // 在idea中,点击左边的耳机符号,可以跳转到监听这个事件的事件监听器

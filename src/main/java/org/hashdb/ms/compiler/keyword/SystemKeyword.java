@@ -1,9 +1,6 @@
 package org.hashdb.ms.compiler.keyword;
 
-import org.hashdb.ms.compiler.keyword.ctx.sys.DBCreateCtx;
-import org.hashdb.ms.compiler.keyword.ctx.sys.DBShowCtx;
-import org.hashdb.ms.compiler.keyword.ctx.sys.DBUseCtx;
-import org.hashdb.ms.compiler.keyword.ctx.sys.SystemCompileCtx;
+import org.hashdb.ms.compiler.keyword.ctx.sys.*;
 import org.hashdb.ms.util.ReflectCacheData;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -17,7 +14,8 @@ import org.jetbrains.annotations.Nullable;
 public enum SystemKeyword implements Keyword<SystemKeyword> {
     DBUSE(DBUseCtx.class),
     DBCREATE(DBCreateCtx.class),
-    DBSHOW(DBShowCtx.class);
+    DBSHOW(DBShowCtx.class),
+    DBCURRENT(DBCurrentCtx.class);
 
     private final ReflectCacheData<? extends SystemCompileCtx<?>> constructor;
 

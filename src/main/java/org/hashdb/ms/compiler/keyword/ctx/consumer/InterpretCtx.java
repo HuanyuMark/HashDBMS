@@ -2,6 +2,8 @@ package org.hashdb.ms.compiler.keyword.ctx.consumer;
 
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
+import org.hashdb.ms.data.DataType;
+import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.exception.CommandCompileException;
 import org.hashdb.ms.exception.CommandExecuteException;
 import org.hashdb.ms.exception.CommandInterpretException;
@@ -122,5 +124,35 @@ public abstract class InterpretCtx extends ConsumerCtx<Object> {
         if (getPrecompileResult().values.isEmpty()) {
             throw new CommandCompileException("keyword '" + name() + "' require at lease one key to query");
         }
+    }
+
+    @Override
+    protected DataType consumableHValueType() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected Class<?> consumableModifiableClass() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected Class<?> consumableUnmodifiableClass() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected Object operateWithMutableList(Object opsTarget) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected Object operateWithImmutableList(Object opsTarget) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected Object operateWithHValue(HValue<Object> opsTarget) {
+        throw new UnsupportedOperationException();
     }
 }

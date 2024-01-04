@@ -46,18 +46,18 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
     protected final AtomicReference<ScheduledFuture<?>> saveTask = new AtomicReference<>();
     public final Object SAVE_TASK_LOCK = new Object();
 
-    private final AtomicInteger tackUpCount = new AtomicInteger(0);
+    private final AtomicInteger usingCount = new AtomicInteger(0);
 
-    public void restrain() {
-        tackUpCount.incrementAndGet();
+    public void use() {
+        usingCount.incrementAndGet();
     }
 
     public void release() {
-        tackUpCount.decrementAndGet();
+        usingCount.decrementAndGet();
     }
 
-    public int getTackUpCount() {
-        return tackUpCount.get();
+    public int getUsingCount() {
+        return usingCount.get();
     }
 
     public CompletableFuture<Boolean> startDaemon() {

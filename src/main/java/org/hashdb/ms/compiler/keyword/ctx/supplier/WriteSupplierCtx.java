@@ -131,7 +131,7 @@ public abstract class WriteSupplierCtx extends SupplierCtx {
                 key = (String) pair.keyOrSupplier;
             }
             if (pair.valueCtx.rawOrSupplier instanceof SupplierCtx valueSupplier) {
-                value = normalizeToOneValueOrElseThrow(getSuppliedValue(valueSupplier));
+                value = selectOneKeyOrElseThrow(getSuppliedValue(valueSupplier));
             } else {
                 value = pair.valueCtx.rawOrSupplier;
             }

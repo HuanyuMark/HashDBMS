@@ -55,7 +55,7 @@ public abstract class PopPushCtx extends MutableListCtx {
     abstract protected void doPush(List<Object> opsTarget, Stream<Object> values);
 
     @Override
-    void beforeCompile() {
+    protected void beforeCompile() {
         doCompile();
         beforeCompilePipe();
     }

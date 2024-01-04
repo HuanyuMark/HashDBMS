@@ -7,6 +7,9 @@ import org.hashdb.ms.compiler.keyword.ctx.consumer.DelCtx;
 import org.hashdb.ms.compiler.keyword.ctx.consumer.GetCtx;
 import org.hashdb.ms.compiler.keyword.ctx.consumer.SetCtx;
 import org.hashdb.ms.compiler.keyword.ctx.consumer.list.*;
+import org.hashdb.ms.compiler.keyword.ctx.consumer.set.SSetCtx;
+import org.hashdb.ms.data.DataType;
+import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.exception.StopComplieException;
 import org.hashdb.ms.util.ReflectCacheData;
 import org.jetbrains.annotations.NotNull;
@@ -53,7 +56,8 @@ public enum ConsumerKeyword implements Keyword<ConsumerKeyword> {
     REVERSE(LReverseCtx.class),
     TRIM(TrimCtx.class),
     LPOPRPUSH(LPopRPush.class),
-    RPOPLPUSH(RPopLPush.class);
+    RPOPLPUSH(RPopLPush.class),
+    SSET(SSetCtx.class);
     private final ConsumerCtxConstructor compileCtxFactory;
 
     ConsumerKeyword(Class<? extends ConsumerCtx<?>> keywordCtxClass) {
@@ -157,6 +161,36 @@ public enum ConsumerKeyword implements Keyword<ConsumerKeyword> {
 
         @Override
         protected Function<Object, ?> executor() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        protected DataType consumableHValueType() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        protected Class<?> consumableModifiableClass() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        protected Class<?> consumableUnmodifiableClass() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        protected Object operateWithMutableList(Object opsTarget) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        protected Object operateWithImmutableList(Object opsTarget) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        protected Object operateWithHValue(HValue<Object> opsTarget) {
             throw new UnsupportedOperationException();
         }
     }

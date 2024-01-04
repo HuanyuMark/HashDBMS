@@ -36,7 +36,7 @@ public abstract class PushCtx extends MutableListCtx {
     }
 
     @Override
-    void beforeCompile() {
+    protected void beforeCompile() {
         doCompile();
         beforeCompilePipe();
     }

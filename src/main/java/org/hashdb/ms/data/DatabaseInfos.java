@@ -20,6 +20,7 @@ import java.util.Date;
 @EqualsAndHashCode
 @RequiredArgsConstructor
 public class DatabaseInfos implements Serializable {
+    public static final DatabaseInfos NULL = new DatabaseInfos(-1, "NULL", new Date(0));
     @Serial
     private static final long serialVersionUID = 632895L;
     protected final int id;

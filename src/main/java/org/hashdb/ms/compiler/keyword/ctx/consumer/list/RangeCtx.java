@@ -36,7 +36,7 @@ public class RangeCtx extends ListCtx {
     }
 
     @Override
-    void beforeCompile() {
+    protected void beforeCompile() {
         doCompile();
         beforeCompilePipe();
     }

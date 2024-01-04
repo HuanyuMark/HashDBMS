@@ -33,7 +33,7 @@ public abstract class RandomAccessCtx extends MutableListCtx implements Precompi
     }
 
     @Override
-    void beforeCompile() {
+    protected void beforeCompile() {
         // 如果不为空, 说明使用了解释模式, 通过解析预编译的结果已经生成了所有所需值
         if (indexOrSuppliers.isEmpty()) {
             doCompile();

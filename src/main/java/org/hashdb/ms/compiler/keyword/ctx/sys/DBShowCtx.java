@@ -5,6 +5,7 @@ import org.hashdb.ms.compiler.keyword.SystemKeyword;
 import org.hashdb.ms.data.DatabaseInfos;
 import org.hashdb.ms.data.OpsTask;
 import org.hashdb.ms.exception.CommandInterpretException;
+import org.hashdb.ms.net.ReadonlyConnectionSession;
 
 import java.util.Collection;
 
@@ -23,11 +24,11 @@ public class DBShowCtx extends SystemCompileCtx<Collection<DatabaseInfos>> {
             throw new CommandInterpretException("unknown token '" + token + "'");
         } catch (ArrayIndexOutOfBoundsException ignore) {
         }
-        return executor();
+        return executor(stream.getSession());
     }
 
     @Override
-    public OpsTask<Collection<DatabaseInfos>> executor() {
+    public OpsTask<Collection<DatabaseInfos>> executor(ReadonlyConnectionSession session) {
         return OpsTask.of(() -> system().getSystemInfo().getDatabaseInfosMap().keySet());
     }
 

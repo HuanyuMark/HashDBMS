@@ -3,15 +3,15 @@ package org.hashdb.ms.compiler;
 import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.compiler.keyword.SystemKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.sys.DBCreateCtx;
-import org.hashdb.ms.compiler.keyword.ctx.sys.DBShowCtx;
-import org.hashdb.ms.compiler.keyword.ctx.sys.DBUseCtx;
 import org.hashdb.ms.compiler.keyword.ctx.sys.SystemCompileCtx;
 import org.hashdb.ms.exception.CommandCompileException;
-import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.net.ConnectionSession;
+import org.hashdb.ms.net.ReadonlyConnectionSession;
+import org.hashdb.ms.net.TransportableConnectionSession;
 import org.hashdb.ms.sys.DBSystem;
 import org.hashdb.ms.util.JsonService;
 import org.hashdb.ms.util.Lazy;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Date: 2023/11/30 1:11
@@ -22,19 +22,17 @@ import org.hashdb.ms.util.Lazy;
 public final class SystemCompileStream extends CommonCompileStream<SystemCompileCtx<?>> {
     private static final Lazy<DBSystem> SYSTEM = Lazy.of(() -> HashDBMSApp.ctx().getBean(DBSystem.class));
 
-    private static final Object NULL_RESULT = new Object();
-
     /**
      * 如果该流编译出的指令是读指令, 那么这个 Session 就不为空, 否则为空
      */
-    private final ConnectionSession session;
+    private final ReadonlyConnectionSession session;
 
     /**
      * 只有写命令会有这个编译结果
      */
     private SystemCompileCtx<?> compileResult;
 
-    public ConnectionSession getSession() {
+    public ReadonlyConnectionSession getSession() {
         return session;
     }
 
@@ -49,13 +47,13 @@ public final class SystemCompileStream extends CommonCompileStream<SystemCompile
         eraseParentheses(tokens);
     }
 
-    private SystemCompileStream(SystemCompileCtx<?> compileResult) {
-        this.session = null;
+    private SystemCompileStream(SystemCompileCtx<?> compileResult, ReadonlyConnectionSession session) {
+        this.session = session;
         this.compileResult = compileResult;
     }
 
-    static SystemCompileStream createWithTransportable(SystemCompileCtx<?> compileResult) {
-        return new SystemCompileStream(compileResult);
+    static SystemCompileStream createWithTransportable(SystemCompileCtx<?> compileResult, TransportableConnectionSession session) {
+        return new SystemCompileStream(compileResult, session);
     }
 
     @Override
@@ -74,31 +72,25 @@ public final class SystemCompileStream extends CommonCompileStream<SystemCompile
         return "";
     }
 
-
     @Override
+    @Nullable
     public String run() {
         SystemCompileCtx<?> compileCtx = compile();
         if (compileCtx == null) {
             return null;
         }
-        Object result = NULL_RESULT;
-        if (compileCtx instanceof DBUseCtx dbUseCtx) {
-            assert dbUseCtx.getResult() != null;
-            result = dbUseCtx.getResult().get();
-        }
+        Object result;
         if (compileCtx instanceof DBCreateCtx dbCreateCtx) {
             result = SYSTEM.get().submitOpsTaskSync(dbCreateCtx.getResult());
+        } else {
+            assert compileCtx.getResult() != null;
+            result = compileCtx.getResult().get();
         }
-        if (compileCtx instanceof DBShowCtx dbShowCtx) {
-            assert dbShowCtx.getResult() != null;
-            result = dbShowCtx.getResult().get();
-        }
-        if (NULL_RESULT == result) {
-            throw new DBSystemException("unexpected result");
-        }
+
         if (result instanceof Boolean ok) {
             return ok ? "SUCC" : "FAIL";
         }
+
         Object normalizeValue = CompileStream.normalizeValue(result);
         return JsonService.stringfy(normalizeValue == null ? "null" : normalizeValue);
     }
@@ -106,7 +98,7 @@ public final class SystemCompileStream extends CommonCompileStream<SystemCompile
     @Override
     public String runWithExecutor() {
         // 一般都是数据库系统的写命令, 所以就扔进队列里执行
-        Object result = SYSTEM.get().submitOpsTaskSync(compileResult.executor());
+        Object result = SYSTEM.get().submitOpsTaskSync(compileResult.executor(session));
         if (result instanceof Boolean ok) {
             return ok ? "SUCC" : "FAIL";
         }

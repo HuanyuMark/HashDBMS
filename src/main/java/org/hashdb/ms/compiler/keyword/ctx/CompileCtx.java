@@ -15,6 +15,7 @@ import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
 import org.hashdb.ms.compiler.option.OptionCtx;
 import org.hashdb.ms.compiler.option.Options;
 import org.hashdb.ms.data.DataType;
+import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.exception.*;
 import org.hashdb.ms.util.JsonService;
 import org.jetbrains.annotations.NotNull;
@@ -78,7 +79,7 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
                 } catch (JsonProcessingException e) {
                     SupplierCtx supplierCtx = compileInlineCommand();
                     if (supplierCtx == null) {
-                        throw new CommandCompileException("can not parse json(?) '" + token + "' to valid data type." + stream.errToken(token));
+                        throw new CommandCompileException("can not parse json(?) '" + token + "' to type '" + valueType + "'." + stream.errToken(token));
                     }
                     if (!vc.apply(valueType, supplierCtx)) {
                         return;
@@ -113,7 +114,7 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
             DataType supposedType = DataType.typeOfRawValue(value);
             // 期望类型 是 集合类型, 且可变
             // 如果期望的类型是反序列化后返回的类型的父类, 则直接使用
-            if (!supposedType.isAssignableFrom(value)) {// 如果序列化的值不满足需求, 则报错
+            if (!supposedType.support(value)) {// 如果序列化的值不满足需求, 则报错
                 throw new IllegalValueException("json value: '" + token + "' is unsupported to store in database");
             }
 
@@ -128,7 +129,7 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
     public abstract Class<?> supplyType();
 
     protected static String normalizeToQueryKey(Object unknownKey) throws UnsupportedQueryKey {
-        Object oneValue = normalizeToOneValueOrElseThrow(unknownKey);
+        Object oneValue = selectOneKeyOrElseThrow(unknownKey);
         if (oneValue instanceof String str) {
             if (str.isEmpty()) {
                 throw new UnsupportedQueryKey("can not query key of element '" + str + "'");
@@ -147,22 +148,14 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
         };
     }
 
-    protected static Object normalizeToOneValue(Object unknownValue) {
-        try {
-            return normalizeToOneValueOrElseThrow(unknownValue);
-        } catch (DBSystemException e) {
-            return unknownValue;
-        }
-    }
-
-    protected static Object normalizeToOneValueOrElseThrow(Object unknownValue) {
+    protected static Object selectOneKeyOrElseThrow(Object unknownValue) {
         Function<Collection<?>, Object> normalizeCollectionToQueryKey = collection -> {
             if (collection.isEmpty()) {
                 return "";
             }
             if (collection.size() == 1) {
                 Object toQuery = collection.stream().limit(1).toArray()[0];
-                return normalizeToOneValueOrElseThrow(toQuery);
+                return selectOneKeyOrElseThrow(toQuery);
             }
             throw new UnsupportedQueryKey("can not query key of a collection containing multiple elements");
         };
@@ -170,11 +163,15 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
         if (unknownValue instanceof Collection<?> co) {
             return normalizeCollectionToQueryKey.apply(co);
         }
+        if (unknownValue instanceof HValue<?> hValue) {
+            return selectOneKeyOrElseThrow(hValue.data());
+        }
+
         try {
             DataType.typeOfRawValue(unknownValue);
         } catch (IllegalJavaClassStoredException e) {
             log.error("can not normalize : {}", unknownValue);
-            throw new DBSystemException("can not normalize: " + unknownValue);
+            throw new CommandExecuteException("can not normalize: " + unknownValue);
         }
         return unknownValue;
     }

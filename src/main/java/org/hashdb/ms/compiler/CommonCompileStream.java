@@ -1,5 +1,6 @@
 package org.hashdb.ms.compiler;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.compiler.keyword.CompilerNode;
 import org.hashdb.ms.exception.CommandCompileException;
@@ -32,9 +33,11 @@ public abstract class CommonCompileStream<R extends CompilerNode> implements Com
      * 子链表(这个链表是一个视图, 即对视图的操作会影响到原链表) 这导致了:
      * 因为要去掉包裹内联命令的左右两个括号, 会直接影响到原链表的 token 序列
      */
+    @JsonProperty
     protected String[] tokens;
     protected int cursor = 0;
 
+    @JsonProperty
     protected boolean write = false;
 
     /**

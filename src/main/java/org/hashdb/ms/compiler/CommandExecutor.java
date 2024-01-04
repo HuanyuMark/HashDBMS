@@ -1,9 +1,12 @@
 package org.hashdb.ms.compiler;
 
 import org.hashdb.ms.exception.DBClientException;
+import org.hashdb.ms.exception.NoDatabaseSelectedException;
 import org.hashdb.ms.net.ConnectionSession;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.concurrent.ExecutionException;
 
 /**
  * Date: 2023/11/30 14:10
@@ -32,7 +35,7 @@ public class CommandExecutor {
      * 接收端执行. 否则, 可以调用 {@link TransportableCompileResult#run()} 在本机立即执行
      */
     @Deprecated
-    public String run(String command) {
+    public String run(String command) throws ExecutionException {
         var compileStream = new SystemCompileStream(session, command);
         var execRes = compileStream.run();
         if (execRes != null) {
@@ -40,7 +43,7 @@ public class CommandExecutor {
         }
         var db = session.getDatabase();
         if (db == null) {
-            throw new DBClientException("No database selected");
+            throw NoDatabaseSelectedException.of();
         }
         var supplierCompileStream = new SupplierCompileStream(db, compileStream.tokens, null, false);
         return supplierCompileStream.run();

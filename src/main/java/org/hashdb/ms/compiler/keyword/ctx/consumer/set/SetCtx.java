@@ -1,4 +1,4 @@
-package org.hashdb.ms.compiler.keyword.ctx.consumer.list;
+package org.hashdb.ms.compiler.keyword.ctx.consumer.set;
 
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
@@ -10,7 +10,7 @@ import org.hashdb.ms.exception.CommandExecuteException;
 import org.hashdb.ms.exception.IllegalJavaClassStoredException;
 import org.hashdb.ms.exception.StopComplieException;
 
-import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 
 /**
@@ -20,42 +20,45 @@ import java.util.function.Function;
  * @version 0.0.1
  */
 @Slf4j
-public abstract class ListCtx extends ConsumerCtx<List<Object>> {
-    protected ListCtx(CompileCtx<?> fatherCompileCtx) {
+public abstract class SetCtx extends ConsumerCtx<Set<Object>> {
+    protected SetCtx(CompileCtx<?> fatherCompileCtx) {
         super(fatherCompileCtx);
     }
 
     @Override
     protected boolean checkConsumeType(Object consumeType) throws CommandExecuteException {
         Object o = selectOne(consumeType);
-        if (o instanceof HValue<?> hValue) {
-            try {
-                return DataType.LIST == DataType.typeofHValue(hValue);
-            } catch (IllegalJavaClassStoredException ignore) {
-                return false;
-            }
+        if (!(o instanceof HValue<?> hValue)) {
+            return Set.class.isAssignableFrom(o.getClass());
         }
-        return List.class.isAssignableFrom(o.getClass());
+        try {
+            return DataType.LIST == DataType.typeofHValue(hValue);
+        } catch (IllegalJavaClassStoredException ignore) {
+            return false;
+        }
     }
 
     @Override
-    protected Function<List<Object>, ?> compile() throws StopComplieException {
+    protected Function<Set<Object>, ?> compile() throws StopComplieException {
         beforeCompile();
         return executor();
     }
 
+    protected void beforeCompile() {
+    }
+
     @Override
     protected DataType consumableHValueType() {
-        return DataType.LIST;
+        return DataType.SET;
     }
 
     @Override
     protected Class<?> consumableModifiableClass() {
-        return DataType.LIST.reflect().clazz();
+        return DataType.SET.reflect().clazz();
     }
 
     @Override
     protected Class<?> consumableUnmodifiableClass() {
-        return ImmutableChecker.unmodifiableList;
+        return ImmutableChecker.unmodifiableSet;
     }
 }

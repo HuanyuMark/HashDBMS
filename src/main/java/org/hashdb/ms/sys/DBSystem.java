@@ -157,6 +157,7 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
             if (!lazyDb.isCached()) {
                 return;
             }
+            // TODO: 2024/1/4 这里应该要等待数据库的任务执行线程将任务都消费完毕后,再持久化
             Database db = lazyDb.get();
             persistentService.persist(db);
             if (log.isTraceEnabled()) {

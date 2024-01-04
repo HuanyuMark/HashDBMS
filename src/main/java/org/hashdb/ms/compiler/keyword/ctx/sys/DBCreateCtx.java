@@ -5,6 +5,7 @@ import org.hashdb.ms.compiler.SystemCompileStream;
 import org.hashdb.ms.compiler.keyword.SystemKeyword;
 import org.hashdb.ms.data.OpsTask;
 import org.hashdb.ms.exception.CommandInterpretException;
+import org.hashdb.ms.net.ReadonlyConnectionSession;
 
 /**
  * Date: 2023/11/30 14:46
@@ -52,11 +53,11 @@ public class DBCreateCtx extends SystemCompileCtx<Boolean> {
         if (name == null) {
             throw new CommandInterpretException("keyword '" + name() + "' require param 'database name'");
         }
-        return executor();
+        return executor(stream.getSession());
     }
 
     @Override
-    public OpsTask<Boolean> executor() {
+    public OpsTask<Boolean> executor(ReadonlyConnectionSession session) {
         return OpsTask.of(() -> {
             system().newDatabase(id, name);
             return Boolean.TRUE;
