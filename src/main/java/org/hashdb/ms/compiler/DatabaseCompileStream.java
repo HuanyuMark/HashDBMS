@@ -3,6 +3,7 @@ package org.hashdb.ms.compiler;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.data.Database;
+import org.hashdb.ms.exception.CommandCompileException;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
@@ -30,6 +31,9 @@ public abstract sealed class DatabaseCompileStream extends CommonCompileStream<C
      * @param command  原始命令
      */
     protected DatabaseCompileStream(Database database, @NotNull String command) {
+        if (command.isEmpty()) {
+            throw new CommandCompileException("illegal command '" + command + "'");
+        }
         var tokens = extractTokens(command);
         this.command = Lazy.of(() -> (String.join(" ", tokens)));
         this.tokens = tokens;

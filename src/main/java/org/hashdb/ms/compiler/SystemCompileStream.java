@@ -37,6 +37,9 @@ public final class SystemCompileStream extends CommonCompileStream<SystemCompile
     }
 
     public SystemCompileStream(ConnectionSession session, String command) {
+        if (command.isEmpty()) {
+            throw new CommandCompileException("illegal command '" + command + "'");
+        }
         this.session = session;
         this.tokens = extractTokens(command);
         if (tokens.length == 0) {
