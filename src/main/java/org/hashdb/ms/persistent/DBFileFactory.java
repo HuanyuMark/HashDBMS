@@ -17,18 +17,21 @@ import java.util.Objects;
  */
 public class DBFileFactory {
     public static final String INDEX_FILE_NAME = "index.db";
+
     @Contract("_, _ -> new")
-    public static @NotNull File newDBChunkFile(File dbFileDir, int chunkId) {
-        return new File(dbFileDir,chunkId + ".chunk.db");
+    public static @NotNull File newHDBChunkFile(File dbFileDir, int chunkId) {
+        return new File(dbFileDir, chunkId + ".chunk.db");
     }
+
     public static File newIndexFile(File dbFileDir) {
-        return new File(dbFileDir,INDEX_FILE_NAME);
+        return new File(dbFileDir, INDEX_FILE_NAME);
     }
+
     public static File loadIndexFile(File dbFileDir) {
         File[] files = dbFileDir.listFiles(f -> f.getName().equals(INDEX_FILE_NAME));
-        if(files == null || files.length == 0) {
-            throw new DBClientException(new FileNotFoundException("can not find database index file: '"+
-                    Path.of(dbFileDir.getAbsolutePath(),INDEX_FILE_NAME) +"'"));
+        if (files == null || files.length == 0) {
+            throw new DBClientException(new FileNotFoundException("can not find database index file: '" +
+                    Path.of(dbFileDir.getAbsolutePath(), INDEX_FILE_NAME) + "'"));
         }
         return files[0];
     }

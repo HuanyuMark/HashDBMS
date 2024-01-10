@@ -30,7 +30,7 @@ public class BlockingQueueTaskConsumer implements TaskConsumer {
             return CompletableFuture.completedFuture(true);
         }
         CompletableFuture<Boolean> future = new CompletableFuture<>();
-        Supplier<CompletableFuture<?>> opsTaskConsumerSupplier = () -> AsyncService.submit(() -> {
+        Supplier<CompletableFuture<?>> opsTaskConsumerSupplier = () -> AsyncService.start(() -> {
             receiveNewTask.set(true);
             future.complete(true);
             while (true) {

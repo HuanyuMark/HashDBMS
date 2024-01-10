@@ -1,11 +1,13 @@
-package org.hashdb.ms.sys;
+package org.hashdb.ms.manager;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.aspect.methodAccess.DisposableCall;
 import org.hashdb.ms.config.ReplicationConfig;
+import org.hashdb.ms.data.DataType;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.event.ReplicationConfigLoadedEvent;
+import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.exception.DatabaseClashException;
 import org.hashdb.ms.exception.NotFoundDatabaseException;
 import org.hashdb.ms.persistent.PersistentService;
@@ -23,6 +25,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 /**
  * Date: 2023/11/21 1:46
@@ -75,7 +78,14 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
 //    }
 
     public @NotNull Lazy<Database> newDatabase(@Nullable Integer id, @NotNull String name) {
+        return newDatabase(id, name, db -> {
+        });
+    }
+
+    public @NotNull Lazy<Database> newDatabase(@Nullable Integer id, @NotNull String name, Consumer<Database> initializer)
+            throws DatabaseClashException {
         Objects.requireNonNull(name);
+        Objects.requireNonNull(initializer);
         if (id == null) {
             Integer maxId;
             try {
@@ -86,13 +96,18 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
             }
         } else {
             if (this.systemInfo.getDatabaseIdMap().containsKey(id)) {
-                throw new DatabaseClashException("fail to create database. redundancy database id");
+                DatabaseClashException clashWithId = new DatabaseClashException("fail to create database. redundancy database id");
+                clashWithId.clashWith("id");
+                throw clashWithId;
             }
         }
         if (this.systemInfo.getDatabaseNameMap().containsKey(name)) {
-            throw new DatabaseClashException("fail to create database. redundancy database name");
+            DatabaseClashException clashWithName = new DatabaseClashException("fail to create database. redundancy database name");
+            clashWithName.clashWith("name");
+            throw clashWithName;
         }
         var newDb = new Database(id, name, new Date());
+        initializer.accept(newDb);
         var lazy = Lazy.of(() -> {
             newDb.startDaemon().join();
             return newDb;
@@ -136,10 +151,49 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
     public void afterPropertiesSet() throws Exception {
         // 扫描 系统信息,
         setSystemInfo(persistentService.scanSystemInfo());
+        initSystemInternalDB();
         // 扫描 主从复制配置
         replicationConfig = persistentService.scanReplicationConfig();
         // 通知 主从复制配置加载完成
         publisher.publishEvent(new ReplicationConfigLoadedEvent(replicationConfig));
+    }
+
+    public void initSystemInternalDB() {
+        initUserDB();
+    }
+
+    public void initUserDB() {
+        try {
+            newDatabase(1, "user", userDb -> {
+                // add default user
+                var userEntity = ((Map<String, String>) DataType.MAP.reflect().create());
+                userEntity.put("password", "hash");
+                userDb.set("hash", userEntity, null, null);
+            });
+        } catch (DatabaseClashException e) {
+            // check if user db is valid
+            if (e.getClashKeys().contains("id")) {
+                Database db = getDatabase(1);
+                if (!"user".equals(db.getInfos().getName())) {
+                    DatabaseClashException clashWithName = new DatabaseClashException();
+                    log.error("check system internal db 'user' failed. the id of 'user' db should be 1 " +
+                            "and the name of db which itself id is 1 is expect to 'user' but found '" + db.getInfos().getName() + "'");
+                    clashWithName.clashWith("name");
+                    throw new DBSystemException(clashWithName);
+                }
+                return;
+            }
+            if (e.getClashKeys().contains("name")) {
+                Database db = getDatabase("user");
+                if (1 != db.getInfos().getId()) {
+                    DatabaseClashException clashWithId = new DatabaseClashException();
+                    log.error("check system internal db 'user' failed. the id of 'user' db which itself name is 'user' should be 1 but found '" + db.getInfos().getId() + "'");
+                    clashWithId.clashWith("id");
+                    throw new DBSystemException(clashWithId);
+                }
+            }
+            // user database is exited and valid
+        }
     }
 
     /**

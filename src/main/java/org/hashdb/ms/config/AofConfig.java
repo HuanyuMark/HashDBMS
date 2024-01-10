@@ -3,6 +3,9 @@ package org.hashdb.ms.config;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.aspect.methodAccess.ConfigLoadOnly;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
 
 /**
  * Date: 2023/12/5 16:56
@@ -14,9 +17,9 @@ import org.hashdb.ms.aspect.methodAccess.ConfigLoadOnly;
  */
 @Slf4j
 @Getter
-//@Configuration
-//@ConfigurationProperties("db.aof")
-//@EnableConfigurationProperties
+@Configuration
+@EnableConfigurationProperties
+@ConfigurationProperties("db.aof")
 public class AofConfig extends PersistentConfig {
     /**
      * 是否开启aof持久化
@@ -26,7 +29,7 @@ public class AofConfig extends PersistentConfig {
     /**
      * 当aof文件的行数超过该值时，会触发rewrite操作
      */
-    private int rewriteSize = 500;
+    private int rewriteSize = 1500;
 
     /**
      * 触发重写时, 会将此时数据库的状态以一系列写命令的

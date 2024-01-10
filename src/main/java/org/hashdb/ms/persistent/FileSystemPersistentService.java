@@ -5,12 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.config.HdbConfig;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.exception.DBFileAccessFailedException;
-import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.exception.NotFoundDatabaseException;
 
-import java.io.*;
+import java.io.File;
 import java.nio.file.Paths;
-import java.util.Objects;
 
 /**
  * Date: 2023/11/21 12:42
@@ -73,30 +71,5 @@ public abstract class FileSystemPersistentService implements PersistentService {
             return true;
         }
         throw new DBFileAccessFailedException("can not delete db file dir: " + dbFileDir.getAbsolutePath());
-    }
-
-    protected static Object readObject(File file) {
-        Objects.requireNonNull(file);
-        try (
-                FileInputStream is = new FileInputStream(file);
-                ObjectInputStream inputStream = new ObjectInputStream(is);
-        ) {
-            return inputStream.readObject();
-        } catch (IOException | ClassNotFoundException e) {
-            throw new DBSystemException(e);
-        }
-    }
-
-    protected static boolean writeObject(File file, Object object) {
-        Objects.requireNonNull(file);
-        try (
-                FileOutputStream fileOutputStream = new FileOutputStream(file);
-                ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
-        ) {
-            objectOutputStream.writeObject(object);
-            return true;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
     }
 }

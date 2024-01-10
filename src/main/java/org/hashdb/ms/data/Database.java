@@ -215,7 +215,7 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
         }
     }
 
-
+    @Nullable
     public HValue<?> get(String key) {
         return table.get(key);
     }
@@ -500,7 +500,7 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
     }
 
     public CompletableFuture<Boolean> save() {
-        return AsyncService.submit(() -> {
+        return AsyncService.start(() -> {
             PersistentService persistentService = HashDBMSApp.ctx().getBean(PersistentService.class);
             persistentService.persist(this);
             return true;

@@ -19,18 +19,24 @@ public interface OpsTask<T> extends Supplier<T> {
     T result();
 
     CompletableFuture<T> future();
+
     @Slf4j
     @RequiredArgsConstructor
     class OpsTaskImpl<T> implements OpsTask<T> {
-        public static final OpsTask<?> EMPTY = new OpsTaskImpl<>(()-> null);
+        public static final OpsTask<?> EMPTY = new OpsTaskImpl<>(() -> null);
         private final CompletableFuture<T> future = new CompletableFuture<>();
         private final Supplier<T> supplier;
+
         @Override
         public T result() {
             return Futures.unwrap(future);
         }
+
         @Override
-        public CompletableFuture<T> future(){return future;}
+        public CompletableFuture<T> future() {
+            return future;
+        }
+
         @Override
         public T get() {
             try {
@@ -38,25 +44,27 @@ public interface OpsTask<T> extends Supplier<T> {
                 future.complete(res);
                 return res;
             } catch (Throwable e) {
-                log.error("supplier throw exception: {}",e.toString());
+                log.error("supplier throw exception: {}", e.toString());
                 future.completeExceptionally(e);
             }
             return null;
         }
     }
+
     @Contract(value = "_ -> new", pure = true)
     static <T> @NotNull OpsTask<T> of(Supplier<T> supplier) {
         return new OpsTaskImpl<>(supplier);
     }
 
     @Contract("_ -> new")
-    static @NotNull OpsTask<?> of(Runnable task){
-        return new OpsTaskImpl<>(()-> {
+    static @NotNull OpsTask<?> of(Runnable task) {
+        return new OpsTaskImpl<>(() -> {
             task.run();
             return null;
         });
     }
-    static @NotNull OpsTask<?> empty(){
+
+    static @NotNull OpsTask<?> empty() {
         return OpsTaskImpl.EMPTY;
     }
 }

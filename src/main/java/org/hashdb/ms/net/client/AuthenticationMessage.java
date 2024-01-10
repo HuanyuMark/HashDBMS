@@ -16,9 +16,13 @@ import org.hashdb.ms.net.msg.MessageType;
 public class AuthenticationMessage extends Message {
 
     // 下面的属性可以用来验证链接合法性
-//    private String username;
-//    private String password;
+    private PasswordAuth passwordAuth;
+
 //    @Override
+
+    public record PasswordAuth(String username, String password) {
+    }
+
     public MessageType getType() {
         return MessageType.AUTH;
     }

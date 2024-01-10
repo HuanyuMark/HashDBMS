@@ -6,11 +6,11 @@ import org.hashdb.ms.compiler.CommandExecutor;
 import org.hashdb.ms.config.DBServerConfig;
 import org.hashdb.ms.event.StartServerEvent;
 import org.hashdb.ms.exception.*;
+import org.hashdb.ms.manager.DBSystem;
 import org.hashdb.ms.net.client.CommandMessage;
 import org.hashdb.ms.net.msg.Message;
 import org.hashdb.ms.net.service.ActCommandMessage;
 import org.hashdb.ms.net.service.ErrorMessage;
-import org.hashdb.ms.sys.DBSystem;
 import org.hashdb.ms.util.AsyncService;
 import org.hashdb.ms.util.JsonService;
 import org.hashdb.ms.util.Runners;
@@ -99,7 +99,7 @@ public class DBServer implements DisposableBean {
 //    };
 
     private void handleNewSession(SocketChannel con) {
-        AsyncService.submit(() -> {
+        AsyncService.start(() -> {
             // 新建新连接的会话上下文
             ConnectionSession session;           //ConnectionSession是会话
             try {
@@ -119,7 +119,7 @@ public class DBServer implements DisposableBean {
                 Message toSend;
                 try {
                     // 取得命令运行结果
-                    log.info("run command |{}", commandMessage.getCommand());
+                    log.info("run command |'{}'", commandMessage.getCommand());
                     var result = commandExecutor.run(commandMessage.getCommand());
                     toSend = new ActCommandMessage(commandMessage, result);
                 } catch (DBClientException e) {
@@ -151,12 +151,12 @@ public class DBServer implements DisposableBean {
 
     @Contract(" -> new")
     private @NotNull CompletableFuture<?> test() {
-        return AsyncService.submit(() -> Runners.everlasting(() -> {
+        return AsyncService.start(() -> Runners.everlasting(() -> {
             try {
                 var con = serverChannel.accept();
 
                 ByteBuffer buffer = ByteBuffer.allocate(1024);
-                AsyncService.submit(() -> {
+                AsyncService.start(() -> {
                     try (
                             ConnectionSession session = new ConnectionSession(con);
                     ) {

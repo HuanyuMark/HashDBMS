@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.data.Database;
-import org.hashdb.ms.sys.DBSystem;
+import org.hashdb.ms.manager.DBSystem;
 import org.hashdb.ms.util.Lazy;
 
 /**

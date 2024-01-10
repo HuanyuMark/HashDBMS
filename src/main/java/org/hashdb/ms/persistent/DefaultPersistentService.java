@@ -3,6 +3,7 @@ package org.hashdb.ms.persistent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.hashdb.ms.compiler.CompileStream;
 import org.hashdb.ms.config.HdbConfig;
 import org.hashdb.ms.config.ReplicationConfig;
 import org.hashdb.ms.data.Database;
@@ -12,8 +13,8 @@ import org.hashdb.ms.data.StorableHValue;
 import org.hashdb.ms.exception.DBClientException;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.exception.NotFoundDatabaseException;
-import org.hashdb.ms.sys.StorableSystemInfo;
-import org.hashdb.ms.sys.SystemInfo;
+import org.hashdb.ms.manager.StorableSystemInfo;
+import org.hashdb.ms.manager.SystemInfo;
 import org.hashdb.ms.util.AtomLazy;
 import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
@@ -64,13 +65,13 @@ public class DefaultPersistentService extends FileSystemPersistentService {
                 if (size < HDBConfig.getChunkSize()) {
                     continue;
                 }
-                File dbChunkFile = DBFileFactory.newDBChunkFile(dbFileDir, chunkId++);
-                writeObject(dbChunkFile, buffer);
+                File dbChunkFile = DBFileFactory.newHDBChunkFile(dbFileDir, chunkId++);
+                FileUtils.writeObject(dbChunkFile, buffer);
                 buffer.clear();
             }
             if (!buffer.isEmpty()) {
-                File dbChunkFile = DBFileFactory.newDBChunkFile(dbFileDir, chunkId);
-                writeObject(dbChunkFile, buffer);
+                File dbChunkFile = DBFileFactory.newHDBChunkFile(dbFileDir, chunkId);
+                FileUtils.writeObject(dbChunkFile, buffer);
                 buffer.clear();
             }
             // 写入数据库索引文件， 保存数据库的基本信息
@@ -78,7 +79,7 @@ public class DefaultPersistentService extends FileSystemPersistentService {
 //            FileUtils.prepareDir(indexFile, () -> new DBFileAccessFailedException("can`t access index db file '" + indexFile.getAbsolutePath() + "'"));
             DatabaseInfos dbInfos = database.getInfos();
             dbInfos.setLastSaveTime(new Date());
-            return writeObject(indexFile, dbInfos);
+            return FileUtils.writeObject(indexFile, dbInfos);
         }
     }
 
@@ -87,7 +88,7 @@ public class DefaultPersistentService extends FileSystemPersistentService {
         Objects.requireNonNull(systemInfo);
         synchronized (systemInfo.SAVE_LOCK) {
             File systemInfoFile = getSystemInfoFile();
-            return writeObject(systemInfoFile, systemInfo.toStorableSystemInfo());
+            return FileUtils.writeObject(systemInfoFile, systemInfo.toStorableSystemInfo());
         }
     }
 
@@ -106,6 +107,15 @@ public class DefaultPersistentService extends FileSystemPersistentService {
         } catch (JsonProcessingException e) {
             throw new DBSystemException(e);
         }
+    }
+
+    @Override
+    public boolean persist(CompileStream<?> stream) {
+        if (!stream.isWrite()) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -161,7 +171,7 @@ public class DefaultPersistentService extends FileSystemPersistentService {
     private static DatabaseInfos scanDatabaseInfo(File dbFileDir) {
         // 读取数据库索引文件，获取数据库基本信息
         File indexFile = DBFileFactory.loadIndexFile(dbFileDir);
-        return (DatabaseInfos) readObject(indexFile);
+        return (DatabaseInfos) FileUtils.readObject(indexFile);
     }
 
     @Override
@@ -185,7 +195,7 @@ public class DefaultPersistentService extends FileSystemPersistentService {
         var initEntries = Arrays.stream(dbChunkFile)
                 .parallel().flatMap(file -> {
                     @SuppressWarnings("unchecked")
-                    Map<String, StorableHValue<?>> chunk = (Map<String, StorableHValue<?>>) readObject(file);
+                    Map<String, StorableHValue<?>> chunk = (Map<String, StorableHValue<?>>) FileUtils.readObject(file);
                     return chunk.entrySet().parallelStream();
                 })
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
@@ -207,7 +217,7 @@ public class DefaultPersistentService extends FileSystemPersistentService {
                 throw new DBClientException("system info file is not unique");
             }
             if (files.length == 1) {
-                StorableSystemInfo storableSystemInfo = (StorableSystemInfo) readObject(files[0]);
+                StorableSystemInfo storableSystemInfo = (StorableSystemInfo) FileUtils.readObject(files[0]);
                 return storableSystemInfo.restoreBy(HDBConfig, this);
             }
             if (log.isWarnEnabled()) {

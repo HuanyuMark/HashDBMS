@@ -1,4 +1,4 @@
-package org.hashdb.ms.sys;
+package org.hashdb.ms.manager;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;

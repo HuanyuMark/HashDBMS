@@ -18,11 +18,22 @@ public class ActAuthenticationMessage extends ServiceMessage {
     /**
      * 现在不需要验证, 所以默认成功
      */
-    private boolean success = true;
+    private boolean success;
 
     private final String app = "hashDBMS";
+
+    private String user;
+
     @Override
     public MessageType getType() {
         return MessageType.ACT_AUTH;
+    }
+
+    public ActAuthenticationMessage(boolean success) {
+        this.success = success;
+    }
+
+    public ActAuthenticationMessage() {
+        this.success = true;
     }
 }
