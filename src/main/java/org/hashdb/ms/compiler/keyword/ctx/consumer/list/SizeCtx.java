@@ -4,10 +4,9 @@ import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.SingletonCompileCtx;
 import org.hashdb.ms.data.HValue;
-import org.hashdb.ms.exception.StopComplieException;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
-import java.util.function.Function;
 
 /**
  * Date: 2023/11/29 9:54
@@ -19,8 +18,9 @@ public class SizeCtx extends MutableListCtx implements SingletonCompileCtx {
     protected SizeCtx(CompileCtx<?> fatherCompileCtx) {
         super(fatherCompileCtx);
     }
+
     @Override
-    public Class<?> supplyType() {
+    public @NotNull Class<?> supplyType() {
         return Integer.class;
     }
 

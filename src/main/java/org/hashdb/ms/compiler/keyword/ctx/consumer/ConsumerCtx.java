@@ -3,12 +3,12 @@ package org.hashdb.ms.compiler.keyword.ctx.consumer;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.compiler.ConsumerCompileStream;
+import org.hashdb.ms.compiler.exception.CommandExecuteException;
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.data.DataType;
 import org.hashdb.ms.data.HValue;
-import org.hashdb.ms.data.task.ImmutableChecker;
-import org.hashdb.ms.exception.CommandExecuteException;
+import org.hashdb.ms.data.task.UnmodifiableCollections;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.exception.IllegalJavaClassStoredException;
 import org.hashdb.ms.exception.StopComplieException;
@@ -48,7 +48,7 @@ public abstract class ConsumerCtx<I> extends CompileCtx<ConsumerCompileStream> {
         setStream(compileStream);
         // 必须要先在当前线程中编译, 提前发现编译错误
         Function<I, ?> consumerTask = compile();
-        compileResult = opsTarget -> consumeWithConsumer(consumerTask.apply(opsTarget));
+        compileResult = opsTarget -> callConsumer(consumerTask.apply(opsTarget));
         return compileResult;
     }
 
@@ -59,7 +59,7 @@ public abstract class ConsumerCtx<I> extends CompileCtx<ConsumerCompileStream> {
 
     protected Function<I, ?> executor() {
         return opsTarget -> {
-            Object oneValue = selectOne(opsTarget);
+            Object oneValue = selectOneValue(opsTarget);
             if (oneValue instanceof HValue<?> hValue) {
                 try {
                     if (consumableHValueType() == DataType.typeofHValue(hValue)) {
@@ -107,7 +107,7 @@ public abstract class ConsumerCtx<I> extends CompileCtx<ConsumerCompileStream> {
         return (HValue<List<?>>) opsValue;
     }
 
-    protected Object selectOne(Object opsTarget) throws CommandExecuteException {
+    protected Object selectOneValue(Object opsTarget) throws CommandExecuteException {
         Function<Collection<?>, Object> selectOne = collection -> {
             if (collection.isEmpty()) {
                 try {
@@ -118,7 +118,7 @@ public abstract class ConsumerCtx<I> extends CompileCtx<ConsumerCompileStream> {
             }
             if (collection.size() == 1) {
                 Object one = collection.stream().limit(1).findFirst().orElseThrow();
-                return selectOne(one);
+                return selectOneValue(one);
             }
             try {
                 throw new CommandExecuteException("can not select a unique operation target from '" + stream().fatherCommand() + "'." + stream().errToken(stream().token()));
@@ -126,8 +126,8 @@ public abstract class ConsumerCtx<I> extends CompileCtx<ConsumerCompileStream> {
                 throw new CommandExecuteException("can not select a unique operation target from '" + stream().fatherCommand() + "'." + stream().errToken(""));
             }
         };
-        if (ImmutableChecker.isUnmodifiableList(opsTarget.getClass()) ||
-                ImmutableChecker.isUnmodifiableSet(opsTarget.getClass())) {
+        if (UnmodifiableCollections.isUnmodifiableList(opsTarget.getClass()) ||
+                UnmodifiableCollections.isUnmodifiableSet(opsTarget.getClass())) {
             return selectOne.apply((Collection<?>) opsTarget);
         }
         return opsTarget;

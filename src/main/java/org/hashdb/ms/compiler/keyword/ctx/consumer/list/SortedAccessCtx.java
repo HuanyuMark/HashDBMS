@@ -1,7 +1,7 @@
 package org.hashdb.ms.compiler.keyword.ctx.consumer.list;
 
+import org.hashdb.ms.compiler.exception.CommandExecuteException;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
-import org.hashdb.ms.exception.CommandExecuteException;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -18,7 +18,7 @@ public abstract class SortedAccessCtx extends MutableListCtx {
         super(fatherCompileCtx);
     }
 
-    protected static  <T extends Comparable<T>> @NotNull List<T> sort(@NotNull List<T> target, @NotNull Function<T, Long> indexMapper) {
+    protected static <T extends Comparable<T>> @NotNull List<T> sort(@NotNull List<T> target, @NotNull Function<T, Long> indexMapper) {
         List<T> indexes = target.stream().sorted().toList();
         Long smallestIndex = indexMapper.apply(indexes.getFirst());
         Long largestIndex = indexMapper.apply(indexes.getLast());

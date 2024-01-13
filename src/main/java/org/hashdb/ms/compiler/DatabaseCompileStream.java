@@ -1,10 +1,11 @@
 package org.hashdb.ms.compiler;
 
 import lombok.extern.slf4j.Slf4j;
+import org.hashdb.ms.compiler.exception.CommandCompileException;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.data.Database;
-import org.hashdb.ms.exception.CommandCompileException;
 import org.hashdb.ms.exception.DBSystemException;
+import org.hashdb.ms.net.ConnectionSessionModel;
 import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 
@@ -20,35 +21,34 @@ import java.util.stream.Collectors;
 @Slf4j
 public abstract sealed class DatabaseCompileStream extends CommonCompileStream<CompileCtx<?>> permits ConsumerCompileStream, SupplierCompileStream {
 
-    protected final Database database;
-
     protected DatabaseCompileStream fatherStream;
 
     /**
      * 构造主流
      *
-     * @param database 数据库
-     * @param command  原始命令
+     * @param session
+     * @param command 原始命令
      */
-    protected DatabaseCompileStream(Database database, @NotNull String command) {
+    protected DatabaseCompileStream(ConnectionSessionModel session, @NotNull String command) {
+        super(session);
         if (command.isEmpty()) {
             throw new CommandCompileException("illegal command '" + command + "'");
         }
         var tokens = extractTokens(command);
         this.command = Lazy.of(() -> (String.join(" ", tokens)));
         this.tokens = tokens;
-        this.database = database;
     }
 
     /**
      * 构造子流
      *
-     * @param database        数据库
+     * @param session         数据库
      * @param childTokens     子 tokens
      * @param fatherStream    父 流
      * @param shouldNormalize 是否需要规范化
      */
-    protected DatabaseCompileStream(Database database, String @NotNull [] childTokens, DatabaseCompileStream fatherStream, boolean shouldNormalize) {
+    protected DatabaseCompileStream(ConnectionSessionModel session, String @NotNull [] childTokens, DatabaseCompileStream fatherStream, boolean shouldNormalize) {
+        super(session);
         if (childTokens.length == 0) {
             log.error("compiler error: father tokens: {} child tokens: {}", childTokens, childTokens);
             throw new DBSystemException("see console. fail to extract child tokens");
@@ -60,18 +60,17 @@ public abstract sealed class DatabaseCompileStream extends CommonCompileStream<C
         this.command = Lazy.of(() -> String.join(" ", childTokens));
         this.tokens = childTokens;
         this.fatherStream = fatherStream;
-        this.database = database;
         if (log.isTraceEnabled()) {
             log.trace("open compile stream: {}", String.join(" ", tokens));
         }
     }
 
-    protected DatabaseCompileStream(Database database, String @NotNull [] childTokens, DatabaseCompileStream fatherStream) {
-        this(database, childTokens, fatherStream, true);
+    protected DatabaseCompileStream(ConnectionSessionModel session, String @NotNull [] childTokens, DatabaseCompileStream fatherStream) {
+        this(session, childTokens, fatherStream, true);
     }
 
-    protected DatabaseCompileStream(Database database) {
-        this.database = database;
+    protected DatabaseCompileStream(ConnectionSessionModel session) {
+        super(session);
     }
 
     /**
@@ -86,7 +85,7 @@ public abstract sealed class DatabaseCompileStream extends CommonCompileStream<C
             throw new DBSystemException();
         }
         var childTokens = Arrays.stream(tokens).skip(startTokenIndex).limit(endTokenIndex - startTokenIndex + 1).toArray(String[]::new);
-        return new SupplierCompileStream(database, childTokens, this);
+        return new SupplierCompileStream(session, childTokens, this);
     }
 
     public ConsumerCompileStream forkConsumerCompileStream(int startTokenIndex, int endTokenIndex, CompileCtx<?> fatherCompileCtx) {
@@ -96,7 +95,7 @@ public abstract sealed class DatabaseCompileStream extends CommonCompileStream<C
         }
         // 这里相当于取了字串, 那么母串里被摘出的token需要切掉吗?
         var childTokens = Arrays.stream(tokens).skip(startTokenIndex).limit(endTokenIndex - startTokenIndex + 1).toArray(String[]::new);
-        return new ConsumerCompileStream(database, childTokens, this, fatherCompileCtx);
+        return new ConsumerCompileStream(session, childTokens, this, fatherCompileCtx);
     }
 
     @Override
@@ -120,7 +119,11 @@ public abstract sealed class DatabaseCompileStream extends CommonCompileStream<C
     }
 
     public Database db() {
-        return database;
+        return session.getDatabase();
+    }
+
+    public DatabaseCompileStream rootStream() {
+        return fatherStream == null ? this : fatherStream.rootStream();
     }
 
     @Override

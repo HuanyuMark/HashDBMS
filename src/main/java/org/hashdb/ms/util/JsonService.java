@@ -17,8 +17,8 @@ import org.hashdb.ms.compiler.keyword.SystemKeyword;
 import org.hashdb.ms.config.DBRamConfig;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.exception.IllegalCompilerNodeException;
-import org.hashdb.ms.exception.IllegalMessageException;
-import org.hashdb.ms.exception.IllegalMessageTypeException;
+import org.hashdb.ms.net.exception.IllegalMessageException;
+import org.hashdb.ms.net.exception.IllegalMessageTypeException;
 import org.hashdb.ms.net.msg.Message;
 import org.hashdb.ms.net.msg.MessageType;
 import org.jetbrains.annotations.Nullable;
@@ -82,7 +82,7 @@ public class JsonService {
         // 如果不需要保持一致,则可以使用这个自定义的反序列化器, 将 Object 型映射的java对象改为 HashMap
         if (!dbRamConfig.isStoreLikeJsonSequence()) {
             dataTypeModule.addDeserializer(Map.class, new HashMapDeserializer());
-            dataTypeModule.addDeserializer(List.class, new LinkedListDeserializer());
+//            dataTypeModule.addDeserializer(List.class, new LinkedListDeserializer());
         }
         dataTypeModule.addDeserializer(Message.class, new MessageDeserializer());
         dataTypeModule.addDeserializer(CompilerNode.class, new CompilerNodeDeserializer());

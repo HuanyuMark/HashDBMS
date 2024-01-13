@@ -2,14 +2,10 @@ package org.hashdb.ms.compiler.keyword.ctx.consumer.list;
 
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
-import org.hashdb.ms.compiler.keyword.ctx.consumer.ConsumerCtx;
-import org.hashdb.ms.exception.CommandExecuteException;
-import org.hashdb.ms.exception.StopComplieException;
 
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
 /**

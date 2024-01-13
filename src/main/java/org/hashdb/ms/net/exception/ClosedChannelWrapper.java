@@ -1,10 +1,10 @@
-package org.hashdb.ms.exception;
+package org.hashdb.ms.net.exception;
 
-import com.sun.jdi.connect.spi.ClosedConnectionException;
 import lombok.Getter;
 
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.nio.channels.ClosedChannelException;
 
 /**
  * Date: 2023/12/3 14:39
@@ -13,15 +13,15 @@ import java.io.PrintWriter;
  * @version 0.0.1
  */
 @Getter
-public class ClosedConnectionWrapper extends RuntimeException {
-    private final ClosedConnectionException underlay;
+public class ClosedChannelWrapper extends RuntimeException {
+    private final ClosedChannelException underlay;
 
-    protected ClosedConnectionWrapper(ClosedConnectionException underlay) {
+    protected ClosedChannelWrapper(ClosedChannelException underlay) {
         this.underlay = underlay;
     }
 
-    public static ClosedConnectionWrapper wrap(ClosedConnectionException e) {
-        return new ClosedConnectionWrapper(e);
+    public static ClosedChannelWrapper wrap(ClosedChannelException e) {
+        return new ClosedChannelWrapper(e);
     }
 
     @Override

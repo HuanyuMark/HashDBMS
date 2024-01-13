@@ -5,9 +5,13 @@ import org.hashdb.ms.compiler.SupplierCompileStream;
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.option.OptionCtx;
+import org.hashdb.ms.data.DataType;
+import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.OpsTask;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.exception.StopComplieException;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -24,6 +28,17 @@ public abstract class SupplierCtx extends CompileCtx<SupplierCompileStream> {
     @JsonIgnore
     private OpsTask<?> compileResult;
 
+    /**
+     * 这个由用户通过DataType Symbol指定.
+     * 在运行内联命令, 获取执行结果后, 如果用户需要将该值存入数据库中
+     * 就需要通过这个DataType来指定要存储成什么类型
+     * 如果没有指定, 则通过 {@link DataType#typeofHValue(HValue)} 或
+     * {@link DataType#typeOfRawValue(Object)} 判断存储类型
+     * 然后克隆一份后再存入数据库
+     */
+    @Nullable
+    private DataType storeType;
+
     public OpsTask<?> compileWithStream(SupplierCompileStream compileStream) throws StopComplieException {
         if (compileResult != null) {
             throw new DBSystemException(getClass().getSimpleName() + " is finish compilation");
@@ -32,13 +47,13 @@ public abstract class SupplierCtx extends CompileCtx<SupplierCompileStream> {
         // 必须要先在当前线程中编译, 提前发现编译错误
         Supplier<?> supplierTask = compile();
         // 支持管道操作, 将原 生产型任务生产的 结果传给下一个消费者任务使用
-        this.compileResult = OpsTask.of(() -> consumeWithConsumer(supplierTask.get()));
+        this.compileResult = OpsTask.of(() -> callConsumer(supplierTask.get()));
         return this.compileResult;
     }
 
     public OpsTask<?> executeWithStream(SupplierCompileStream stream) {
         setStream(stream);
-        this.compileResult = OpsTask.of(() -> consumeWithConsumer(executor().get()));
+        this.compileResult = OpsTask.of(() -> callConsumer(executor().get()));
         return this.compileResult;
     }
 
@@ -65,8 +80,20 @@ public abstract class SupplierCtx extends CompileCtx<SupplierCompileStream> {
     }
 
     @Override
-    public Class<?> supplyType() {
+    public @NotNull Class<?> supplyType() {
         return Object.class;
+    }
+
+    @NotNull
+    public DataType storeType() {
+        if (storeType == null) {
+            storeType = DataType.typeofClass(supplyType());
+        }
+        return storeType;
+    }
+
+    public void setStoreType(@Nullable DataType storeType) {
+        this.storeType = storeType;
     }
 
     @Override

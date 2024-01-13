@@ -2,9 +2,10 @@ package org.hashdb.ms.compiler;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.extern.slf4j.Slf4j;
+import org.hashdb.ms.compiler.exception.CommandCompileException;
 import org.hashdb.ms.compiler.keyword.CompilerNode;
-import org.hashdb.ms.exception.CommandCompileException;
 import org.hashdb.ms.exception.DBClientException;
+import org.hashdb.ms.net.ConnectionSessionModel;
 import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 
@@ -23,6 +24,8 @@ import java.util.function.Function;
 @Slf4j
 public abstract class CommonCompileStream<R extends CompilerNode> implements CompileStream<R> {
 
+    protected final ConnectionSessionModel session;
+
     protected Lazy<String> command;
     /**
      * 存放token的序列可以改成 {@link LinkedList},
@@ -39,6 +42,10 @@ public abstract class CommonCompileStream<R extends CompilerNode> implements Com
 
     @JsonProperty
     protected boolean write = false;
+
+    protected CommonCompileStream(ConnectionSessionModel session) {
+        this.session = session;
+    }
 
     /**
      * 解析命令字符串, 按照json字符串, 空格分割 的规则, 进行分割
@@ -222,6 +229,7 @@ public abstract class CommonCompileStream<R extends CompilerNode> implements Com
         return tokens[cursor];
     }
 
+
     @Override
     public int tokenSize() {
         return tokens.length;
@@ -238,23 +246,23 @@ public abstract class CommonCompileStream<R extends CompilerNode> implements Com
     }
 
     @Override
-    public DatabaseCompileStream.TokenItr tokenItr() {
-        return new DatabaseCompileStream.TokenItr(tokens);
+    public TokenItr tokenItr() {
+        return new TokenItr();
     }
 
     @Override
-    public DatabaseCompileStream.TokenItr tokenItr(int startIndex) {
-        return new DatabaseCompileStream.TokenItr(tokens, startIndex);
+    public TokenItr tokenItr(int startIndex) {
+        return new TokenItr(startIndex);
     }
 
     @Override
     public TokenItr descendingTokenItr() {
-        return new DescTokenItr(tokens);
+        return new DescTokenItr();
     }
 
     @Override
     public TokenItr descendingTokenItr(int negativeIndex) {
-        return new DescTokenItr(tokens, negativeIndex);
+        return new DescTokenItr(negativeIndex);
     }
 
     public void reset() {
@@ -269,16 +277,13 @@ public abstract class CommonCompileStream<R extends CompilerNode> implements Com
     }
 
 
-    public static class TokenItr implements Iterator<String> {
-        protected final String[] tokens;
-        protected int cursor = 0;
+    public class TokenItr implements Iterator<String> {
+        protected int cursor;
 
-        public TokenItr(String[] tokens) {
-            this.tokens = tokens;
+        public TokenItr() {
         }
 
-        public TokenItr(String[] tokens, int startIndex) {
-            this.tokens = tokens;
+        public TokenItr(int startIndex) {
             cursor = startIndex;
         }
 
@@ -297,17 +302,13 @@ public abstract class CommonCompileStream<R extends CompilerNode> implements Com
         }
     }
 
-    public static class DescTokenItr extends TokenItr {
-        private int cursor;
-
-        public DescTokenItr(String[] tokens) {
-            super(tokens);
-            cursor = tokens.length;
+    public class DescTokenItr extends TokenItr {
+        public DescTokenItr() {
+            super(tokens.length);
         }
 
-        public DescTokenItr(String[] tokens, int negativeStartIndex) {
-            super(tokens);
-            cursor = tokens.length + negativeStartIndex;
+        public DescTokenItr(int negativeStartIndex) {
+            super(tokens.length + negativeStartIndex);
         }
 
         @Override
@@ -328,6 +329,10 @@ public abstract class CommonCompileStream<R extends CompilerNode> implements Com
     @Override
     public boolean isWrite() {
         return write;
+    }
+
+    public ConnectionSessionModel session() {
+        return session;
     }
 
     public void toWrite() {

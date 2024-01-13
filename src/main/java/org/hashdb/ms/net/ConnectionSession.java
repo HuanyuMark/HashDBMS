@@ -1,25 +1,33 @@
 package org.hashdb.ms.net;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.sun.jdi.connect.spi.ClosedConnectionException;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.HashDBMSApp;
+import org.hashdb.ms.compiler.CommandExecutor;
+import org.hashdb.ms.compiler.CompileStream;
+import org.hashdb.ms.compiler.exception.CommandExecuteException;
 import org.hashdb.ms.config.DBServerConfig;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.OpsTask;
-import org.hashdb.ms.exception.IllegalAccessException;
-import org.hashdb.ms.exception.*;
+import org.hashdb.ms.exception.DBClientException;
+import org.hashdb.ms.exception.DBSystemException;
+import org.hashdb.ms.exception.WorkerInterruptedException;
 import org.hashdb.ms.manager.DBSystem;
 import org.hashdb.ms.net.client.ActHeartbeatMessage;
 import org.hashdb.ms.net.client.AuthenticationMessage;
 import org.hashdb.ms.net.client.CloseMessage;
+import org.hashdb.ms.net.client.CommandMessage;
+import org.hashdb.ms.net.exception.IllegalAccessException;
+import org.hashdb.ms.net.exception.*;
 import org.hashdb.ms.net.msg.Message;
 import org.hashdb.ms.net.service.ActAuthenticationMessage;
+import org.hashdb.ms.net.service.ActCommandMessage;
 import org.hashdb.ms.net.service.ErrorMessage;
 import org.hashdb.ms.net.service.HeartbeatMessage;
 import org.hashdb.ms.util.AsyncService;
+import org.hashdb.ms.util.CacheMap;
 import org.hashdb.ms.util.JsonService;
 import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
@@ -27,8 +35,10 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SocketChannel;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
@@ -45,7 +55,7 @@ import java.util.function.Function;
  * @version 0.0.1
  */
 @Slf4j
-public class ConnectionSession implements AutoCloseable, ReadonlyConnectionSession {
+public class ConnectionSession implements AutoCloseable, ConnectionSessionModel {
     private static final Lazy<DBServerConfig> dbServerConfig = Lazy.of(() -> HashDBMSApp.ctx().getBean(DBServerConfig.class));
 
     private static final Lazy<DBSystem> dbSystem = Lazy.of(() -> HashDBMSApp.ctx().getBean(DBSystem.class));
@@ -53,8 +63,30 @@ public class ConnectionSession implements AutoCloseable, ReadonlyConnectionSessi
     private String user;
 
     private static final AtomicInteger connectionCount = new AtomicInteger(0);
+
+    /**
+     * 与参数相关的命令都缓存在这里
+     */
+    @Getter
+    private final CacheMap<String, CompileStream<?>> localCommandCache = new CacheMap<>(dbServerConfig.get().getCommandCache().getAliveDuration(), dbServerConfig.get().getCommandCache().getCacheSize());
+
+    /**
+     * 与参数无关的命令缓存在这里
+     */
+    // TODO: 2024/1/13 这个缓存暂时无法实现, 因为所有的命令执行都与当前Session相关, 如果放入全局命令缓存中
+    //上下文(Session)就要更换, 现在的实现是, 所有的编译流都持有一个Session, 子流也持有父流相同的Sesssion
+    // 如果要更换上下文, 就会修改其它使用该缓存的线程的读写
+    private static final CacheMap<String, CompileStream<?>> globalCommandCache = null;
     @Nullable
     private Database database;
+
+    /**
+     * 参数名以'$'开头
+     * 参数名-{@link org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx}
+     * 参数名-{@link org.hashdb.ms.data.DataType} 里支持的数据类型的java对象实例
+     */
+    private Map<String, Parameter> parameters;
+
     @Getter
     private final UUID id = UUID.randomUUID();
 
@@ -79,7 +111,7 @@ public class ConnectionSession implements AutoCloseable, ReadonlyConnectionSessi
 
     private final HeartbeatMessage heartbeat;
 
-    private long lastInteractTime;
+    private long lastGetTime;
 
     private boolean aliveChecked = true;
 
@@ -110,13 +142,13 @@ public class ConnectionSession implements AutoCloseable, ReadonlyConnectionSessi
         // 认证
         chain.add((msg, chain) -> {
             // if auth is passed
-            if (user != null) {
-                return chain.next();
-            }
             if (msg instanceof CloseMessage) {
                 return chain.next();
             }
             if (!(msg instanceof AuthenticationMessage authMsg)) {
+                if (user != null) {
+                    return chain.next();
+                }
                 if (requestWithNoAuth[0]++ > 3) {
                     var closeMessage = new CloseMessage();
                     closeMessage.setData(JsonService.stringfy("require authenticate"));
@@ -135,9 +167,9 @@ public class ConnectionSession implements AutoCloseable, ReadonlyConnectionSessi
                 var errorMessage = new ErrorMessage(new IllegalAccessException("require authenticate"));
                 try {
                     send(errorMessage);
-                } catch (ClosedConnectionException e) {
+                } catch (ClosedChannelException e) {
                     log.error("send no   auth  throw", e);
-                    throw ClosedConnectionWrapper.wrap(e);
+                    throw ClosedChannelWrapper.wrap(e);
                 }
                 return null;
             }
@@ -167,15 +199,15 @@ public class ConnectionSession implements AutoCloseable, ReadonlyConnectionSessi
                 act.setData(JsonService.stringfy("SUCC"));
                 send(act);
                 startCheckAlive();
-            } catch (ClosedConnectionException e) {
+            } catch (ClosedChannelException e) {
                 log.error("send auth pass  throw", e);
-                throw ClosedConnectionWrapper.wrap(e);
+                throw ClosedChannelWrapper.wrap(e);
             }
             return null;
         });
         // 生命周期
         chain.add((msg, chain) -> {
-            lastInteractTime = System.currentTimeMillis();
+            lastGetTime = System.currentTimeMillis();
             // 心跳
             actHeartbeat();
             if (msg instanceof ActHeartbeatMessage) {
@@ -191,6 +223,40 @@ public class ConnectionSession implements AutoCloseable, ReadonlyConnectionSessi
             close();
             return null;
         });
+
+        // 根据会话创建会话特化的编译器
+        var commandExecutor = CommandExecutor.create(this);
+        // 添加命令消息的处理器
+        chain.add((msg, chain) -> {
+            if (!(msg instanceof CommandMessage commandMessage)) {
+                return chain.next();
+            }
+
+            Message toSend;
+            try {
+                // 取得命令运行结果
+                log.info("run command |'{}'", commandMessage.getCommand());
+                var result = commandExecutor.run(commandMessage.getCommand());
+                toSend = new ActCommandMessage(commandMessage, result);
+            } catch (DBClientException e) {
+                // 如果有异常,就发送
+                toSend = new ErrorMessage(e);
+            } catch (Exception e) {
+                log.error("command runner throw ", e);
+                toSend = new ErrorMessage(new CommandExecuteException(e));
+            }
+            try {
+                log.info("send result |{}", toSend);
+                send(toSend);
+            } catch (ClosedChannelException ex) {
+                log.warn("unexpected send error msg closed throw '{}'", ex.toString());
+                throw ClosedChannelWrapper.wrap(ex);
+            } catch (Exception e) {
+                log.error("unexpected error", e);
+                throw new DBSystemException(e);
+            }
+            return null;
+        });
     }
 
     @SuppressWarnings("InfiniteLoopStatement")
@@ -201,18 +267,18 @@ public class ConnectionSession implements AutoCloseable, ReadonlyConnectionSessi
                 try {
                     Message msg = writeQueue.take();
                     send0(msg);
-                } catch (ClosedConnectionException e) {
+                } catch (ClosedChannelException e) {
                     if (log.isTraceEnabled()) {
                         log.error("messageWriter throw ", e);
                     }
-                    throw ClosedConnectionWrapper.wrap(e);
+                    throw ClosedChannelWrapper.wrap(e);
                 } catch (InterruptedException e) {
                     if (log.isTraceEnabled()) {
                         log.error("messageWriter throw ", e);
                     }
                     throw new WorkerInterruptedException(e);
                 } catch (Exception e) {
-                    log.error("messageWriter throw ", e);
+                    log.error("messageWriter throw unexpected", e);
                     throw new DBSystemException(e);
                 }
             }
@@ -223,11 +289,22 @@ public class ConnectionSession implements AutoCloseable, ReadonlyConnectionSessi
                     Message msg = get();
 //                    System.out.println("messageReader read msg: " + msg.getType());
                     readQueue.add(msg);
-                } catch (ClosedConnectionException e) {
-                    log.error("messageReader throw '{}'", e.toString());
-                    throw ClosedConnectionWrapper.wrap(e);
+                } catch (ClosedChannelException e) {
+                    if (log.isTraceEnabled()) {
+                        log.error("messageReader throw ", e);
+                    }
+                    throw ClosedChannelWrapper.wrap(e);
+                } catch (DBSystemException e) {
+                    if (e.getCause() instanceof ClosedChannelException) {
+                        if (log.isTraceEnabled()) {
+                            log.error("messageReader throw ", e);
+                        }
+                        return;
+                    }
+                    log.error("messageReader throw unexpected", e);
+                    throw e;
                 } catch (Exception e) {
-                    log.error("messageReader throw ", e);
+                    log.error("messageReader throw unexpected", e);
                     throw new DBSystemException(e);
                 }
             }
@@ -247,9 +324,9 @@ public class ConnectionSession implements AutoCloseable, ReadonlyConnectionSessi
                 try {
 //                    System.out.println("messageConsumer consume msg: " + msg.getType());
                     chain.consume(msg);
-                } catch (ClosedConnectionException e) {
+                } catch (ClosedChannelException e) {
                     log.error("closedConnection throw", e);
-                    throw ClosedConnectionWrapper.wrap(e);
+                    throw ClosedChannelWrapper.wrap(e);
                 } catch (Exception e) {
                     log.error("message consumer chain throw", e);
                     throw new DBSystemException(e);
@@ -262,8 +339,8 @@ public class ConnectionSession implements AutoCloseable, ReadonlyConnectionSessi
             MaxConnectionException exception = new MaxConnectionException("out of max connection");
             try {
                 send(new ErrorMessage(exception));
-            } catch (ClosedConnectionException e) {
-                throw ClosedConnectionWrapper.wrap(e);
+            } catch (ClosedChannelException e) {
+                throw ClosedChannelWrapper.wrap(e);
             }
             // TODO: 2024/1/10 提示数据库连接过多
             close();
@@ -302,7 +379,7 @@ public class ConnectionSession implements AutoCloseable, ReadonlyConnectionSessi
             writeQueue.clear();
             try {
                 send0(message);
-            } catch (ClosedConnectionException ignore) {
+            } catch (ClosedChannelException ignore) {
                 // can not connect to client
             }
         }
@@ -314,7 +391,9 @@ public class ConnectionSession implements AutoCloseable, ReadonlyConnectionSessi
         if (database != null) {
             database.release();
         }
-        aliveChecker.cancel(true);
+        if (aliveChecker != null) {
+            aliveChecker.cancel(true);
+        }
         messageWriter.cancel(true);
         messageReader.cancel(true);
         messageConsumerDispatcher.cancel(true);
@@ -339,7 +418,7 @@ public class ConnectionSession implements AutoCloseable, ReadonlyConnectionSessi
         long heartbeatInterval = dbServerConfig.get().getHeartbeatInterval();
         int timeoutRetry = dbServerConfig.get().getTimeoutRetry();
         aliveChecker = AsyncService.setInterval(() -> {
-            if (System.currentTimeMillis() - lastInteractTime <= heartbeatInterval) {
+            if (System.currentTimeMillis() - lastGetTime <= heartbeatInterval) {
                 actHeartbeat();
                 return;
             }
@@ -348,9 +427,9 @@ public class ConnectionSession implements AutoCloseable, ReadonlyConnectionSessi
                 try {
                     send(heartbeat);
                     heartbeat.next();
-                } catch (ClosedConnectionException e) {
+                } catch (ClosedChannelException e) {
                     log.warn("unexpected send heartbeat closed throw ", e);
-                    throw ClosedConnectionWrapper.wrap(e);
+                    throw ClosedChannelWrapper.wrap(e);
                 }
                 return;
             }
@@ -367,9 +446,10 @@ public class ConnectionSession implements AutoCloseable, ReadonlyConnectionSessi
         }, heartbeatInterval);
     }
 
-    protected Message get() throws ClosedConnectionException, IllegalMessageException {
+    protected Message get() throws ClosedChannelException, IllegalMessageException {
         if (closed || !channel.isConnected()) {
-            throw new ClosedConnectionException("Connection closed");
+            close();
+            throw new ClosedChannelException();
         }
         try {
             channel.read(readBuffer);
@@ -382,15 +462,20 @@ public class ConnectionSession implements AutoCloseable, ReadonlyConnectionSessi
 //                expectReadCount -= readCount;
 //            }
         } catch (IOException e) {
+            close();
             throw new DBSystemException(e);
         }
         var json = new String(Arrays.copyOf(readBuffer.array(), readBuffer.position()));
+        if (json.isEmpty() || !channel.isConnected()) {
+            throw new ClosedChannelException();
+        }
         try {
             Message result = JsonService.parse(json, Message.class);
             readBuffer.clear();
             if (result == null) {
                 throw new IllegalMessageException("unexpected message type 'null'");
             }
+            log.info("get msg: {}", result);
             return result;
         } catch (JsonProcessingException e) {
             readBuffer.clear();
@@ -402,7 +487,7 @@ public class ConnectionSession implements AutoCloseable, ReadonlyConnectionSessi
         }
     }
 
-    public void send(Message toSend) throws ClosedConnectionException {
+    public void send(Message toSend) throws ClosedChannelException {
         writeQueue.add(toSend);
     }
 
@@ -410,15 +495,17 @@ public class ConnectionSession implements AutoCloseable, ReadonlyConnectionSessi
         chain.add(consumer);
     }
 
-    protected void send0(Message toSend) throws ClosedConnectionException {
+    protected void send0(Message toSend) throws ClosedChannelException {
         if (closed || !channel.isConnected()) {
-            throw new ClosedConnectionException("Connection closed");
+            close();
+            throw new ClosedChannelException();
         }
         String data = JsonService.stringfy(toSend);
+        log.info("send msg: {}", data);
         try {
             channel.write(ByteBuffer.wrap(data.getBytes()));
-            lastInteractTime = System.currentTimeMillis();
         } catch (IOException e) {
+            close();
             throw new DBSystemException(e);
         }
     }
@@ -445,9 +532,39 @@ public class ConnectionSession implements AutoCloseable, ReadonlyConnectionSessi
         try {
             send(errorMessage);
             return null;
-        } catch (ClosedConnectionException e) {
+        } catch (ClosedChannelException e) {
             log.error("send auth error throw", e);
-            throw ClosedConnectionWrapper.wrap(e);
+            throw ClosedChannelWrapper.wrap(e);
         }
+    }
+
+    @Override
+    public synchronized Parameter setParameter(String name, Object value) {
+        if (parameters == null) {
+            parameters = new HashMap<>();
+        }
+        Parameter oldValue;
+        if (value == null) {
+            oldValue = parameters.remove(name);
+        } else {
+            oldValue = parameters.put(name, new Parameter(value));
+        }
+        if (oldValue != null) {
+            oldValue.usedCacheCommands.parallelStream().forEach(localCommandCache::remove);
+        }
+        return null;
+    }
+
+    @Override
+    public Parameter getParameter(String name) {
+        if (parameters == null) {
+            return null;
+        }
+        return parameters.get(name);
+    }
+
+    @Override
+    public void useParameter(Parameter parameter, String command) {
+        parameter.usedCacheCommands.add(command);
     }
 }

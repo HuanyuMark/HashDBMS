@@ -1,9 +1,9 @@
 package org.hashdb.ms.compiler.option;
 
+import org.hashdb.ms.compiler.exception.IllegalValueException;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.OpsTaskPriority;
-import org.hashdb.ms.exception.IllegalValueException;
 
 /**
  * Date: 2023/11/28 22:06
@@ -15,42 +15,42 @@ import org.hashdb.ms.exception.IllegalValueException;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public enum ExpireStrategy  {
-    DEFAULT((db,value, expireTime,priority) -> {
-        value.clearBy(db,expireTime,priority);
+public enum ExpireStrategy {
+    DEFAULT((db, value, expireTime, priority) -> {
+        value.clearBy(db, expireTime, priority);
     }),
-    DEF((db,value, expireTime,priority) -> {
-        value.clearBy(db,expireTime,priority);
+    DEF((db, value, expireTime, priority) -> {
+        value.clearBy(db, expireTime, priority);
     }),
-    NX((db,value, expireTime,priority) -> {
-        if(value.getExpireMilliseconds() != null) {
+    NX((db, value, expireTime, priority) -> {
+        if (value.getExpireMilliseconds() != null) {
             return;
         }
-        value.clearBy(db,expireTime,priority);
+        value.clearBy(db, expireTime, priority);
     }),
-    XX((db,value, expireTime,priority) -> {
-        if(value.getExpireMilliseconds() == null) {
+    XX((db, value, expireTime, priority) -> {
+        if (value.getExpireMilliseconds() == null) {
             return;
         }
-        value.clearBy(db,expireTime,priority);
+        value.clearBy(db, expireTime, priority);
     }),
-    GT((db,value, expireTime,priority) -> {
-        if(expireTime == null) {
+    GT((db, value, expireTime, priority) -> {
+        if (expireTime == null) {
             throw new IllegalValueException("option value of 'EXPIRE_STRATEGY' should not be null");
         }
-        if(value.getExpireMilliseconds() == null || expireTime > value.getExpireMilliseconds()) {
+        if (value.getExpireMilliseconds() == null || expireTime > value.getExpireMilliseconds()) {
             return;
         }
-        value.clearBy(db,expireTime,priority);
+        value.clearBy(db, expireTime, priority);
     }),
-    LT((db,value, expireTime,priority) -> {
-        if(expireTime == null) {
+    LT((db, value, expireTime, priority) -> {
+        if (expireTime == null) {
             throw new IllegalValueException("option value of 'EXPIRE_STRATEGY' should not be null");
         }
-        if(value.getExpireMilliseconds() == null || expireTime < value.getExpireMilliseconds()) {
+        if (value.getExpireMilliseconds() == null || expireTime < value.getExpireMilliseconds()) {
             return;
         }
-        value.clearBy(db,expireTime,priority);
+        value.clearBy(db, expireTime, priority);
     });
 
     public interface ExpireStrategyExecutor {
@@ -62,7 +62,8 @@ public enum ExpireStrategy  {
     ExpireStrategy(ExpireStrategyExecutor strategyExecutor) {
         this.strategyExecutor = strategyExecutor;
     }
+
     public void exec(Database db, HValue<?> value, Long expireTime, OpsTaskPriority priority) {
-        this.strategyExecutor.exec(db, value, expireTime,priority);
+        this.strategyExecutor.exec(db, value, expireTime, priority);
     }
 }

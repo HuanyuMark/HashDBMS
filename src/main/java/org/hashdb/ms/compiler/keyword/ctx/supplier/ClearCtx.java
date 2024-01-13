@@ -2,6 +2,7 @@ package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
 import org.hashdb.ms.compiler.SupplierCompileStream;
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Supplier;
 
@@ -24,7 +25,7 @@ public class ClearCtx extends SupplierCtx {
     }
 
     @Override
-    public Class<?> supplyType() {
+    public @NotNull Class<?> supplyType() {
         return Boolean.class;
     }
 

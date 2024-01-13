@@ -1,16 +1,9 @@
 package org.hashdb.ms.net;
 
-import com.sun.jdi.connect.spi.ClosedConnectionException;
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.compiler.CommandExecutor;
 import org.hashdb.ms.config.DBServerConfig;
 import org.hashdb.ms.event.StartServerEvent;
-import org.hashdb.ms.exception.*;
 import org.hashdb.ms.manager.DBSystem;
-import org.hashdb.ms.net.client.CommandMessage;
-import org.hashdb.ms.net.msg.Message;
-import org.hashdb.ms.net.service.ActCommandMessage;
-import org.hashdb.ms.net.service.ErrorMessage;
 import org.hashdb.ms.util.AsyncService;
 import org.hashdb.ms.util.JsonService;
 import org.hashdb.ms.util.Runners;
@@ -101,46 +94,7 @@ public class DBServer implements DisposableBean {
     private void handleNewSession(SocketChannel con) {
         AsyncService.start(() -> {
             // 新建新连接的会话上下文
-            ConnectionSession session;           //ConnectionSession是会话
-            try {
-                session = new ConnectionSession(con);
-            } catch (MaxConnectionException e) {
-                return;
-            }
-
-            // 根据会话创建会话特化的编译器
-            var commandExecutor = CommandExecutor.create(session);
-            // 添加命令消息的处理器
-            session.addMessageConsumer((msg, chain) -> {
-                if (!(msg instanceof CommandMessage commandMessage)) {
-                    return chain.next();
-                }
-
-                Message toSend;
-                try {
-                    // 取得命令运行结果
-                    log.info("run command |'{}'", commandMessage.getCommand());
-                    var result = commandExecutor.run(commandMessage.getCommand());
-                    toSend = new ActCommandMessage(commandMessage, result);
-                } catch (DBClientException e) {
-                    // 如果有异常,就发送
-                    toSend = new ErrorMessage(e);
-                } catch (Exception e) {
-                    log.error("command runner throw ", e);
-                    toSend = new ErrorMessage(new CommandExecuteException(e));
-                }
-                try {
-                    log.info("send result |{}", toSend);
-                    session.send(toSend);
-                } catch (ClosedConnectionException ex) {
-                    log.warn("unexpected send error msg closed throw '{}'", ex.toString());
-                    throw ClosedConnectionWrapper.wrap(ex);
-                } catch (Exception e) {
-                    log.error("unexpected error", e);
-                    throw new DBSystemException(e);
-                }
-                return null;
-            });
+            new ConnectionSession(con);
         });
     }
 

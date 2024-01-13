@@ -1,10 +1,10 @@
 package org.hashdb.ms.compiler;
 
 import lombok.extern.slf4j.Slf4j;
+import org.hashdb.ms.compiler.exception.UnknownTokenException;
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
-import org.hashdb.ms.data.Database;
-import org.hashdb.ms.exception.UnknownTokenException;
+import org.hashdb.ms.net.ConnectionSessionModel;
 import org.hashdb.ms.net.TransportableConnectionSession;
 import org.hashdb.ms.util.JsonService;
 import org.hashdb.ms.util.Lazy;
@@ -24,30 +24,30 @@ public final class SupplierCompileStream extends DatabaseCompileStream {
 
     private final Lazy<SupplierCtx> compileResult = Lazy.empty();
 
-    SupplierCompileStream(Database database, String command) {
-        super(database, command);
+    SupplierCompileStream(ConnectionSessionModel session, String command) {
+        super(session, command);
     }
 
-    SupplierCompileStream(Database database, String @NotNull [] childTokens, DatabaseCompileStream fatherStream, boolean shouldNormalize) {
-        super(database, childTokens, fatherStream, shouldNormalize);
+    SupplierCompileStream(ConnectionSessionModel session, String @NotNull [] childTokens, DatabaseCompileStream fatherStream, boolean shouldNormalize) {
+        super(session, childTokens, fatherStream, shouldNormalize);
     }
 
-    SupplierCompileStream(Database database, String[] tokens, DatabaseCompileStream fatherStream) {
-        super(database, tokens, fatherStream);
+    SupplierCompileStream(ConnectionSessionModel session, String[] tokens, DatabaseCompileStream fatherStream) {
+        super(session, tokens, fatherStream);
     }
 
-    private SupplierCompileStream(Database database, SupplierCtx supplierCtx) {
-        super(database);
+    private SupplierCompileStream(ConnectionSessionModel session, SupplierCtx supplierCtx) {
+        super(session);
         compileResult.computedWith(supplierCtx);
     }
 
     static SupplierCompileStream createWithTransportable(SupplierCtx supplierCtx, TransportableConnectionSession session) {
-        return new SupplierCompileStream(session.getDatabase(), supplierCtx);
+        return new SupplierCompileStream(session, supplierCtx);
     }
 
-    public static @NotNull SupplierCompileStream open(Database db, @NotNull String command) {
-        Objects.requireNonNull(db);
-        return new SupplierCompileStream(db, command);
+    public static @NotNull SupplierCompileStream open(ConnectionSessionModel session, @NotNull String command) {
+        Objects.requireNonNull(session);
+        return new SupplierCompileStream(session, command);
     }
 
     @Override
@@ -59,15 +59,22 @@ public final class SupplierCompileStream extends DatabaseCompileStream {
         if (commandContext == null) {
             throw new UnknownTokenException("unknown keyword: '" + token() + "'");
         }
+        return compile(commandContext);
+    }
+
+    public SupplierCtx compile(SupplierCtx mainStatement) throws UnknownTokenException {
+        if (compileResult.isCached()) {
+            return compileResult.get();
+        }
         next();
-        commandContext.compileWithStream(this);
-        compileResult.computedWith(commandContext);
-        return commandContext;
+        mainStatement.compileWithStream(this);
+        compileResult.computedWith(mainStatement);
+        return mainStatement;
     }
 
     @Override
     public String run() {
-        Object result = database.submitOpsTaskSync(compile().compileResult());
+        Object result = session.getDatabase().submitOpsTaskSync(compile().compileResult());
         return toString(result);
     }
 
@@ -77,7 +84,7 @@ public final class SupplierCompileStream extends DatabaseCompileStream {
     @Override
     public String runWithExecutor() {
         // 直接使用已生成的编译上下文
-        Object result = database.submitOpsTaskSync(compileResult.get().executeWithStream(this));
+        Object result = session.getDatabase().submitOpsTaskSync(compileResult.get().executeWithStream(this));
         return toString(result);
     }
 

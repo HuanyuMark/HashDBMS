@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.compiler.ConsumerCompileStream;
 import org.hashdb.ms.compiler.DatabaseCompileStream;
+import org.hashdb.ms.compiler.exception.*;
 import org.hashdb.ms.compiler.keyword.CompilerNode;
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.Keyword;
@@ -16,7 +17,11 @@ import org.hashdb.ms.compiler.option.OptionCtx;
 import org.hashdb.ms.compiler.option.Options;
 import org.hashdb.ms.data.DataType;
 import org.hashdb.ms.data.HValue;
-import org.hashdb.ms.exception.*;
+import org.hashdb.ms.exception.DBClientException;
+import org.hashdb.ms.exception.DBSystemException;
+import org.hashdb.ms.exception.IllegalJavaClassStoredException;
+import org.hashdb.ms.exception.UnsupportedQueryKey;
+import org.hashdb.ms.net.Parameter;
 import org.hashdb.ms.util.JsonService;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -56,14 +61,14 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
 
 
     /**
-     * @param valueConsumer 这个方法将接收两个参数 ({@link DataType} dataType,{@link Object}value)
-     *                      如果 dataType为null, 则说明, value 是一个内联命令, 且用户没有指定转化为的Value的存储数据类型(DataType)
-     *                      如果 dataType有值, value 可能是一个内联命令,也可能是一个合法的存储数据类型
-     *                      这个value可能是解析完成json串, 也可能是内联命令. 如果该方法返回true,则继续解析下一个token, 以此类推
+     * @param valueChecker 这个方法将接收两个参数 ({@link DataType} dataType,{@link Object}value)
+     *                     如果 dataType为null, 则说明, value 是一个内联命令, 且用户没有指定转化为的Value的存储数据类型(DataType)
+     *                     如果 dataType有值, value 可能是一个内联命令,也可能是一个合法的存储数据类型
+     *                     这个value可能是解析完成json串, 也可能是内联命令. 如果该方法返回true,则继续解析下一个token, 以此类推
      */
-    protected void compileJsonValues(BiFunction<DataType, ?, Boolean> valueConsumer) throws CommandCompileException, ArrayIndexOutOfBoundsException {
+    protected void compileJsonValues(BiFunction<DataType, ?, Boolean> valueChecker) throws CommandCompileException, ArrayIndexOutOfBoundsException {
         @SuppressWarnings("unchecked")
-        BiFunction<DataType, Object, Boolean> vc = (BiFunction<DataType, Object, Boolean>) valueConsumer;
+        BiFunction<DataType, Object, Boolean> vc = (BiFunction<DataType, Object, Boolean>) valueChecker;
         while (true) {
             String token = stream.token();
             DataType valueType = DataType.typeOfSymbol(token);
@@ -114,9 +119,9 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
             DataType supposedType = DataType.typeOfRawValue(value);
             // 期望类型 是 集合类型, 且可变
             // 如果期望的类型是反序列化后返回的类型的父类, 则直接使用
-            if (!supposedType.support(value)) {// 如果序列化的值不满足需求, 则报错
-                throw new IllegalValueException("json value: '" + token + "' is unsupported to store in database");
-            }
+//            if (!supposedType.support(value)) {// 如果序列化的值不满足需求, 则报错
+//                throw new IllegalValueException("json value: '" + token + "' is unsupported to store in database");
+//            }
 
             if (!vc.apply(supposedType, value)) {
                 stream.next();
@@ -126,8 +131,42 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
         }
     }
 
+    /**
+     * @param valueChecker 同{@link #compileJsonValues(BiFunction)}
+     * @return 如果在编译过程中, 编译到有token是参数, 则返回true, 否则返回false
+     * 如果是参数, 则会获取当前session里的参数, 如果没有, 则抛出{@link NotFoundParameterException} 异常
+     * @throws NotFoundParameterException 如果找不到参数, 则抛出异常
+     */
+    // TODO: 2024/1/13 这里应该还有些问题:
+    // 如果这条命令被缓存后, 用到的参数在参数集中被删除, 那么这条被缓存的命令理应过期
+    protected boolean compileParameter(BiFunction<DataType, Object, Boolean> valueChecker) throws ArrayIndexOutOfBoundsException, NotFoundParameterException {
+        boolean match = false;
+        while (true) {
+            String token = stream.token();
+            if (!token.startsWith("$")) {
+                return match;
+            }
+            Parameter parameter = stream.session().getParameter(token);
+            if (parameter == null) {
+                throw new NotFoundParameterException("can not found parameter '" + token + "'." + stream.errToken(token));
+            }
+            match = true;
+            // 登记该组流使用该参数, 防止参数变更后缓存的编译流过期
+            stream.session().useParameter(parameter, stream.rootStream().command());
+            stream.next();
+            if (parameter.value() instanceof SupplierCtx && !valueChecker.apply(null, parameter.value())) {
+                return true;
+            }
+            if (!valueChecker.apply(DataType.typeOfRawValue(parameter), parameter.value())) {
+                return true;
+            }
+        }
+    }
+
+    @NotNull
     public abstract Class<?> supplyType();
 
+    @NotNull
     protected static String normalizeToQueryKey(Object unknownKey) throws UnsupportedQueryKey {
         Object oneValue = selectOneKeyOrElseThrow(unknownKey);
         if (oneValue instanceof String str) {
@@ -148,6 +187,7 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
         };
     }
 
+    @NotNull
     protected static Object selectOneKeyOrElseThrow(Object unknownValue) {
         Function<Collection<?>, Object> normalizeCollectionToQueryKey = collection -> {
             if (collection.isEmpty()) {
@@ -179,66 +219,108 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
     @Override
     abstract public Keyword<?> name();
 
-    protected Object consumeWithConsumer(Object suppliedResult) {
+    protected Object callConsumer(Object consumeValue) {
         // 没有 Consumer 任务需要消费 Supplier 生产的结果
         if (consumerCtx == null) {
-            return suppliedResult;
+            return consumeValue;
         }
         // 如果有ConsumerKeyword生成的消费者上下文, 则将结果交由其处理
-        return consumerCtx.consume(suppliedResult);
+        return consumerCtx.consume(consumeValue);
     }
 
     @NotNull
-    protected Object getSuppliedValue(@NotNull SupplierCtx supplierCtx) {
+    protected Object exeSupplierCtx(@NotNull SupplierCtx supplierCtx) {
+        return exeSupplierCtx(supplierCtx, false);
+    }
+
+    @NotNull
+    protected Object exeSupplierCtx(@NotNull SupplierCtx supplierCtx, boolean copy) {
         Object o = supplierCtx.compileResult().get();
         if (o == null) {
             throw new CommandExecuteException("common '" + stream.command() + "' can not receive null value return form inline common '" +
                     supplierCtx.command() + "'." + stream.errToken(supplierCtx.command()));
         }
-        return o;
+        if (copy) {
+            return o;
+        }
+        // TODO: 2024/1/12 根据SupplierCtx指定的返回类型, 使用DataType里
+        // 定义好的clone(Object) 方法克隆, 然后返回
+        return supplierCtx.storeType().clone(o);
     }
 
     protected Object adaptSuppliedValueToOneRawValue(Object mayBeSupplier) {
         if (mayBeSupplier instanceof SupplierCtx s) {
-            return getSuppliedValue(s);
+            return exeSupplierCtx(s);
         }
         return mayBeSupplier;
     }
 
+    // TODO: 2024/1/12 让用户指定内联命令的返回值类型
+    // 否则在执行期间得到内联命令返回值后, 不知道将这个值
+    // clone成什么类型
     @Nullable
     protected SupplierCtx compileInlineCommand() throws ArrayIndexOutOfBoundsException {
+        // 如果有DataTypeSymbol
+        String mayBeDataTypeSymbol = stream.token();
+        DataType storeType = DataType.typeOfSymbol(mayBeDataTypeSymbol);
+        if (storeType != null) {
+            stream.next();
+        }
         String token = stream.token();
         if (token.charAt(0) != '(') {
-            return null;
+            if (storeType == null) {
+                return null;
+            }
+            throw new CommandCompileException("DataType Symbol '" + mayBeDataTypeSymbol + "' should modify a value expression");
         }
         var inlineCmdCtx = SupplierKeyword.getCompileCtxConstructor(token.substring(token.lastIndexOf("(") + 1));
         // 如果不是内联命令, 则返回null
         if (inlineCmdCtx == null) {
             return null;
         }
-        // 有其它关键字, 那么有可能下一段是另一串命令,
-        var tokenItr = stream.descendingTokenItr();
+//        {  // 有其它关键字, 那么有可能下一段是另一串命令,
+//            var tokenItr = stream.descendingTokenItr();
+//            int rightParenthesisTokenIndex = tokenItr.cursor();
+//            // 如果这个右括号不在当前这个token里, 就去找
+//            if (token.charAt(token.length() - 1) != ')') {
+//                boolean matched = false;
+//                while (tokenItr.hasNext()) {
+//                    String nextToken = tokenItr.next();
+//                    if (nextToken.charAt(nextToken.length() - 1) != ')') {
+//                        continue;
+//                    }
+//                    rightParenthesisTokenIndex = tokenItr.cursor();
+//                    matched = true;
+//                    break;
+//                }
+//                // 没找到右括号, 那么就抛出异常
+//                if (!matched) {
+//                    throw new CommandCompileException("can not find ')' for inline command." + stream.errToken(token));
+//                }
+//            }
+//        }
+        // 有其它关键字, 那么有可能下一段是另一串命令
+        var tokenItr = stream.tokenItr(stream.cursor());
         int rightParenthesisTokenIndex = tokenItr.cursor();
         // 如果这个右括号不在当前这个token里, 就去找
-        if (token.charAt(token.length() - 1) != ')') {
-            boolean matched = false;
-            while (tokenItr.hasNext()) {
-                String nextToken = tokenItr.next();
-                if (nextToken.charAt(nextToken.length() - 1) != ')') {
-                    continue;
-                }
-                rightParenthesisTokenIndex = tokenItr.cursor();
-                matched = true;
-                break;
+        boolean matched = false;
+        while (tokenItr.hasNext()) {
+            String nextToken = tokenItr.next();
+            if (nextToken.charAt(nextToken.length() - 1) != ')') {
+                continue;
             }
-            // 没找到右括号, 那么就抛出异常
-            if (!matched) {
-                throw new CommandCompileException("can not find right parenthesis ')' for inline command." + stream.errToken(token));
-            }
+            rightParenthesisTokenIndex = tokenItr.cursor();
+            matched = true;
+            break;
+        }
+        // 没找到右括号, 那么就抛出异常
+        if (!matched) {
+            throw new CommandCompileException("can not find ')' for inline command." + stream.errToken(token));
         }
         beforeCompileInlineCommand();
         var inlineStream = stream.forkSupplierCompileStream(stream.cursor(), rightParenthesisTokenIndex);
-        var inlineCommandCtx = inlineStream.compile();
+        var inlineCommandCtx = inlineStream.compile(inlineCmdCtx.create());
+        inlineCommandCtx.setStoreType(storeType);
         // 从右括号的下一块开始解析
         stream.jumpTo(rightParenthesisTokenIndex + 1);
         return inlineCommandCtx;
@@ -360,5 +442,51 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
     @JsonIgnore
     public void setStream(S stream) {
         this.stream = stream;
+    }
+
+    /**
+     * 提取原始字符串表达式 {@code R(string)} 括号中的字符串(这个{@code R}不限大小写)
+     * 这里面的字符串不会被视作有其它意义而被替换, 只会当成普通的字符串.
+     * <br/>
+     * 比如, 如果一个 key 是 {@code $param}, 因为这个形式的字符串是 parameter 参数
+     * 的形式, 所以会被替换为参数集中 {@code $param} 的值
+     * 但如果这个key 是 {@code  R($param)} 则{@code $param}就会当作普通字符串.
+     * 例如下面这段语句, 因为key为{@code  R($param)}, 所以不会被替换为{@code  $param}在参数集中对应的值
+     * 而是是为一个字符串, 又因为{@code '$param'}符合parameterName的命名规范, 所以在设置参数时, 就需要使用
+     * <br/>
+     * {@code
+     * SET R($param1) "value1" R($param2) 456
+     * }
+     * <br/>
+     * 的形式
+     *
+     * @param any 任意字符串
+     * @return 如果该字符串是原始字符串, 则提取出原始字符串, 否则返回null
+     */
+    protected String extractOriginalString(String any) {
+        if (!isOriginalString(any)) {
+            return null;
+        }
+        return any.substring(2, any.length() - 1);
+    }
+
+    protected boolean isOriginalString(String any) {
+        if (any.length() < 3) {
+            return false;
+        }
+        if (any.charAt(0) != 'R' && any.charAt(0) != 'r') {
+            return false;
+        }
+        if (any.charAt(1) != '(') {
+            return false;
+        }
+        int lastIndex = any.length() - 1;
+        if (any.charAt(lastIndex) != ')') {
+            throw new IllegalExpressionException("uncompleted expression." + stream.errToken(any));
+        }
+        if (lastIndex - 2 <= 0) {
+            throw new CommandCompileException("function 'R(string)' require a not blank string." + stream.errToken(any));
+        }
+        return true;
     }
 }

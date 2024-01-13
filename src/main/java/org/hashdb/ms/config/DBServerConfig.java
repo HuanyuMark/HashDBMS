@@ -30,6 +30,22 @@ public class DBServerConfig {
 
     private Level logLevel = Level.INFO;
 
+    private CommandCacheConfig commandCache = new CommandCacheConfig();
+
+    @Getter
+    public static class CommandCacheConfig {
+        /**
+         * 单位ms, 命令的缓存时间
+         */
+        long aliveDuration = 30 * 60_000;
+
+        int cacheSize = 1000;
+
+        @ConfigLoadOnly
+        public void setAliveDuration(long aliveDuration) {
+            this.aliveDuration = aliveDuration;
+        }
+    }
 
     public void setPort(int port) {
         this.port = port;
@@ -53,5 +69,10 @@ public class DBServerConfig {
     @ConfigLoadOnly
     public void setLogLevel(Level logLevel) {
         this.logLevel = logLevel;
+    }
+
+    @ConfigLoadOnly
+    public void setCommandCache(CommandCacheConfig commandCache) {
+        this.commandCache = commandCache;
     }
 }

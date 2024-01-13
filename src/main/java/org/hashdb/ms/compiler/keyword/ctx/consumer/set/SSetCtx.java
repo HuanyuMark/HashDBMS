@@ -5,7 +5,8 @@ import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.consumer.Precompilable;
 import org.hashdb.ms.compiler.keyword.ctx.consumer.PrecompileResult;
 import org.hashdb.ms.data.HValue;
-import org.hashdb.ms.data.task.ImmutableChecker;
+import org.hashdb.ms.data.task.UnmodifiableCollections;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Set;
 
@@ -21,8 +22,8 @@ public class SSetCtx extends MutableSetCtx implements Precompilable {
     }
 
     @Override
-    public Class<?> supplyType() {
-        return ImmutableChecker.unmodifiableList;
+    public @NotNull Class<?> supplyType() {
+        return UnmodifiableCollections.unmodifiableList;
     }
 
     @Override

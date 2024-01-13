@@ -1,6 +1,7 @@
 package org.hashdb.ms.compiler.keyword.ctx.consumer.list;
 
 import org.hashdb.ms.compiler.ConsumerCompileStream;
+import org.hashdb.ms.compiler.exception.CommandCompileException;
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
@@ -9,8 +10,8 @@ import org.hashdb.ms.compiler.option.HDeleteOpCtx;
 import org.hashdb.ms.compiler.option.LDeleteOpCtx;
 import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.OpsTaskPriority;
-import org.hashdb.ms.data.task.ImmutableChecker;
-import org.hashdb.ms.exception.CommandCompileException;
+import org.hashdb.ms.data.task.UnmodifiableCollections;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
 import java.util.LinkedList;
@@ -40,8 +41,8 @@ public class TrimCtx extends MutableListCtx {
     }
 
     @Override
-    public Class<?> supplyType() {
-        return ImmutableChecker.unmodifiableList;
+    public @NotNull Class<?> supplyType() {
+        return UnmodifiableCollections.unmodifiableList;
     }
 
     @Override
@@ -59,7 +60,7 @@ public class TrimCtx extends MutableListCtx {
         long popCount;
         long limit;
         if (limitOrSupplier instanceof SupplierCtx limitSupplier) {
-            limitOrSupplier = (getSuppliedValue(limitSupplier));
+            limitOrSupplier = (exeSupplierCtx(limitSupplier));
         }
         limit = (Long) selectOneKeyOrElseThrow(limitOrSupplier);
 

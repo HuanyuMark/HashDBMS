@@ -1,13 +1,13 @@
 package org.hashdb.ms.compiler.keyword.ctx.sys;
 
 import org.hashdb.ms.compiler.SystemCompileStream;
+import org.hashdb.ms.compiler.exception.CommandInterpretException;
 import org.hashdb.ms.compiler.keyword.SystemKeyword;
 import org.hashdb.ms.data.OpsTask;
-import org.hashdb.ms.exception.CommandInterpretException;
 import org.hashdb.ms.exception.DBSystemException;
-import org.hashdb.ms.exception.NotFoundDatabaseException;
 import org.hashdb.ms.net.ConnectionSession;
-import org.hashdb.ms.net.ReadonlyConnectionSession;
+import org.hashdb.ms.net.ConnectionSessionModel;
+import org.hashdb.ms.net.exception.NotFoundDatabaseException;
 
 /**
  * Date: 2023/11/30 0:48
@@ -55,7 +55,7 @@ public class DBUseCtx extends SystemCompileCtx<Boolean> {
             if (dbName == null) {
                 throw new CommandInterpretException("keyword '" + name() + "' require param: database id(Integer) or name(String)");
             }
-            if (stream.getSession() instanceof ConnectionSession session) {
+            if (stream.session() instanceof ConnectionSession session) {
                 session.setDatabase(system().getDatabase(dbName));
                 return PLACE_HOLDER;
             }
@@ -66,7 +66,7 @@ public class DBUseCtx extends SystemCompileCtx<Boolean> {
                 throw NotFoundDatabaseException.of("{\"id\":" + dbId + ",\"name\":\"" + dbName + "\"}");
             }
         }
-        if (stream.getSession() instanceof ConnectionSession session) {
+        if (stream.session() instanceof ConnectionSession session) {
             session.setDatabase(system().getDatabase(dbId));
             return PLACE_HOLDER;
         }
@@ -74,7 +74,7 @@ public class DBUseCtx extends SystemCompileCtx<Boolean> {
     }
 
     @Override
-    public OpsTask<Boolean> executor(ReadonlyConnectionSession session) {
+    public OpsTask<Boolean> executor(ConnectionSessionModel session) {
         return PLACE_HOLDER;
     }
 }

@@ -1,4 +1,4 @@
-package org.hashdb.ms.exception;
+package org.hashdb.ms.compiler.exception;
 
 import lombok.experimental.StandardException;
 
@@ -9,5 +9,5 @@ import lombok.experimental.StandardException;
  * @version 0.0.1
  */
 @StandardException
-public class IllegalExpressionException extends DBClientException {
+public class IllegalExpressionException extends CommandCompileException {
 }

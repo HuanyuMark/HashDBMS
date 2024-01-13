@@ -1,7 +1,7 @@
 package org.hashdb.ms.compiler.option;
 
 import org.hashdb.ms.compiler.DatabaseCompileStream;
-import org.hashdb.ms.exception.IllegalValueException;
+import org.hashdb.ms.compiler.exception.IllegalValueException;
 
 import java.util.Arrays;
 
@@ -13,31 +13,39 @@ import java.util.Arrays;
  */
 public abstract class EnumOpCtx<E extends Enum<E>> extends ParseableOpCtx<E> implements FlyweightOpCtx {
 
-    public EnumOpCtx(E value) {
-        super(value);
+    public EnumOpCtx(E defaultValue) {
+        super(defaultValue);
     }
 
     abstract protected Class<? extends Enum<E>> getEnumClass();
+
     @Override
+    @SuppressWarnings("unchecked")
     public OptionCtx<E> compile(String unknownValueToken, DatabaseCompileStream stream) {
         // 使用默认值
-        if(unknownValueToken.isEmpty() && useDefaultValueWhenEmpty()) {
+        if (unknownValueToken.isEmpty() && useDefaultValueWhenEmpty()) {
             return this;
         }
-        Enum<E>[] enumConstants = getEnumClass().getEnumConstants();
-        @SuppressWarnings("unchecked")
-        E en = (E) Arrays.stream(enumConstants).filter(e->e.name().equalsIgnoreCase(unknownValueToken))
-                .findAny()
-                .orElseThrow(()->new IllegalValueException("option value of '"+key()+"' should be one of" + Arrays.toString(enumConstants)));
-        value = en;
-        afterCompile(en);
+        E matchedEnumInstance = null;
+        E[] enumConstants = (E[]) getEnumClass().getEnumConstants();
+        for (E enumInstance : enumConstants) {
+            if (enumInstance.name().equalsIgnoreCase(unknownValueToken)) {
+                matchedEnumInstance = enumInstance;
+                break;
+            }
+        }
+        if (matchedEnumInstance == null) {
+            throw new IllegalValueException("option value of '" + key() + "' should be one of" + Arrays.toString(enumConstants));
+        }
+        value = matchedEnumInstance;
+        afterCompile(matchedEnumInstance);
         return this;
     }
 
     protected void afterCompile(E value) {
     }
 
-    protected boolean useDefaultValueWhenEmpty(){
+    protected boolean useDefaultValueWhenEmpty() {
         return true;
     }
 }

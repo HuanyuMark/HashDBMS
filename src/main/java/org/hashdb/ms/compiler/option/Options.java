@@ -1,8 +1,7 @@
 package org.hashdb.ms.compiler.option;
 
 import org.hashdb.ms.compiler.DatabaseCompileStream;
-import org.hashdb.ms.exception.CommandCompileException;
-import org.hashdb.ms.util.AtomLazy;
+import org.hashdb.ms.compiler.exception.CommandCompileException;
 import org.hashdb.ms.util.Lazy;
 import org.hashdb.ms.util.ReflectCacheData;
 import org.jetbrains.annotations.NotNull;
@@ -11,7 +10,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Date: 2023/11/24 16:51
@@ -40,18 +38,27 @@ public enum Options {
     COPY(CopyOpCtx.class, List.of("cp")),
 
     DESTRUCT(DestructOpCtx.class, List.of("dstc")),
-    EXPIRE_STRATEGY(ExpireStrategyOpCtx.class, List.of("eps")),
+    EXPIRE_STRATEGY("expire-strategy", ExpireStrategyOpCtx.class, List.of("eps")),
     DELETE(DeleteOpCtx.class, List.of("del")),
     HDELETE(HDeleteOpCtx.class, List.of("hdel")),
     LDELETE(LDeleteOpCtx.class, List.of("ldel")),
     ;
     private static Map<String, Options> aliasMap;
 
-    private final OptionCache optionCacheCell;
+    private final OptionCache optionCache;
+
+    public final String fullName;
 
     Options(Class<? extends OptionCtx<?>> optionClass, List<String> aliases) {
-        this.optionCacheCell = new OptionCache(this, optionClass);
+        this.optionCache = new OptionCache(this, optionClass);
         addAlias(aliases, this);
+        fullName = name();
+    }
+
+    Options(String fullName, Class<? extends OptionCtx<?>> optionClass, List<String> aliases) {
+        this.optionCache = new OptionCache(this, optionClass);
+        addAlias(aliases, this);
+        this.fullName = fullName;
     }
 
     private static void addAlias(@NotNull List<String> aliases, Options option) {
@@ -88,7 +95,7 @@ public enum Options {
             var normalizedOptionToken = assignPos == -1 ? unknownToken.substring(2).toUpperCase() : unknownToken.substring(2, assignPos).toUpperCase();
             try {
                 // 这个 token 是 配置项token
-                return valueOf(normalizedOptionToken).optionCacheCell.create(valueStr, assignPos, stream);
+                return valueOf(normalizedOptionToken).optionCache.create(valueStr, assignPos, stream);
             } catch (IllegalArgumentException e) {
                 throw new CommandCompileException("illegal option: '" + normalizedOptionToken + "'." + stream.errToken(unknownToken));
             }
@@ -99,18 +106,14 @@ public enum Options {
         if (options == null) {
             throw new CommandCompileException("illegal option alias: '" + normalizedOptionToken + "'." + stream.errToken(unknownToken));
         }
-        return options.optionCacheCell.create(valueStr, assignPos, stream);
-    }
-
-    public OptionCache getOptionCacheCell() {
-        return optionCacheCell;
+        return options.optionCache.create(valueStr, assignPos, stream);
     }
 
     public static class OptionCache extends ReflectCacheData<OptionCtx<?>> {
 
         private final Options option;
 
-        private final Lazy<Map<String, OptionCtx<?>>> flyweightMap = AtomLazy.of(ConcurrentHashMap::new);
+        private final static Lazy<Map<String, OptionCtx<?>>> flyweightMap = Lazy.of(HashMap::new);
 
         public OptionCache(Options option, Class<? extends OptionCtx<?>> clazz) {
             super(clazz);
@@ -121,11 +124,11 @@ public enum Options {
             return option;
         }
 
-        public OptionCtx<?> create(String valueStr,int assignPos, DatabaseCompileStream stream) {
+        public OptionCtx<?> create(String valueStr, int assignPos, DatabaseCompileStream stream) {
             if (!FlyweightOpCtx.class.isAssignableFrom(clazz)) {
                 return create().prepareCompile(valueStr, assignPos, stream);
             }
-            return flyweightMap.get().computeIfAbsent(valueStr, v-> create().prepareCompile(valueStr, assignPos, stream));
+            return flyweightMap.get().computeIfAbsent(valueStr, v -> create().prepareCompile(valueStr, assignPos, stream));
         }
     }
 }

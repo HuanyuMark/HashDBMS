@@ -1,16 +1,17 @@
 package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
 import org.hashdb.ms.compiler.SupplierCompileStream;
+import org.hashdb.ms.compiler.exception.CommandCompileException;
+import org.hashdb.ms.compiler.exception.CommandExecuteException;
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.option.*;
 import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.OpsTaskPriority;
-import org.hashdb.ms.data.task.ImmutableChecker;
-import org.hashdb.ms.exception.CommandCompileException;
-import org.hashdb.ms.exception.CommandExecuteException;
+import org.hashdb.ms.data.task.UnmodifiableCollections;
 import org.hashdb.ms.exception.StopComplieException;
 import org.hashdb.ms.exception.UnsupportedQueryKey;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -37,8 +38,8 @@ public class ExpireCtx extends SupplierCtx {
     }
 
     @Override
-    public Class<?> supplyType() {
-        return ImmutableChecker.unmodifiableList;
+    public @NotNull Class<?> supplyType() {
+        return UnmodifiableCollections.unmodifiableList;
     }
 
     @Override
@@ -54,7 +55,7 @@ public class ExpireCtx extends SupplierCtx {
             String key;
             if (keyCtx.keyOrSupplier instanceof SupplierCtx supplierCtx) {
                 try {
-                    key = SupplierCtx.normalizeToQueryKey(getSuppliedValue(supplierCtx));
+                    key = SupplierCtx.normalizeToQueryKey(exeSupplierCtx(supplierCtx));
                 } catch (UnsupportedQueryKey e) {
                     throw UnsupportedQueryKey.of(name(), supplierCtx);
                 }
@@ -97,7 +98,7 @@ public class ExpireCtx extends SupplierCtx {
             if (inlineSupplierCtx != null) {
                 keyCtx.keyOrSupplier = inlineSupplierCtx;
                 try {
-                    token = stream().token();
+                    stream().token();
                 } catch (ArrayIndexOutOfBoundsException e) {
                     return;
                 }

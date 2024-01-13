@@ -2,11 +2,6 @@ package org.hashdb.ms.compiler.keyword.ctx.consumer.list;
 
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
-import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
-import org.hashdb.ms.compiler.option.DestructOpCtx;
-import org.hashdb.ms.data.DataType;
-import org.hashdb.ms.data.task.ImmutableChecker;
-import org.hashdb.ms.exception.CommandExecuteException;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;

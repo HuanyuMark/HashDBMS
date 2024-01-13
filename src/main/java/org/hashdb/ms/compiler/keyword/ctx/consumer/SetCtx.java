@@ -1,11 +1,11 @@
 package org.hashdb.ms.compiler.keyword.ctx.consumer;
 
 import org.hashdb.ms.compiler.ConsumerCompileStream;
+import org.hashdb.ms.compiler.exception.CommandCompileException;
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.consumer.list.LSetCtx;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
-import org.hashdb.ms.exception.CommandCompileException;
 
 import java.util.List;
 

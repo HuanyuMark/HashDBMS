@@ -4,8 +4,8 @@ import org.hashdb.ms.compiler.CompileStream;
 import org.hashdb.ms.config.ReplicationConfig;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.DatabaseInfos;
-import org.hashdb.ms.exception.NotFoundDatabaseException;
 import org.hashdb.ms.manager.SystemInfo;
+import org.hashdb.ms.net.exception.NotFoundDatabaseException;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -23,7 +23,7 @@ public interface PersistentService {
     boolean persist(SystemInfo systemInfo);
 
     boolean persist(ReplicationConfig config);
-    
+
     boolean persist(CompileStream<?> stream);
 
     @Deprecated

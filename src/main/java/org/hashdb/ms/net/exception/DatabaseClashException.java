@@ -1,7 +1,8 @@
-package org.hashdb.ms.exception;
+package org.hashdb.ms.net.exception;
 
 import lombok.Getter;
 import lombok.experimental.StandardException;
+import org.hashdb.ms.exception.DBClientException;
 
 import java.util.Arrays;
 import java.util.LinkedList;

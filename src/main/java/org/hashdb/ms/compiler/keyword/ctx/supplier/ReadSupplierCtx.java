@@ -1,12 +1,13 @@
 package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
+import org.hashdb.ms.compiler.exception.CommandCompileException;
+import org.hashdb.ms.compiler.exception.LikePatternSyntaxException;
 import org.hashdb.ms.compiler.keyword.KeywordModifier;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.option.LimitOpCtx;
-import org.hashdb.ms.data.task.ImmutableChecker;
-import org.hashdb.ms.exception.CommandCompileException;
-import org.hashdb.ms.exception.LikePatternSyntaxException;
+import org.hashdb.ms.data.task.UnmodifiableCollections;
 import org.hashdb.ms.exception.UnsupportedQueryKey;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -30,8 +31,8 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
     protected boolean like = false;
 
     @Override
-    public Class<?> supplyType() {
-        return ImmutableChecker.unmodifiableList;
+    public @NotNull Class<?> supplyType() {
+        return UnmodifiableCollections.unmodifiableList;
     }
 
     @Override
@@ -54,7 +55,7 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
                 if (patternOrSupplier instanceof SupplierCtx supplierCtx) {
                     // 有内联命令, 则执行其命令, 获取返回结果
                     try {
-                        pattern = Pattern.compile(normalizeToQueryKey(getSuppliedValue(supplierCtx)));
+                        pattern = Pattern.compile(normalizeToQueryKey(exeSupplierCtx(supplierCtx)));
                     } catch (PatternSyntaxException e) {
                         throw new LikePatternSyntaxException(e);
                     }
@@ -68,7 +69,7 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
                 String key;
                 if (keyOrSupplier instanceof SupplierCtx supplierCtx) {
                     // 有内联命令, 则执行其命令, 获取返回结果
-                    keyOrSupplier = getSuppliedValue(supplierCtx);
+                    keyOrSupplier = exeSupplierCtx(supplierCtx);
                     try {
                         key = normalizeToQueryKey(keyOrSupplier);
                     } catch (UnsupportedQueryKey e) {
@@ -196,4 +197,6 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
 //        }
         like = true;
     }
+
+
 }

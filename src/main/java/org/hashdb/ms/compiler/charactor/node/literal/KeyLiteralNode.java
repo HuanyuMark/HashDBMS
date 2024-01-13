@@ -1,7 +1,7 @@
 package org.hashdb.ms.compiler.charactor.node.literal;
 
 import org.hashdb.ms.compiler.charactor.CharacterCompileStream;
-import org.hashdb.ms.exception.CommandCompileException;
+import org.hashdb.ms.compiler.exception.CommandCompileException;
 
 import java.util.LinkedList;
 

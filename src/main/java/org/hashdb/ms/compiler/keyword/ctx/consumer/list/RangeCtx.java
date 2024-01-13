@@ -1,12 +1,13 @@
 package org.hashdb.ms.compiler.keyword.ctx.consumer.list;
 
+import org.hashdb.ms.compiler.exception.CommandCompileException;
+import org.hashdb.ms.compiler.exception.CommandExecuteException;
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
 import org.hashdb.ms.data.HValue;
-import org.hashdb.ms.data.task.ImmutableChecker;
-import org.hashdb.ms.exception.CommandCompileException;
-import org.hashdb.ms.exception.CommandExecuteException;
+import org.hashdb.ms.data.task.UnmodifiableCollections;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
@@ -26,8 +27,8 @@ public class RangeCtx extends ListCtx {
     }
 
     @Override
-    public Class<?> supplyType() {
-        return ImmutableChecker.unmodifiableList;
+    public @NotNull Class<?> supplyType() {
+        return UnmodifiableCollections.unmodifiableList;
     }
 
     @Override
@@ -50,7 +51,7 @@ public class RangeCtx extends ListCtx {
     protected Object operateWithImmutableList(List<Object> opsTarget) {
         long startIndex;
         if (startIndexOrSupplier instanceof SupplierCtx startIndexSupplier) {
-            Object o = getSuppliedValue(startIndexSupplier);
+            Object o = exeSupplierCtx(startIndexSupplier);
             if (o instanceof Number n) {
                 startIndex = n.longValue();
             } else {
@@ -65,7 +66,7 @@ public class RangeCtx extends ListCtx {
         }
         long endIndex;
         if (endIndexOrSupplier instanceof SupplierCtx endIndexSupplier) {
-            Object o = getSuppliedValue(endIndexSupplier);
+            Object o = exeSupplierCtx(endIndexSupplier);
             if (o instanceof Number n) {
                 endIndex = n.longValue();
             } else {

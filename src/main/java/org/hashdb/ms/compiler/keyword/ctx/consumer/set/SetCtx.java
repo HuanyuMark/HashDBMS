@@ -1,12 +1,12 @@
 package org.hashdb.ms.compiler.keyword.ctx.consumer.set;
 
 import lombok.extern.slf4j.Slf4j;
+import org.hashdb.ms.compiler.exception.CommandExecuteException;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.consumer.ConsumerCtx;
 import org.hashdb.ms.data.DataType;
 import org.hashdb.ms.data.HValue;
-import org.hashdb.ms.data.task.ImmutableChecker;
-import org.hashdb.ms.exception.CommandExecuteException;
+import org.hashdb.ms.data.task.UnmodifiableCollections;
 import org.hashdb.ms.exception.IllegalJavaClassStoredException;
 import org.hashdb.ms.exception.StopComplieException;
 
@@ -27,7 +27,7 @@ public abstract class SetCtx extends ConsumerCtx<Set<Object>> {
 
     @Override
     protected boolean checkConsumeType(Object consumeType) throws CommandExecuteException {
-        Object o = selectOne(consumeType);
+        Object o = selectOneValue(consumeType);
         if (!(o instanceof HValue<?> hValue)) {
             return Set.class.isAssignableFrom(o.getClass());
         }
@@ -59,6 +59,6 @@ public abstract class SetCtx extends ConsumerCtx<Set<Object>> {
 
     @Override
     protected Class<?> consumableUnmodifiableClass() {
-        return ImmutableChecker.unmodifiableSet;
+        return UnmodifiableCollections.unmodifiableSet;
     }
 }

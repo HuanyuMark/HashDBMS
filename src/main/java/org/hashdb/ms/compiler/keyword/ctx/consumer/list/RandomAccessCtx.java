@@ -1,15 +1,16 @@
 package org.hashdb.ms.compiler.keyword.ctx.consumer.list;
 
+import org.hashdb.ms.compiler.exception.CommandCompileException;
+import org.hashdb.ms.compiler.exception.CommandInterpretException;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.consumer.ConsumerCtx;
 import org.hashdb.ms.compiler.keyword.ctx.consumer.Precompilable;
 import org.hashdb.ms.compiler.keyword.ctx.consumer.PrecompileResult;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
 import org.hashdb.ms.data.HValue;
-import org.hashdb.ms.data.task.ImmutableChecker;
-import org.hashdb.ms.exception.CommandCompileException;
-import org.hashdb.ms.exception.CommandInterpretException;
+import org.hashdb.ms.data.task.UnmodifiableCollections;
 import org.hashdb.ms.exception.StopComplieException;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -28,8 +29,8 @@ public abstract class RandomAccessCtx extends MutableListCtx implements Precompi
     }
 
     @Override
-    public Class<?> supplyType() {
-        return ImmutableChecker.unmodifiableList;
+    public @NotNull Class<?> supplyType() {
+        return UnmodifiableCollections.unmodifiableList;
     }
 
     @Override
@@ -45,9 +46,9 @@ public abstract class RandomAccessCtx extends MutableListCtx implements Precompi
     protected Object operateWithMutableList(List<Object> opsList) {
         List<Long> indexes = indexOrSuppliers.parallelStream().map(indexOrSupplier -> {
             if (indexOrSupplier instanceof SupplierCtx indexSupplier) {
-                indexOrSupplier = getSuppliedValue(indexSupplier);
+                indexOrSupplier = exeSupplierCtx(indexSupplier);
             }
-            Object oneValue = selectOne(indexOrSupplier);
+            Object oneValue = selectOneValue(indexOrSupplier);
             if (!(oneValue instanceof Long index)) {
                 throw new StopComplieException("index must be a number");
             }

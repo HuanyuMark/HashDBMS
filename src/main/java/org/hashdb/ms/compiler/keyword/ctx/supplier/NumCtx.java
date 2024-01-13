@@ -1,12 +1,17 @@
 package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
+import org.hashdb.ms.compiler.exception.CommandCompileException;
 import org.hashdb.ms.compiler.option.ExpireOpCtx;
 import org.hashdb.ms.compiler.option.HExpireOpCtx;
 import org.hashdb.ms.compiler.option.LExpireOpCtx;
 import org.hashdb.ms.data.DataType;
 import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.OpsTaskPriority;
-import org.hashdb.ms.exception.*;
+import org.hashdb.ms.data.task.UnmodifiableCollections;
+import org.hashdb.ms.exception.IllegalJavaClassStoredException;
+import org.hashdb.ms.exception.IncreaseUnsupportedException;
+import org.hashdb.ms.exception.StopComplieException;
+import org.hashdb.ms.exception.UnsupportedQueryKey;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -37,7 +42,7 @@ public abstract class NumCtx extends SupplierCtx {
                 .map(arithmeticCtx -> {
                     String key;
                     if (arithmeticCtx.keyOrSupplier instanceof SupplierCtx keySupplier) {
-                        arithmeticCtx.keyOrSupplier = getSuppliedValue(keySupplier);
+                        arithmeticCtx.keyOrSupplier = exeSupplierCtx(keySupplier);
                         try {
                             key = normalizeToQueryKey(arithmeticCtx.keyOrSupplier);
                         } catch (UnsupportedQueryKey e) {
@@ -47,7 +52,7 @@ public abstract class NumCtx extends SupplierCtx {
                         key = ((String) arithmeticCtx.keyOrSupplier);
                     }
                     if (arithmeticCtx.stepOrSupplier instanceof SupplierCtx stepSupplier) {
-                        arithmeticCtx.stepOrSupplier = getSuppliedValue(stepSupplier);
+                        arithmeticCtx.stepOrSupplier = exeSupplierCtx(stepSupplier);
                     }
                     return doArithmeticOps(
                             key,
@@ -165,7 +170,7 @@ public abstract class NumCtx extends SupplierCtx {
                         value.data(newValue(Long.parseLong(rawValue), stepNumber));
                     }
                 } catch (NumberFormatException e) {
-                    throw new IncreaseUnsupportedException("can '" + name() + "' string: '" + rawValue + "' with step '" + step + "'");
+                    throw new IncreaseUnsupportedException("can`t '" + name() + "' string: '" + rawValue + "' with step '" + step + "'");
                 } catch (ClassCastException e) {
                     throw IllegalJavaClassStoredException.of(rawValue.getClass());
                 }
@@ -187,8 +192,8 @@ public abstract class NumCtx extends SupplierCtx {
     }
 
     @Override
-    public Class<? extends Number> supplyType() {
-        return Number.class;
+    public @NotNull Class<?> supplyType() {
+        return UnmodifiableCollections.unmodifiableList;
     }
 
     abstract Number newValue(Number n1, Number n2);

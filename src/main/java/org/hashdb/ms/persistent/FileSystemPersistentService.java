@@ -4,8 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.config.HdbConfig;
 import org.hashdb.ms.data.Database;
-import org.hashdb.ms.exception.DBFileAccessFailedException;
-import org.hashdb.ms.exception.NotFoundDatabaseException;
+import org.hashdb.ms.net.exception.DBFileAccessFailedException;
+import org.hashdb.ms.net.exception.NotFoundDatabaseException;
 
 import java.io.File;
 import java.nio.file.Paths;

@@ -1,13 +1,14 @@
 package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
 import org.hashdb.ms.compiler.SupplierCompileStream;
+import org.hashdb.ms.compiler.exception.CommandCompileException;
 import org.hashdb.ms.compiler.option.LongOpCtx;
 import org.hashdb.ms.compiler.option.Options;
 import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.OpsTaskPriority;
-import org.hashdb.ms.data.task.ImmutableChecker;
-import org.hashdb.ms.exception.CommandCompileException;
+import org.hashdb.ms.data.task.UnmodifiableCollections;
 import org.hashdb.ms.exception.UnsupportedQueryKey;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedList;
@@ -30,8 +31,8 @@ public abstract class WriteSupplierCtx extends SupplierCtx {
     protected final List<Pair> pairs = new LinkedList<>();
 
     @Override
-    public Class<?> supplyType() {
-        return ImmutableChecker.unmodifiableList;
+    public @NotNull Class<?> supplyType() {
+        return UnmodifiableCollections.unmodifiableList;
     }
 
     @Override
@@ -59,47 +60,71 @@ public abstract class WriteSupplierCtx extends SupplierCtx {
             if (keySupplier != null) {
                 pair.keyOrSupplier = keySupplier;
             } else {
-                pair.keyOrSupplier = stream().token();
-                stream().next();
-            }
-
-            pair.valueCtx = new ValueCtx();
-
-            // 探测一下, 有没有value
-            try {
-                stream().token();
-            } catch (ArrayIndexOutOfBoundsException e) {
-                stream().prev();
-                String errorToken = stream().token();
-                stream().next();
-                throw new CommandCompileException("keyword '" + name() + "' require key-value pair to write." + stream().errToken(errorToken));
+                boolean isParameter = compileParameter((dataType, value) -> {
+                    pair.keyOrSupplier = value;
+                    return false;
+                });
+                if (!isParameter) {
+                    String token = stream().token();
+                    if (isOriginalString(token) && token.charAt(2) != '$') {
+                        throw new CommandCompileException("parameter name should be started with '$'." + stream().errToken(token));
+                    }
+                    pair.keyOrSupplier = token;
+                    stream().next();
+                }
             }
 
             // 有可能是内联命令
-            SupplierCtx valueSupplier = compileInlineCommand();
+            SupplierCtx valueSupplier;
+            try {
+                valueSupplier = compileInlineCommand();
+            } catch (ArrayIndexOutOfBoundsException e) {
+                // 如果没有value
+                stream().prev();
+                String errorToken = stream().token();
+                throw new CommandCompileException("keyword '" + name() + "' require key-value pair to write." + stream().errToken(errorToken));
+            }
+
             if (valueSupplier != null) {
 //                if (!DataType.canStore(valueSupplier.supplyType())) {
 //                    throw new CommandExecuteException("can not store the return type of inline command: '" +
 //                            valueSupplier.command()
 //                            + "'." +stream().errToken(valueSupplier.command()));
 //                }
-                pair.valueCtx.rawOrSupplier = valueSupplier;
+                pair.rawOrSupplierValue = valueSupplier;
             } else {
-                compileJsonValues((dataType, value) -> {
-                    pair.valueCtx.rawOrSupplier = value;
-                    return false;
-                });
+                try {
+                    boolean isParameter = compileParameter((dataType, value) -> {
+                        if (value instanceof SupplierCtx inlineCmd && !inlineCmd.storeType().supportClone(inlineCmd.supplyType())) {
+                            throw new CommandCompileException("can not writer value type '" + inlineCmd.storeType() + "' of '" + inlineCmd.command() + "'");
+                        }
+                        pair.rawOrSupplierValue = value;
+                        return false;
+                    });
+                    if (!isParameter) {
+                        compileJsonValues((dataType, value) -> {
+                            if (dataType != null) {
+                                pair.rawOrSupplierValue = dataType.clone(value);
+                                return false;
+                            }
+                            pair.rawOrSupplierValue = value;
+                            return false;
+                        });
+                    }
+                } catch (ArrayIndexOutOfBoundsException e) {
+                    return;
+                }
             }
 
             compileOptions(optionCtx -> {
                 if (Options.EXPIRE == optionCtx.key()) {
-                    pair.valueCtx.expireTime = ((LongOpCtx) optionCtx).value();
+                    pair.expireTime = ((LongOpCtx) optionCtx).value();
                 } else if (Options.HEXPIRE == optionCtx.key()) {
-                    pair.valueCtx.expireTime = ((LongOpCtx) optionCtx).value();
-                    pair.valueCtx.priority = OpsTaskPriority.HIGH;
+                    pair.expireTime = ((LongOpCtx) optionCtx).value();
+                    pair.priority = OpsTaskPriority.HIGH;
                 } else if (Options.LEXPIRE == optionCtx.key()) {
-                    pair.valueCtx.expireTime = ((LongOpCtx) optionCtx).value();
-                    pair.valueCtx.priority = OpsTaskPriority.LOW;
+                    pair.expireTime = ((LongOpCtx) optionCtx).value();
+                    pair.priority = OpsTaskPriority.LOW;
                 }
                 addOption(optionCtx);
                 return true;
@@ -119,37 +144,33 @@ public abstract class WriteSupplierCtx extends SupplierCtx {
     @Override
     public Supplier<?> executor() {
         return () -> pairs.stream().map(pair -> {
-            String key;
-            Object value;
+            String rawKey;
+            Object rawValue;
             if (pair.keyOrSupplier instanceof SupplierCtx keySupplier) {
                 try {
-                    key = normalizeToQueryKey(getSuppliedValue(keySupplier));
+                    rawKey = normalizeToQueryKey(exeSupplierCtx(keySupplier));
                 } catch (UnsupportedQueryKey e) {
                     throw UnsupportedQueryKey.of(name(), keySupplier);
                 }
             } else {
-                key = (String) pair.keyOrSupplier;
+                rawKey = (String) pair.keyOrSupplier;
             }
-            if (pair.valueCtx.rawOrSupplier instanceof SupplierCtx valueSupplier) {
-                value = selectOneKeyOrElseThrow(getSuppliedValue(valueSupplier));
+            if (pair.rawOrSupplierValue instanceof SupplierCtx valueSupplier) {
+                rawValue = exeSupplierCtx(valueSupplier, true);
             } else {
-                value = pair.valueCtx.rawOrSupplier;
+                rawValue = pair.rawOrSupplierValue;
             }
-            HValue<?> oldValue = doMutation(key, value, pair.valueCtx.expireTime, pair.valueCtx.priority);
+            HValue<?> oldValue = doMutation(rawKey, rawValue, pair.expireTime, pair.priority);
             return HValue.unwrapData(oldValue);
         }).toList();
     }
 
     @Nullable
-    abstract protected HValue<?> doMutation(String key, Object value, Long expireMillis, OpsTaskPriority priority);
+    abstract protected HValue<?> doMutation(String key, Object rawValue, Long expireMillis, OpsTaskPriority priority);
 
     protected static final class Pair {
         Object keyOrSupplier;
-        ValueCtx valueCtx;
-    }
-
-    protected static class ValueCtx {
-        Object rawOrSupplier;
+        Object rawOrSupplierValue;
         Long expireTime;
         OpsTaskPriority priority;
     }

@@ -1,13 +1,12 @@
 package org.hashdb.ms.compiler;
 
 import org.hashdb.ms.HashDBMSApp;
+import org.hashdb.ms.compiler.exception.CommandCompileException;
 import org.hashdb.ms.compiler.keyword.SystemKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.sys.DBCreateCtx;
 import org.hashdb.ms.compiler.keyword.ctx.sys.SystemCompileCtx;
-import org.hashdb.ms.exception.CommandCompileException;
 import org.hashdb.ms.manager.DBSystem;
-import org.hashdb.ms.net.ConnectionSession;
-import org.hashdb.ms.net.ReadonlyConnectionSession;
+import org.hashdb.ms.net.ConnectionSessionModel;
 import org.hashdb.ms.net.TransportableConnectionSession;
 import org.hashdb.ms.util.JsonService;
 import org.hashdb.ms.util.Lazy;
@@ -23,24 +22,15 @@ public final class SystemCompileStream extends CommonCompileStream<SystemCompile
     private static final Lazy<DBSystem> SYSTEM = Lazy.of(() -> HashDBMSApp.ctx().getBean(DBSystem.class));
 
     /**
-     * 如果该流编译出的指令是读指令, 那么这个 Session 就不为空, 否则为空
-     */
-    private final ReadonlyConnectionSession session;
-
-    /**
      * 只有写命令会有这个编译结果
      */
     private SystemCompileCtx<?> compileResult;
 
-    public ReadonlyConnectionSession getSession() {
-        return session;
-    }
-
-    public SystemCompileStream(ConnectionSession session, String command) {
+    public SystemCompileStream(ConnectionSessionModel session, String command) {
+        super(session);
         if (command.isEmpty()) {
             throw new CommandCompileException("illegal command '" + command + "'");
         }
-        this.session = session;
         this.tokens = extractTokens(command);
         if (tokens.length == 0) {
             throw new CommandCompileException("illegal command '" + command + "'");
@@ -50,8 +40,8 @@ public final class SystemCompileStream extends CommonCompileStream<SystemCompile
         eraseParentheses(tokens);
     }
 
-    private SystemCompileStream(SystemCompileCtx<?> compileResult, ReadonlyConnectionSession session) {
-        this.session = session;
+    private SystemCompileStream(SystemCompileCtx<?> compileResult, ConnectionSessionModel session) {
+        super(session);
         this.compileResult = compileResult;
     }
 
@@ -61,13 +51,17 @@ public final class SystemCompileStream extends CommonCompileStream<SystemCompile
 
     @Override
     public SystemCompileCtx<?> compile() {
+        if (compileResult != null) {
+            return compileResult;
+        }
         SystemCompileCtx<?> compileCtx = SystemKeyword.createCtx(token());
         if (compileCtx == null) {
             return null;
         }
         next();
         compileCtx.compileWithStream(this);
-        return compileCtx;
+        compileResult = compileCtx;
+        return compileResult;
     }
 
     @Override
@@ -91,7 +85,7 @@ public final class SystemCompileStream extends CommonCompileStream<SystemCompile
         }
 
         if (result instanceof Boolean ok) {
-            return ok ? "SUCC" : "FAIL";
+            return ok ? "\"SUCC\"" : "\"FAIL\"";
         }
 
         Object normalizeValue = CompileStream.normalizeValue(result);
@@ -103,7 +97,7 @@ public final class SystemCompileStream extends CommonCompileStream<SystemCompile
         // 一般都是数据库系统的写命令, 所以就扔进队列里执行
         Object result = SYSTEM.get().submitOpsTaskSync(compileResult.executor(session));
         if (result instanceof Boolean ok) {
-            return ok ? "SUCC" : "FAIL";
+            return ok ? "\"SUCC\"" : "\"FAIL\"";
         }
         Object normalizeValue = CompileStream.normalizeValue(result);
         return JsonService.stringfy(normalizeValue == null ? "null" : normalizeValue);

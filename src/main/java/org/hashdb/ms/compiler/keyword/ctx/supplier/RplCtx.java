@@ -20,7 +20,14 @@ public class RplCtx extends WriteSupplierCtx {
     }
 
     @Override
-    protected @Nullable HValue<?> doMutation(String key, Object value, Long expireMillis, OpsTaskPriority priority) {
-        return stream().db().rpl(key, value, expireMillis, priority);
+    protected @Nullable HValue<?> doMutation(String key, Object rawValue, Long expireMillis, OpsTaskPriority priority) {
+        // 如果这个key被原始字符串标记 R()
+        String parameterName = extractOriginalString(key);
+        if (parameterName == null) {
+            return stream().db().rpl(key, rawValue, expireMillis, priority);
+        }
+        // 这个parameterName必须要在编译时校验, 也就是说检查是否是$开头
+        stream().session().setParameter(parameterName, rawValue);
+        return null;
     }
 }

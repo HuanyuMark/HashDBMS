@@ -1,13 +1,14 @@
 package org.hashdb.ms.compiler.keyword.ctx.consumer.list;
 
+import org.hashdb.ms.compiler.exception.CommandCompileException;
+import org.hashdb.ms.compiler.exception.CommandExecuteException;
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.option.LimitOpCtx;
 import org.hashdb.ms.compiler.option.Options;
 import org.hashdb.ms.data.HValue;
-import org.hashdb.ms.data.task.ImmutableChecker;
-import org.hashdb.ms.exception.CommandCompileException;
-import org.hashdb.ms.exception.CommandExecuteException;
+import org.hashdb.ms.data.task.UnmodifiableCollections;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
 import java.util.List;
@@ -30,8 +31,8 @@ public class LReverseCtx extends ListCtx {
     }
 
     @Override
-    public Class<?> supplyType() {
-        return self ? List.class : ImmutableChecker.unmodifiableList;
+    public @NotNull Class<?> supplyType() {
+        return self ? List.class : UnmodifiableCollections.unmodifiableList;
     }
 
     @Override

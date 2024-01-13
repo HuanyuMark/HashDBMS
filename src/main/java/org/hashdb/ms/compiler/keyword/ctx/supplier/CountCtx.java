@@ -1,6 +1,7 @@
 package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Supplier;
 
@@ -17,7 +18,7 @@ public class CountCtx extends SupplierCtx {
     }
 
     @Override
-    public Class<?> supplyType() {
+    public @NotNull Class<?> supplyType() {
         return Integer.class;
     }
 

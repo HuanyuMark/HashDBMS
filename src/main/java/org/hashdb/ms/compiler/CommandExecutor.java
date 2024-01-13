@@ -1,8 +1,8 @@
 package org.hashdb.ms.compiler;
 
 import org.hashdb.ms.exception.DBClientException;
-import org.hashdb.ms.exception.NoDatabaseSelectedException;
-import org.hashdb.ms.net.ConnectionSession;
+import org.hashdb.ms.net.ConnectionSessionModel;
+import org.hashdb.ms.net.exception.NoDatabaseSelectedException;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
@@ -16,14 +16,17 @@ import java.util.concurrent.ExecutionException;
  * @version 0.0.1
  */
 public class CommandExecutor {
-    private final ConnectionSession session;
+    private final ConnectionSessionModel session;
 
-    protected CommandExecutor(ConnectionSession session) {
+//    private final boolean useCache;
+
+    protected CommandExecutor(ConnectionSessionModel session) {
         this.session = session;
+//        this.useCache = session.getLocalCommandCache().getCacheSize() >= 0 && session.getLocalCommandCache().getAliveTime() >= -1;
     }
 
     @Contract(value = "_ -> new", pure = true)
-    public static @NotNull CommandExecutor create(ConnectionSession session) {
+    public static @NotNull CommandExecutor create(ConnectionSessionModel session) {
         return new CommandExecutor(session);
     }
 
@@ -36,6 +39,15 @@ public class CommandExecutor {
      */
     @Deprecated
     public String run(String command) throws ExecutionException {
+        return runWithCache(session, command);
+    }
+
+    public static String runWithCache(ConnectionSessionModel session, String command) {
+        // 从缓存中取出编译结果
+        var transientValue = session.getLocalCommandCache().get(command);
+        if (transientValue != null) {
+            return transientValue.get().run();
+        }
         var compileStream = new SystemCompileStream(session, command);
         var execRes = compileStream.run();
         if (execRes != null) {
@@ -45,7 +57,9 @@ public class CommandExecutor {
         if (db == null) {
             throw NoDatabaseSelectedException.of();
         }
-        var supplierCompileStream = new SupplierCompileStream(db, compileStream.tokens, null, false);
+        var supplierCompileStream = new SupplierCompileStream(session, compileStream.tokens, null, false);
+        // 存入缓存
+        session.getLocalCommandCache().putRaw(command, supplierCompileStream);
         return supplierCompileStream.run();
     }
 
@@ -65,7 +79,7 @@ public class CommandExecutor {
         if (db == null) {
             throw new DBClientException("No database selected");
         }
-        var supplierCompileStream = new SupplierCompileStream(db, compileStream.tokens, null, false);
+        var supplierCompileStream = new SupplierCompileStream(session, compileStream.tokens, null, false);
         return new TransportableCompileResult(supplierCompileStream);
     }
 }

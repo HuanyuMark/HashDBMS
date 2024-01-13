@@ -150,7 +150,7 @@ public enum ConsumerKeyword implements Keyword<ConsumerKeyword> {
         }
 
         @Override
-        public Class<?> supplyType() {
+        public @NotNull Class<?> supplyType() {
             throw new UnsupportedOperationException();
         }
 

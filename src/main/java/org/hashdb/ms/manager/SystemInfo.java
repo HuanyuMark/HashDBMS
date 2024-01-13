@@ -6,7 +6,7 @@ import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.DatabaseInfos;
 import org.hashdb.ms.data.PlainPair;
 import org.hashdb.ms.exception.DBSystemException;
-import org.hashdb.ms.exception.DatabaseInUseException;
+import org.hashdb.ms.net.exception.DatabaseInUseException;
 import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 

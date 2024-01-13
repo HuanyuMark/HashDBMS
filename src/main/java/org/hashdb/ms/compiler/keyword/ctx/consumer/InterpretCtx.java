@@ -1,13 +1,14 @@
 package org.hashdb.ms.compiler.keyword.ctx.consumer;
 
+import org.hashdb.ms.compiler.exception.CommandCompileException;
+import org.hashdb.ms.compiler.exception.CommandExecuteException;
+import org.hashdb.ms.compiler.exception.CommandInterpretException;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
 import org.hashdb.ms.data.DataType;
 import org.hashdb.ms.data.HValue;
-import org.hashdb.ms.exception.CommandCompileException;
-import org.hashdb.ms.exception.CommandExecuteException;
-import org.hashdb.ms.exception.CommandInterpretException;
 import org.hashdb.ms.exception.StopComplieException;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.function.Function;
@@ -33,7 +34,7 @@ public abstract class InterpretCtx extends ConsumerCtx<Object> {
     }
 
     @Override
-    public Class<?> supplyType() {
+    public @NotNull Class<?> supplyType() {
         return Object.class;
     }
 

@@ -5,7 +5,7 @@ import org.hashdb.ms.compiler.keyword.SystemKeyword;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.DatabaseInfos;
 import org.hashdb.ms.data.OpsTask;
-import org.hashdb.ms.net.ReadonlyConnectionSession;
+import org.hashdb.ms.net.ConnectionSessionModel;
 
 /**
  * Date: 2024/1/3 10:53
@@ -17,11 +17,11 @@ public class DBCurrentCtx extends SystemCompileCtx<DatabaseInfos> {
 
     @Override
     OpsTask<DatabaseInfos> doCompile(SystemCompileStream stream) {
-        return executor(stream.getSession());
+        return executor(stream.session());
     }
 
     @Override
-    public OpsTask<DatabaseInfos> executor(ReadonlyConnectionSession session) {
+    public OpsTask<DatabaseInfos> executor(ConnectionSessionModel session) {
         return OpsTask.of(() -> {
             Database database = session.getDatabase();
             if (database == null) {

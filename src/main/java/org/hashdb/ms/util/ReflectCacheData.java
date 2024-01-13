@@ -1,7 +1,6 @@
 package org.hashdb.ms.util;
 
 import lombok.SneakyThrows;
-import org.springframework.cglib.core.ReflectUtils;
 
 import java.lang.reflect.Constructor;
 import java.util.function.Function;
@@ -57,4 +56,22 @@ public class ReflectCacheData<T> {
     public T create() {
         return constructor().newInstance();
     }
+
+
+    public static final ReflectCacheData<?> NULL = new ReflectCacheData<>(Object.class) {
+        @Override
+        public Class<?> clazz() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Constructor<?> constructor() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Object create() {
+            throw new UnsupportedOperationException();
+        }
+    };
 }

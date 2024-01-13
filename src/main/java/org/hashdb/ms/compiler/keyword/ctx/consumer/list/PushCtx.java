@@ -1,15 +1,16 @@
 package org.hashdb.ms.compiler.keyword.ctx.consumer.list;
 
 import org.hashdb.ms.compiler.ConsumerCompileStream;
+import org.hashdb.ms.compiler.exception.CommandCompileException;
+import org.hashdb.ms.compiler.exception.CommandExecuteException;
+import org.hashdb.ms.compiler.exception.IllegalValueException;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
 import org.hashdb.ms.compiler.option.DestructOpCtx;
 import org.hashdb.ms.data.DataType;
 import org.hashdb.ms.data.HValue;
-import org.hashdb.ms.data.task.ImmutableChecker;
-import org.hashdb.ms.exception.CommandCompileException;
-import org.hashdb.ms.exception.CommandExecuteException;
-import org.hashdb.ms.exception.IllegalValueException;
+import org.hashdb.ms.data.task.UnmodifiableCollections;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 import java.util.LinkedList;
@@ -49,10 +50,10 @@ public abstract class PushCtx extends MutableListCtx {
                 doPushRaw(opsTarget, value);
                 continue;
             }
-            Object o = getSuppliedValue(supplierCtx);
+            Object o = exeSupplierCtx(supplierCtx);
             // 如果这个内联命令返回的是一个不存在于数据库中的值 (Immutable), 则全部加入
-            if (ImmutableChecker.unmodifiableList.isAssignableFrom(o.getClass())
-                    || ImmutableChecker.unmodifiableSet.isAssignableFrom(o.getClass())) {
+            if (UnmodifiableCollections.unmodifiableList.isAssignableFrom(o.getClass())
+                    || UnmodifiableCollections.unmodifiableSet.isAssignableFrom(o.getClass())) {
                 @SuppressWarnings("unchecked")
                 Collection<Object> co = (Collection<Object>) o;
                 checkNullInCollection(co);
@@ -69,7 +70,7 @@ public abstract class PushCtx extends MutableListCtx {
                 doPushCollection(opsTarget, co);
                 continue;
             }
-            if (ImmutableChecker.isUnmodifiableCollection(o.getClass())) {
+            if (UnmodifiableCollections.isUnmodifiableCollection(o.getClass())) {
                 throw new CommandExecuteException("keyword '" + name() + "' can not receive data type '" +
                         List.of(DataType.MAP, DataType.ORDERED_MAP, DataType.BITMAP) + "'. " + stream().errToken(supplierCtx.command()));
             }
@@ -122,7 +123,7 @@ public abstract class PushCtx extends MutableListCtx {
     }
 
     @Override
-    public Class<?> supplyType() {
+    public @NotNull Class<?> supplyType() {
         return Integer.class;
     }
 

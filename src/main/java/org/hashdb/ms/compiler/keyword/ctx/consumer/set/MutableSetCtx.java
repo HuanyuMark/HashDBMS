@@ -1,7 +1,7 @@
 package org.hashdb.ms.compiler.keyword.ctx.consumer.set;
 
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
-import org.hashdb.ms.exception.CommandExecuteException;
+import org.hashdb.ms.compiler.exception.CommandExecuteException;
 
 import java.util.Set;
 

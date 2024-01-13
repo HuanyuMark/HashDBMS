@@ -1,9 +1,10 @@
 package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
+import org.hashdb.ms.compiler.exception.CommandCompileException;
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
-import org.hashdb.ms.data.task.ImmutableChecker;
-import org.hashdb.ms.exception.CommandCompileException;
+import org.hashdb.ms.data.task.UnmodifiableCollections;
 import org.hashdb.ms.exception.UnsupportedQueryKey;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -25,8 +26,8 @@ public class TypeCtx extends SupplierCtx {
     }
 
     @Override
-    public Class<?> supplyType() {
-        return ImmutableChecker.unmodifiableList;
+    public @NotNull Class<?> supplyType() {
+        return UnmodifiableCollections.unmodifiableList;
     }
 
     @Override
@@ -42,7 +43,7 @@ public class TypeCtx extends SupplierCtx {
             Object toQuery;
             String key;
             if (keyOrSupplier instanceof SupplierCtx keySupplierCtx) {
-                toQuery = getSuppliedValue(keySupplierCtx);
+                toQuery = exeSupplierCtx(keySupplierCtx);
                 try {
                     key = normalizeToQueryKey(toQuery);
                 } catch (UnsupportedQueryKey e) {

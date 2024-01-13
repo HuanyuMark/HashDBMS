@@ -11,12 +11,13 @@ import java.util.Objects;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public class ImmutableChecker {
+public class UnmodifiableCollections {
     public static final Class<?> unmodifiableCollection;
     public static final Class<?> unmodifiableList;
     public static final Class<?> unmodifiableAbstractList;
     public static final Class<?> unmodifiableSet;
     public static final Class<?> unmodifiableAbstractSet;
+
     static {
         try {
             unmodifiableCollection = Class.forName("java.util.Collections$UnmodifiableCollection");
@@ -43,6 +44,7 @@ public class ImmutableChecker {
         Objects.requireNonNull(clazz);
         return unmodifiableCollection.isAssignableFrom(clazz);
     }
+
     public static boolean isUnmodifiableCollection(List<?> container) {
         Objects.requireNonNull(container);
         return isUnmodifiableCollection(container.getClass());

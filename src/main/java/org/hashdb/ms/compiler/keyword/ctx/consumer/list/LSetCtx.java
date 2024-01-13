@@ -1,14 +1,14 @@
 package org.hashdb.ms.compiler.keyword.ctx.consumer.list;
 
+import org.hashdb.ms.compiler.exception.CommandCompileException;
+import org.hashdb.ms.compiler.exception.CommandExecuteException;
+import org.hashdb.ms.compiler.exception.CommandInterpretException;
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.consumer.*;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
 import org.hashdb.ms.data.HValue;
-import org.hashdb.ms.data.task.ImmutableChecker;
-import org.hashdb.ms.exception.CommandCompileException;
-import org.hashdb.ms.exception.CommandExecuteException;
-import org.hashdb.ms.exception.CommandInterpretException;
+import org.hashdb.ms.data.task.UnmodifiableCollections;
 import org.hashdb.ms.exception.StopComplieException;
 import org.jetbrains.annotations.NotNull;
 
@@ -31,8 +31,8 @@ public class LSetCtx extends MutableListCtx implements Precompilable {
     }
 
     @Override
-    public Class<?> supplyType() {
-        return ImmutableChecker.unmodifiableList;
+    public @NotNull Class<?> supplyType() {
+        return UnmodifiableCollections.unmodifiableList;
     }
 
     @Override
@@ -64,7 +64,7 @@ public class LSetCtx extends MutableListCtx implements Precompilable {
         if (opsTarget instanceof RandomAccess) {
             return indexValuePairs.stream().map(pair -> {
                 if (pair.valueOrSupplier instanceof SupplierCtx vs) {
-                    pair.valueOrSupplier = selectOne(getSuppliedValue(vs));
+                    pair.valueOrSupplier = selectOneValue(exeSupplierCtx(vs));
                 }
                 return opsTarget.set(((Number) (pair.indexOrSupplier)).intValue(), pair.valueOrSupplier);
             }).toList();
@@ -121,7 +121,7 @@ public class LSetCtx extends MutableListCtx implements Precompilable {
     private void replaceValueByItr(List<Object> result, ListIterator<Object> elIter, IndexValuePair pair, Object el) {
         result.add(el);
         if (pair.valueOrSupplier instanceof SupplierCtx vs) {
-            pair.valueOrSupplier = selectOne(getSuppliedValue(vs));
+            pair.valueOrSupplier = selectOneValue(exeSupplierCtx(vs));
         }
         elIter.set(pair.valueOrSupplier);
     }
@@ -149,19 +149,27 @@ public class LSetCtx extends MutableListCtx implements Precompilable {
                 pair.indexOrSupplier = Long.parseLong(token);
                 stream().next();
             } catch (NumberFormatException e) {
-                SupplierCtx indexSupplier = compileInlineCommand();
-                if (indexSupplier == null) {
-                    throw new CommandCompileException("can not parse string '" + token + "' to number." + stream().errToken(token));
+                boolean isParameter = compileParameter((dataType, value) -> {
+                    pair.indexOrSupplier = value;
+                    return false;
+                });
+                if (!isParameter) {
+                    pair.indexOrSupplier = compileInlineCommand();
+                    if (pair.indexOrSupplier == null) {
+                        throw new CommandCompileException("can not parse string '" + token + "' to number." + stream().errToken(token));
+                    }
                 }
             }
             try {
                 compileJsonValues((dataType, value) -> {
                     if (value instanceof SupplierCtx v) {
-                        if (ImmutableChecker.isUnmodifiableCollection(v.supplyType())) {
-                            throw new CommandCompileException("keyword '" + name() + "' can not set immutable return value of supplier command '" + v.command() + "'");
+                        if (!v.storeType().supportClone(value)) {
+                            throw new CommandCompileException("keyword '" + name() + "' can not set value type '" + v.storeType() + "' of '" + v.command() + "'. " + stream().errToken(v.command()));
                         }
+                        pair.valueOrSupplier = value;
+                        return false;
                     }
-                    pair.valueOrSupplier = value;
+                    pair.valueOrSupplier = dataType.clone(value);
                     return false;
                 });
             } catch (ArrayIndexOutOfBoundsException e) {
@@ -206,7 +214,7 @@ public class LSetCtx extends MutableListCtx implements Precompilable {
 
         private long normalizeIndex() {
             if (indexOrSupplier instanceof SupplierCtx indexSupplier) {
-                indexOrSupplier = getSuppliedValue(indexSupplier);
+                indexOrSupplier = exeSupplierCtx(indexSupplier);
             }
             Object indexKey = selectOneKeyOrElseThrow(indexOrSupplier);
             if (!(indexKey instanceof Long index)) {

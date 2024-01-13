@@ -1,4 +1,4 @@
-package org.hashdb.ms.exception;
+package org.hashdb.ms.compiler.exception;
 
 import lombok.experimental.StandardException;
 

@@ -2,7 +2,8 @@ package org.hashdb.ms.compiler.keyword.ctx.supplier;
 
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
 import org.hashdb.ms.compiler.option.LimitOpCtx;
-import org.hashdb.ms.data.task.ImmutableChecker;
+import org.hashdb.ms.data.task.UnmodifiableCollections;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Supplier;
 
@@ -24,8 +25,8 @@ public class KeysCtx extends SupplierCtx {
     }
 
     @Override
-    public Class<?> supplyType() {
-        return ImmutableChecker.unmodifiableCollection;
+    public @NotNull Class<?> supplyType() {
+        return UnmodifiableCollections.unmodifiableCollection;
     }
 
     @Override

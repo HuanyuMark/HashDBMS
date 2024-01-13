@@ -1,11 +1,11 @@
 package org.hashdb.ms.compiler;
 
 import lombok.extern.slf4j.Slf4j;
+import org.hashdb.ms.compiler.exception.CommandCompileException;
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.consumer.ConsumerCtx;
-import org.hashdb.ms.data.Database;
-import org.hashdb.ms.exception.CommandCompileException;
+import org.hashdb.ms.net.ConnectionSessionModel;
 import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 
@@ -23,11 +23,11 @@ public final class ConsumerCompileStream extends DatabaseCompileStream {
 
     private final CompileCtx<?> fatherCompileCtx;
 
-    ConsumerCompileStream(Database database,
+    ConsumerCompileStream(ConnectionSessionModel session,
                           String @NotNull [] childTokens,
                           DatabaseCompileStream fatherSteam,
                           CompileCtx<?> fatherCompileCtx) {
-        super(database, childTokens, fatherSteam);
+        super(session, childTokens, fatherSteam);
         Objects.requireNonNull(fatherCompileCtx);
         this.fatherCompileCtx = fatherCompileCtx;
     }

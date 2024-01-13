@@ -1,12 +1,13 @@
 package org.hashdb.ms.compiler.keyword.ctx.consumer.list;
 
 import org.hashdb.ms.compiler.ConsumerCompileStream;
+import org.hashdb.ms.compiler.exception.CommandCompileException;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
 import org.hashdb.ms.compiler.option.PopOpCtx;
 import org.hashdb.ms.data.HValue;
-import org.hashdb.ms.data.task.ImmutableChecker;
-import org.hashdb.ms.exception.CommandCompileException;
+import org.hashdb.ms.data.task.UnmodifiableCollections;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.stream.Stream;
@@ -33,8 +34,8 @@ public abstract class PopPushCtx extends MutableListCtx {
     }
 
     @Override
-    public Class<?> supplyType() {
-        return ImmutableChecker.unmodifiableList;
+    public @NotNull Class<?> supplyType() {
+        return UnmodifiableCollections.unmodifiableList;
     }
 
     @Override
@@ -42,7 +43,7 @@ public abstract class PopPushCtx extends MutableListCtx {
         var pops = doPop(opsTarget);
         Stream<Object> values = valueOrSuppliers.parallelStream().map(valueOrSupplier -> {
             if (valueOrSupplier instanceof SupplierCtx valueSupplier) {
-                return selectOne(getSuppliedValue(valueSupplier));
+                return selectOneValue(exeSupplierCtx(valueSupplier));
             }
             return valueOrSupplier;
         });

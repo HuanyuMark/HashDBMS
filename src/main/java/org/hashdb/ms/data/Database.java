@@ -1,10 +1,10 @@
 package org.hashdb.ms.data;
 
 import org.hashdb.ms.HashDBMSApp;
+import org.hashdb.ms.compiler.exception.LikePatternSyntaxException;
 import org.hashdb.ms.config.HdbConfig;
 import org.hashdb.ms.exception.IllegalJavaClassStoredException;
 import org.hashdb.ms.exception.IncreaseUnsupportedException;
-import org.hashdb.ms.exception.LikePatternSyntaxException;
 import org.hashdb.ms.exception.ServiceStoppedException;
 import org.hashdb.ms.persistent.PersistentService;
 import org.hashdb.ms.util.AsyncService;

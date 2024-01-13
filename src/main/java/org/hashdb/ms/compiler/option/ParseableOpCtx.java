@@ -9,8 +9,8 @@ package org.hashdb.ms.compiler.option;
 public abstract class ParseableOpCtx<V> implements OptionCtx<V> {
     protected V value;
 
-    public ParseableOpCtx(V value) {
-        this.value = value;
+    public ParseableOpCtx(V defaultValue) {
+        this.value = defaultValue;
     }
 
     public ParseableOpCtx() {
@@ -24,6 +24,6 @@ public abstract class ParseableOpCtx<V> implements OptionCtx<V> {
     @Override
     public String toString() {
         String simpleName = getClass().getSimpleName();
-        return simpleName.substring(0,simpleName.length()-5)+"="+value;
+        return simpleName.substring(0, simpleName.length() - 5) + "=" + value;
     }
 }
