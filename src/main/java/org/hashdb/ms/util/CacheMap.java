@@ -16,6 +16,7 @@ import java.util.Map;
  */
 public class CacheMap<K, V> extends LinkedHashMap<K, CacheValue<K, V>> {
 
+//    private final LinkedHashMap<K, CacheValue<K,V>> base;
     /**
      * 当这个map的元素都被清空时,在{@link  #aliveTime} 毫秒后,通知
      * 监听者, 这个map已经闲置了 {@link #aliveTime} 毫秒
@@ -42,6 +43,7 @@ public class CacheMap<K, V> extends LinkedHashMap<K, CacheValue<K, V>> {
 
     public CacheMap(long aliveTime, int cacheSize, int initialCapacity, float loadFactor) {
         super(initialCapacity, loadFactor, true);
+        assert aliveTime > 0;
         this.aliveTime = aliveTime;
         this.cacheSize = cacheSize;
     }
@@ -51,7 +53,7 @@ public class CacheMap<K, V> extends LinkedHashMap<K, CacheValue<K, V>> {
             throw new NullPointerException();
         }
         CacheValue<K, V> v = new CacheValue<>(key, value, this);
-        v.delay(aliveTime);
+        v.hitAndDelay(aliveTime);
         return super.put(key, v);
     }
 
@@ -59,7 +61,7 @@ public class CacheMap<K, V> extends LinkedHashMap<K, CacheValue<K, V>> {
     public CacheValue<K, V> get(Object key) {
         CacheValue<K, V> res = super.get(key);
         if (res != null) {
-            res.delay((long) (aliveTime * Math.log(Math.E + ++res.hitCount)));
+            res.hitAndDelay(aliveTime);
         }
         return res;
     }

@@ -17,29 +17,14 @@ public class CacheValue<K, Raw> {
     /**
      * 命中次数
      */
-    int hitCount = 0;
-    /**
-     * 毫秒时间戳
-     * -1 永久保存
-     * 其他值, 到这个时间戳删除
-     */
-//        private long expireTimestamp = -1;
+    private int hitCount = 0;
 
     private ScheduledFuture<?> expireExecutor;
-
 
     public CacheValue(K key, Raw value, CacheMap<K, Raw> container) {
         this.key = key;
         this.value = value;
         this.container = container;
-    }
-
-    void delay(long ms) {
-        if (ms <= -1 || ms < System.currentTimeMillis()) {
-            container.remove(key);
-            return;
-        }
-        expireExecutor = AsyncService.setTimeout(() -> container.remove(key), ms);
     }
 
     public Raw get() {
@@ -58,5 +43,9 @@ public class CacheValue<K, Raw> {
             expireExecutor.cancel(true);
             expireExecutor = null;
         }
+    }
+
+    synchronized void hitAndDelay(long ms) {
+        expireExecutor = AsyncService.setTimeout(() -> container.remove(key), (long) (ms * Math.log(Math.E + hitCount++)));
     }
 }
