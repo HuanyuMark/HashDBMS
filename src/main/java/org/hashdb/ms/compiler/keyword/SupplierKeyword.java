@@ -1,7 +1,7 @@
 package org.hashdb.ms.compiler.keyword;
 
 import org.hashdb.ms.compiler.keyword.ctx.supplier.*;
-import org.hashdb.ms.util.ReflectCacheData;
+import org.hashdb.ms.util.ReflectCache;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -29,17 +29,18 @@ public enum SupplierKeyword implements Keyword<SupplierKeyword> {
     TYPE(TypeCtx.class),
     EXPIRE(ExpireCtx.class),
     INC(IncCtx.class),
-    MUL(MulCtx.class);
+    MUL(MulCtx.class),
+    $$PARAMETER_ACCESS$$(ParameterAccessorCtx.class);
 
-    private final ReflectCacheData<? extends SupplierCtx> constructor;
+    private final ReflectCache<? extends SupplierCtx> constructor;
 
     SupplierKeyword(Class<? extends SupplierCtx> keywordCtxClass) {
-        this.constructor = new ReflectCacheData<>(keywordCtxClass);
+        this.constructor = new ReflectCache<>(keywordCtxClass);
     }
 
-    public static ReflectCacheData<? extends SupplierCtx> getCompileCtxConstructor(@NotNull String unknownToken) {
+    public static ReflectCache<? extends SupplierCtx> getCompileCtxConstructor(@NotNull String unknownToken) {
         SupplierKeyword supplierKeyword = typeOfIgnoreCase(unknownToken);
-        if (supplierKeyword == null) {
+        if (supplierKeyword == null || supplierKeyword == $$PARAMETER_ACCESS$$) {
             return null;
         }
         return supplierKeyword.constructor;
@@ -64,7 +65,7 @@ public enum SupplierKeyword implements Keyword<SupplierKeyword> {
 
 
     @Override
-    public ReflectCacheData<? extends SupplierCtx> constructor() {
+    public ReflectCache<? extends SupplierCtx> constructor() {
         return constructor;
     }
 

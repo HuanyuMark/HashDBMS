@@ -74,16 +74,15 @@ public final class SupplierCompileStream extends DatabaseCompileStream {
 
     @Override
     public String run() {
+        // 提交， 进入执行时
         Object result = session.getDatabase().submitOpsTaskSync(compile().compileResult());
         return toString(result);
     }
 
-    /**
-     * 直接使用已生成的 Ctx, 和其执行器, 生成执行结果
-     */
     @Override
     public String runWithExecutor() {
         // 直接使用已生成的编译上下文
+        // 直接提交， 进入执行时
         Object result = session.getDatabase().submitOpsTaskSync(compileResult.get().executeWithStream(this));
         return toString(result);
     }

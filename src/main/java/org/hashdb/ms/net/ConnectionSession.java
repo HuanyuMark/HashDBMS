@@ -3,18 +3,14 @@ package org.hashdb.ms.net;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.compiler.CommandExecutor;
-import org.hashdb.ms.compiler.CompileStream;
 import org.hashdb.ms.compiler.exception.CommandExecuteException;
-import org.hashdb.ms.config.DBServerConfig;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.OpsTask;
 import org.hashdb.ms.exception.DBClientException;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.exception.WorkerInterruptedException;
-import org.hashdb.ms.manager.DBSystem;
 import org.hashdb.ms.net.client.ActHeartbeatMessage;
 import org.hashdb.ms.net.client.AuthenticationMessage;
 import org.hashdb.ms.net.client.CloseMessage;
@@ -29,16 +25,13 @@ import org.hashdb.ms.net.service.HeartbeatMessage;
 import org.hashdb.ms.util.AsyncService;
 import org.hashdb.ms.util.CacheMap;
 import org.hashdb.ms.util.JsonService;
-import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SocketChannel;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
@@ -55,37 +48,11 @@ import java.util.function.Function;
  * @version 0.0.1
  */
 @Slf4j
-public class ConnectionSession implements AutoCloseable, ConnectionSessionModel {
-    private static final Lazy<DBServerConfig> dbServerConfig = Lazy.of(() -> HashDBMSApp.ctx().getBean(DBServerConfig.class));
-
-    private static final Lazy<DBSystem> dbSystem = Lazy.of(() -> HashDBMSApp.ctx().getBean(DBSystem.class));
+public class ConnectionSession extends AbstractConnectionSession implements ConnectionSessionModel {
 
     private String user;
 
     private static final AtomicInteger connectionCount = new AtomicInteger(0);
-
-    /**
-     * 与参数相关的命令都缓存在这里
-     */
-    @Getter
-    private final CacheMap<String, CompileStream<?>> localCommandCache = new CacheMap<>(dbServerConfig.get().getCommandCache().getAliveDuration(), dbServerConfig.get().getCommandCache().getCacheSize());
-
-    /**
-     * 与参数无关的命令缓存在这里
-     */
-    // TODO: 2024/1/13 这个缓存暂时无法实现, 因为所有的命令执行都与当前Session相关, 如果放入全局命令缓存中
-    //上下文(Session)就要更换, 现在的实现是, 所有的编译流都持有一个Session, 子流也持有父流相同的Sesssion
-    // 如果要更换上下文, 就会修改其它使用该缓存的线程的读写
-    private static final CacheMap<String, CompileStream<?>> globalCommandCache = null;
-    @Nullable
-    private Database database;
-
-    /**
-     * 参数名以'$'开头
-     * 参数名-{@link org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx}
-     * 参数名-{@link org.hashdb.ms.data.DataType} 里支持的数据类型的java对象实例
-     */
-    private Map<String, Parameter> parameters;
 
     @Getter
     private final UUID id = UUID.randomUUID();
@@ -127,6 +94,7 @@ public class ConnectionSession implements AutoCloseable, ConnectionSessionModel 
     private volatile boolean closed = false;
 
     {
+        localCommandCache = new CacheMap<>(ConnectionSessionModel.dbServerConfig.get().getCommandCache().getAliveDuration(), ConnectionSessionModel.dbServerConfig.get().getCommandCache().getCacheSize());
         var requestWithNoAuth = new int[]{0};
         Function<Integer, ScheduledFuture<?>> getCloseNoAuthSessionTask = timeout -> AsyncService.setTimeout(() -> {
             if (user != null) {
@@ -181,7 +149,7 @@ public class ConnectionSession implements AutoCloseable, ConnectionSessionModel 
             if (authMsg.getPasswordAuth().password() == null) {
                 return sendAuthFailedMsg();
             }
-            Database userDb = dbSystem.get().getDatabase("user");
+            Database userDb = ConnectionSessionModel.dbSystem.get().getDatabase("user");
             @SuppressWarnings("unchecked")
             Map<String, String> user = (Map<String, String>) HValue.unwrapData(userDb.submitOpsTaskSync(OpsTask.of(() -> userDb.get(authMsg.getPasswordAuth().username()))));
             if (user == null || !user.get("password").equals(authMsg.getPasswordAuth().password())) {
@@ -334,8 +302,8 @@ public class ConnectionSession implements AutoCloseable, ConnectionSessionModel 
             }
         });
 
-        if (connectionCount.getAndIncrement() > dbServerConfig.get().getMaxConnections()) {
-            connectionCount.set(dbServerConfig.get().getMaxConnections());
+        if (connectionCount.getAndIncrement() > ConnectionSessionModel.dbServerConfig.get().getMaxConnections()) {
+            connectionCount.set(ConnectionSessionModel.dbServerConfig.get().getMaxConnections());
             MaxConnectionException exception = new MaxConnectionException("out of max connection");
             try {
                 send(new ErrorMessage(exception));
@@ -355,20 +323,6 @@ public class ConnectionSession implements AutoCloseable, ConnectionSessionModel 
 
     boolean isConnected() {
         return channel.isConnected();
-    }
-
-    @Override
-    public @Nullable Database getDatabase() {
-        return database;
-    }
-
-    public void setDatabase(Database database) {
-        if (database == null) {
-            close();
-        } else {
-            database.use();
-        }
-        this.database = database;
     }
 
     public synchronized void close(CloseMessage message) {
@@ -415,8 +369,8 @@ public class ConnectionSession implements AutoCloseable, ConnectionSessionModel 
         if (aliveChecker != null) {
             return;
         }
-        long heartbeatInterval = dbServerConfig.get().getHeartbeatInterval();
-        int timeoutRetry = dbServerConfig.get().getTimeoutRetry();
+        long heartbeatInterval = ConnectionSessionModel.dbServerConfig.get().getHeartbeatInterval();
+        int timeoutRetry = ConnectionSessionModel.dbServerConfig.get().getTimeoutRetry();
         aliveChecker = AsyncService.setInterval(() -> {
             if (System.currentTimeMillis() - lastGetTime <= heartbeatInterval) {
                 actHeartbeat();
@@ -538,33 +492,4 @@ public class ConnectionSession implements AutoCloseable, ConnectionSessionModel 
         }
     }
 
-    @Override
-    public synchronized Parameter setParameter(String name, Object value) {
-        if (parameters == null) {
-            parameters = new HashMap<>();
-        }
-        Parameter oldValue;
-        if (value == null) {
-            oldValue = parameters.remove(name);
-        } else {
-            oldValue = parameters.put(name, new Parameter(value));
-        }
-        if (oldValue != null) {
-            oldValue.usedCacheCommands.parallelStream().forEach(localCommandCache::remove);
-        }
-        return null;
-    }
-
-    @Override
-    public Parameter getParameter(String name) {
-        if (parameters == null) {
-            return null;
-        }
-        return parameters.get(name);
-    }
-
-    @Override
-    public void useParameter(Parameter parameter, String command) {
-        parameter.usedCacheCommands.add(command);
-    }
 }

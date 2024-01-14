@@ -15,6 +15,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Supplier;
 
 /**
@@ -86,10 +87,18 @@ public abstract class SupplierCtx extends CompileCtx<SupplierCompileStream> {
 
     @NotNull
     public DataType storeType() {
-        if (storeType == null) {
-            storeType = DataType.typeofClass(supplyType());
+        if (storeType != null) {
+            return storeType;
         }
-        return storeType;
+        Set<DataType> supportedDataType = DataType.typeOfCloneable(supplyType());
+        if (supportedDataType == null) {
+            throw new DBSystemException("class '" + getClass() + "' supplyType is '" + supplyType() + "', can not found cloneable DataType");
+        }
+        for (DataType dataType : supportedDataType) {
+            storeType = dataType;
+            return dataType;
+        }
+        throw new DBSystemException("supportedDataType is illegal");
     }
 
     public void setStoreType(@Nullable DataType storeType) {

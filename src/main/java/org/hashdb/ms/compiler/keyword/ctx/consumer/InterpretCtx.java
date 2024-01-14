@@ -94,12 +94,17 @@ public abstract class InterpretCtx extends ConsumerCtx<Object> {
                     getPrecompileResult().values.add(keySupplierCtx);
                 } else {
                     String token = stream().token();
-                    Object customized = compileRawString(token);
-                    if (customized == null) {
+                    if (!compileParameter(true, (dataType, parameter) -> {
                         getPrecompileResult().values.add(token);
-                        stream().next();
-                    } else {
-                        getPrecompileResult().values.add(customized);
+                        return false;
+                    })) {
+                        Object customized = compileRawString(token);
+                        if (customized == null) {
+                            getPrecompileResult().values.add(token);
+                            stream().next();
+                        } else {
+                            getPrecompileResult().values.add(customized);
+                        }
                     }
                 }
             } catch (ArrayIndexOutOfBoundsException e) {

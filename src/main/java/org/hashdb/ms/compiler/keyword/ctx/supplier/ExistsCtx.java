@@ -31,7 +31,7 @@ public class ExistsCtx extends SupplierCtx {
     public Supplier<?> executor() {
         return () -> {
             int[] index = {0};
-            return getCtx.keyOrSupplier.stream().flatMap(keyOfSupplier -> {
+            return getCtx.keyOrSuppliers.stream().flatMap(keyOfSupplier -> {
                 String key;
                 if (keyOfSupplier instanceof SupplierCtx supplierCtx) {
                     try {

@@ -3,7 +3,7 @@ package org.hashdb.ms.data;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.exception.IllegalJavaClassStoredException;
-import org.hashdb.ms.util.ReflectCacheData;
+import org.hashdb.ms.util.ReflectCache;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -57,7 +57,7 @@ public enum DataType {
     ),
     BITMAP(BitSet.class, List.of("BMAP"), BitSet.class, s -> ((BitSet) s).clone()),
     LIST(
-            List.of(ArrayList.class, LinkedList.class),
+            List.of(LinkedList.class, ArrayList.class),
             List.of("LIST", "LS"),
             List.class,
             s -> ((List<?>) s).parallelStream()
@@ -70,11 +70,12 @@ public enum DataType {
 
     private final Set<Class<?>> javaClasses;
     private final Function<Object, Object> cloner;
-    private final ReflectCacheData<?> reflectCacheData;
+    private final ReflectCache<?> reflectCache;
     private final List<String> typeSymbol;
 
     private final Class<?> clonableClass;
 
+    private static Map<Class<?>, Set<DataType>> clonableClassMap;
     private static Map<Class<?>, DataType> javaClassMap;
     private static Map<String, DataType> commandSymbolMap;
 
@@ -82,14 +83,15 @@ public enum DataType {
     static {
         // 配合配置项: dbRamConfig.isStoreLikeJsonSequence()
         javaClassMap.put(LinkedHashMap.class, MAP);
+        clonableClassMap.replaceAll((clonableClass, set) -> Collections.unmodifiableSet(set));
     }
 
-    public static class DataTypeConstructor<T> extends ReflectCacheData<T> {
-        public DataTypeConstructor(Class<? extends T> clazz) {
+    public static class DataTypeInstanceFactory<T> extends ReflectCache<T> {
+        public DataTypeInstanceFactory(Class<? extends T> clazz) {
             super(clazz);
         }
 
-        public DataTypeConstructor(Class<? extends T> clazz, Function<Class<?>, Constructor<?>> constructorFinder) {
+        public DataTypeInstanceFactory(Class<? extends T> clazz, Function<Class<?>, Constructor<?>> constructorFinder) {
             super(clazz, constructorFinder);
         }
     }
@@ -101,6 +103,14 @@ public enum DataType {
         javaClassMap.put(clazz, type);
     }
 
+    private static void registerClonableClass(Class<?> clazz, DataType type) {
+        if (clonableClassMap == null) {
+            clonableClassMap = new LinkedHashMap<>();
+        }
+        Set<DataType> thisTypeSet = clonableClassMap.computeIfAbsent(clazz, k -> new HashSet<>());
+        thisTypeSet.add(type);
+    }
+
     private static void registerCommandSymbol(@NotNull List<String> symbols, DataType type) {
         if (commandSymbolMap == null) {
             commandSymbolMap = new HashMap<>();
@@ -109,13 +119,7 @@ public enum DataType {
     }
 
     DataType(Class<?> clazz, List<String> typeSymbol, Class<?> clonableClass, Function<Object, Object> cloner) {
-        this.javaClasses = Set.of(clazz);
-        this.typeSymbol = typeSymbol;
-        this.clonableClass = clonableClass;
-        registerClass(clazz, this);
-        registerCommandSymbol(typeSymbol, this);
-        reflectCacheData = new ReflectCacheData<>(clazz);
-        this.cloner = cloner;
+        this(List.of(clazz), typeSymbol, clonableClass, cloner);
     }
 
     DataType(@NotNull List<Class<?>> classes, List<String> typeSymbol, Class<?> clonableClass, Function<Object, Object> cloner) {
@@ -124,12 +128,13 @@ public enum DataType {
                 .collect(Collectors.toUnmodifiableSet());
         this.typeSymbol = typeSymbol;
         this.clonableClass = clonableClass;
+        registerClonableClass(clonableClass, this);
         registerCommandSymbol(typeSymbol, this);
         // TODO: 2024/1/12 这里可能有bug, 比如说数字型那里, 要具体情况具体分析, 不存在可以通用第一种class来实例化的情况
-        reflectCacheData = new ReflectCacheData<>(classes.getFirst());
+        reflectCache = new ReflectCache<>(classes.getFirst());
         this.cloner = source -> {
-            if (source == null || !clonableClass.isAssignableFrom(source.getClass())) {
-                throw new DBSystemException("can not clone type '" + (source == null ? null : source.getClass()) + "' expected type is '" + clonableClass + "', value is '" + source + "'");
+            if (source == null || !this.clonableClass.isAssignableFrom(source.getClass())) {
+                throw new DBSystemException("can not clone type '" + (source == null ? null : source.getClass()) + "' expected type is '" + this.clonableClass + "', value is '" + source + "'");
             }
             return cloner.apply(source);
         };
@@ -148,8 +153,7 @@ public enum DataType {
     }
 
     public static @NotNull DataType typeOfRawValue(@Nullable Object instance) throws IllegalJavaClassStoredException {
-        Class<?> javaClass = Objects.requireNonNullElse(instance, Null.VALUE).getClass();
-        return typeofClass(javaClass);
+        return typeofClass(instance == null ? null : instance.getClass());
     }
 
     public static @NotNull DataType typeofClass(Class<?> clazz) throws IllegalJavaClassStoredException {
@@ -166,12 +170,32 @@ public enum DataType {
         return commandSymbolMap.get(symbol.toUpperCase());
     }
 
+    public static Set<DataType> typeOfCloneable(Class<?> cloneableClass) {
+        Objects.requireNonNull(cloneableClass);
+        return findCloneableDataType(cloneableClass, null);
+    }
+
+    static Set<DataType> findCloneableDataType(Class<?> thisClass, Class<?> sonClass) {
+        Set<DataType> dataTypes = clonableClassMap.get(thisClass);
+        if (dataTypes != null) {
+            if (sonClass != null) {
+                clonableClassMap.put(sonClass, dataTypes);
+            }
+            return dataTypes;
+        }
+        Class<?> superclass = thisClass.getSuperclass();
+        if (superclass == Object.class || superclass == null) {
+            return null;
+        }
+        return findCloneableDataType(superclass, thisClass);
+    }
+
     public Set<Class<?>> javaClasses() {
         return javaClasses;
     }
 
-    public ReflectCacheData<?> reflect() {
-        return reflectCacheData;
+    public ReflectCache<?> reflect() {
+        return reflectCache;
     }
 
     public Collection<String> commandSymbols() {
@@ -224,7 +248,7 @@ public enum DataType {
         return cloner.apply(source);
     }
 
-    public boolean supportClone(Object source) {
-        return source != null && clonableClass.isAssignableFrom(source.getClass());
+    public boolean unsupportedClone(Object source) {
+        return source == null || !clonableClass.isAssignableFrom(source.getClass());
     }
 }

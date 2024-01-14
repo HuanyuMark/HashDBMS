@@ -1,7 +1,7 @@
 package org.hashdb.ms.compiler.keyword;
 
 import org.hashdb.ms.compiler.keyword.ctx.sys.*;
-import org.hashdb.ms.util.ReflectCacheData;
+import org.hashdb.ms.util.ReflectCache;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,10 +17,10 @@ public enum SystemKeyword implements Keyword<SystemKeyword> {
     DBSHOW(DBShowCtx.class),
     DBCURRENT(DBCurrentCtx.class);
 
-    private final ReflectCacheData<? extends SystemCompileCtx<?>> constructor;
+    private final ReflectCache<? extends SystemCompileCtx<?>> constructor;
 
     SystemKeyword(Class<? extends SystemCompileCtx<?>> clazz) {
-        this.constructor = new ReflectCacheData<>(clazz);
+        this.constructor = new ReflectCache<>(clazz);
     }
 
     public static @Nullable SystemCompileCtx<?> createCtx(String unknownToken) {
@@ -47,7 +47,7 @@ public enum SystemKeyword implements Keyword<SystemKeyword> {
     }
 
     @Override
-    public ReflectCacheData<? extends SystemCompileCtx<?>> constructor() {
+    public ReflectCache<? extends SystemCompileCtx<?>> constructor() {
         return constructor;
     }
 }

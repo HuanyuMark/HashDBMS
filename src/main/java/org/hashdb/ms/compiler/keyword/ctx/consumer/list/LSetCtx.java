@@ -42,10 +42,11 @@ public class LSetCtx extends MutableListCtx implements Precompilable {
 
     @Override
     protected void beforeCompile() {
-        if (indexValuePairs.isEmpty()) {
-            doCompile();
-            beforeCompileInlineCommand();
+        if (!indexValuePairs.isEmpty()) {
+            return;
         }
+        doCompile();
+        beforeCompileInlineCommand();
     }
 
     @Override
@@ -149,7 +150,7 @@ public class LSetCtx extends MutableListCtx implements Precompilable {
                 pair.indexOrSupplier = Long.parseLong(token);
                 stream().next();
             } catch (NumberFormatException e) {
-                boolean isParameter = compileParameter((dataType, value) -> {
+                boolean isParameter = compileParameter(false, (dataType, value) -> {
                     pair.indexOrSupplier = value;
                     return false;
                 });
@@ -163,7 +164,7 @@ public class LSetCtx extends MutableListCtx implements Precompilable {
             try {
                 compileJsonValues((dataType, value) -> {
                     if (value instanceof SupplierCtx v) {
-                        if (!v.storeType().supportClone(value)) {
+                        if (v.storeType().unsupportedClone(v.supplyType())) {
                             throw new CommandCompileException("keyword '" + name() + "' can not set value type '" + v.storeType() + "' of '" + v.command() + "'. " + stream().errToken(v.command()));
                         }
                         pair.valueOrSupplier = value;

@@ -80,6 +80,10 @@ public interface CompileStream<R extends CompilerNode> {
 
     boolean isWrite();
 
+    default String rerun() {
+        return run();
+    }
+
     default String runWithExecutor() {
         return null;
     }

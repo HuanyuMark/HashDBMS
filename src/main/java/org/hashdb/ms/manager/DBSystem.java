@@ -11,6 +11,7 @@ import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.net.exception.DatabaseClashException;
 import org.hashdb.ms.net.exception.NotFoundDatabaseException;
 import org.hashdb.ms.persistent.PersistentService;
+import org.hashdb.ms.util.AsyncService;
 import org.hashdb.ms.util.BlockingQueueTaskConsumer;
 import org.hashdb.ms.util.Lazy;
 import org.hashdb.ms.util.TimeCounter;
@@ -206,13 +207,18 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
         persistentService.persist(systemInfo);
         if (log.isTraceEnabled()) {
             log.trace("system info storing success");
+            log.info("storing database ...");
         }
         systemInfo.getDatabaseInfosMap().values().forEach(lazyDb -> {
             if (!lazyDb.isCached()) {
                 return;
             }
-            // TODO: 2024/1/4 这里应该要等待数据库的任务执行线程将任务都消费完毕后,再持久化
-            Database db = lazyDb.get();
+            var db = lazyDb.get();
+            var reportTimeout = AsyncService.setTimeout(() -> {
+                log.warn("Timed out waiting for the database {} to complete all tasks", db);
+            }, 10_000);
+            db.stopConsumeOpsTask().join();
+            reportTimeout.cancel(true);
             persistentService.persist(db);
             if (log.isTraceEnabled()) {
                 log.trace("db '{}' storing success", db);

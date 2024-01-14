@@ -8,7 +8,6 @@ import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 /**
@@ -20,11 +19,11 @@ import java.util.function.Supplier;
 public class BlockingQueueTaskConsumer implements TaskConsumer {
 
     protected final BlockingDeque<OpsTask<?>> opsTaskDeque = new LinkedBlockingDeque<>();
-    protected final AtomicReference<CompletableFuture<?>> opsTaskConsumeLoop = new AtomicReference<>();
+    protected CompletableFuture<?> opsTaskConsumeLoop;
     protected final AtomicBoolean receiveNewTask = new AtomicBoolean(false);
 
     @Override
-    public CompletableFuture<Boolean> startConsumeOpsTask() {
+    public synchronized CompletableFuture<Boolean> startConsumeOpsTask() {
         // 正在接收新任务，则直接 返回启动成功
         if (receiveNewTask.get()) {
             return CompletableFuture.completedFuture(true);
@@ -34,8 +33,8 @@ public class BlockingQueueTaskConsumer implements TaskConsumer {
             receiveNewTask.set(true);
             future.complete(true);
             while (true) {
-                if (opsTaskDeque.size() == 0 && receiveNewTask.compareAndSet(false, false)) {
-                    opsTaskConsumeLoop.set(null);
+                if (opsTaskDeque.size() == 0 && !receiveNewTask.get()) {
+                    opsTaskConsumeLoop = null;
                     break;
                 }
                 OpsTask<?> task;
@@ -50,7 +49,8 @@ public class BlockingQueueTaskConsumer implements TaskConsumer {
         // 需要接收新任务
         // 消费线程在running, 就不开启新消费任务, 返回启动成功
         // 不在running, 就开启一个新消费任务
-        if (opsTaskConsumeLoop.compareAndSet(null, opsTaskConsumerSupplier.get())) {
+        if (opsTaskConsumeLoop == null) {
+            opsTaskConsumeLoop = opsTaskConsumerSupplier.get();
             return future;
         }
         return CompletableFuture.completedFuture(true);
@@ -58,16 +58,13 @@ public class BlockingQueueTaskConsumer implements TaskConsumer {
 
     @Override
     public CompletableFuture<Boolean> stopConsumeOpsTask() {
-        if (!receiveNewTask.compareAndSet(true, false)) {
+        receiveNewTask.compareAndSet(true, false);
+        if (opsTaskConsumeLoop == null) {
             return CompletableFuture.completedFuture(true);
         }
         // 避免消费者线程一直卡在 take() 方法
         opsTaskDeque.add(OpsTask.empty());
-        CompletableFuture<?> consumeLoopResult = opsTaskConsumeLoop.get();
-        if (consumeLoopResult == null) {
-            return CompletableFuture.completedFuture(true);
-        }
-        return consumeLoopResult.thenApply(v -> true);
+        return opsTaskConsumeLoop.thenApply(v -> true);
     }
 
     /**
@@ -76,11 +73,10 @@ public class BlockingQueueTaskConsumer implements TaskConsumer {
     public boolean shutdownConsumer() {
         opsTaskDeque.clear();
         receiveNewTask.set(false);
-        CompletableFuture<?> oldLoop = opsTaskConsumeLoop.getAndSet(null);
-        if (oldLoop == null) {
+        if (opsTaskConsumeLoop == null) {
             return true;
         }
-        oldLoop.cancel(true);
+        opsTaskConsumeLoop.cancel(true);
         return true;
     }
 

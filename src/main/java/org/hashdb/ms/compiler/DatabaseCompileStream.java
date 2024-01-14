@@ -10,6 +10,8 @@ import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -23,10 +25,12 @@ public abstract sealed class DatabaseCompileStream extends CommonCompileStream<C
 
     protected DatabaseCompileStream fatherStream;
 
+    private List<Runnable> rerunCbs;
+
     /**
      * 构造主流
      *
-     * @param session
+     * @param session 会话
      * @param command 原始命令
      */
     protected DatabaseCompileStream(ConnectionSessionModel session, @NotNull String command) {
@@ -42,7 +46,7 @@ public abstract sealed class DatabaseCompileStream extends CommonCompileStream<C
     /**
      * 构造子流
      *
-     * @param session         数据库
+     * @param session         会话
      * @param childTokens     子 tokens
      * @param fatherStream    父 流
      * @param shouldNormalize 是否需要规范化
@@ -118,10 +122,12 @@ public abstract sealed class DatabaseCompileStream extends CommonCompileStream<C
         return fatherStream.command();
     }
 
+    @NotNull
     public Database db() {
         return session.getDatabase();
     }
 
+    @NotNull
     public DatabaseCompileStream rootStream() {
         return fatherStream == null ? this : fatherStream.rootStream();
     }
@@ -136,5 +142,23 @@ public abstract sealed class DatabaseCompileStream extends CommonCompileStream<C
         if (fatherStream != null) {
             fatherStream.toWrite();
         }
+    }
+
+    /**
+     * @param cb 在命令被重运行时的回调
+     */
+    public void onRerun(Runnable cb) {
+        if (rerunCbs == null) {
+            rerunCbs = new LinkedList<>();
+        }
+        rerunCbs.add(cb);
+    }
+
+    @Override
+    public String rerun() {
+        if (rerunCbs != null) {
+            rerunCbs.parallelStream().forEach(Runnable::run);
+        }
+        return run();
     }
 }

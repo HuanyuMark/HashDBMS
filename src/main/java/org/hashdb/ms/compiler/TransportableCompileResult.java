@@ -17,12 +17,16 @@ public class TransportableCompileResult {
     @JsonProperty
     private boolean write;
 
+    /**
+     * 当为空时， 说明发送端认为接收端已经缓存过该命令， 不需要传输编译结果
+     * 让接收端直接使用接收端的命令缓存运行
+     */
     @Nullable
     @JsonProperty
     private CompilerNode compilerCtx;
-    @Nullable
+    @NotNull
     @JsonProperty
-    private String cachedCommand;
+    private String command;
     /**
      * 不参与网络传输, 如果这个CompileResult是在本地生成, 则不为空
      */
@@ -36,18 +40,17 @@ public class TransportableCompileResult {
     protected TransportableCompileResult() {
     }
 
-    protected TransportableCompileResult(@NotNull CompileStream<?> stream) {
-        this.write = stream.isWrite();
-        compilerCtx = stream.compile();
-        this.stream = stream;
-    }
-
     /**
-     * @param cachedCommand 当前服务器下被缓存的命令
+     * @param stream       命令编译流
+     * @param assumeCached 预测接收端是否缓存了该命令
      */
-    protected TransportableCompileResult(String cachedCommand, CompileStream<?> stream) {
+    protected TransportableCompileResult(@NotNull CompileStream<?> stream, boolean assumeCached) {
         this.write = stream.isWrite();
+        if (!assumeCached) {
+            compilerCtx = stream.compile();
+        }
         this.stream = stream;
+        this.command = stream.command();
     }
 
     /**
@@ -59,12 +62,8 @@ public class TransportableCompileResult {
         // 如果其它服务器没穿该值, 说明在那个服务器里, 这条命令被缓存了并
         // 假定收到这个这个编译结果的服务器也知道
         if (compilerCtx == null) {
-            if (cachedCommand == null) {
-                throw new DBSystemException("cached command is required");
-            }
-            return CommandExecutor.runWithCache(session, cachedCommand);
+            return CommandExecutor.runWithCache(session, command);
         }
-
         if (compilerCtx instanceof SupplierCtx supplierCtx) {
             return SupplierCompileStream.createWithTransportable(supplierCtx, session).runWithExecutor();
         }

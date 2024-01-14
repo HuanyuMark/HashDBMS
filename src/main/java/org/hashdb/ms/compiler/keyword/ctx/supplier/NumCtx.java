@@ -27,7 +27,7 @@ import java.util.function.Supplier;
  */
 public abstract class NumCtx extends SupplierCtx {
 
-    private final List<ArithmeticCtx> arithmeticCtxes = new LinkedList<>();
+    private final List<ArithmeticPair> arithmeticPairs = new LinkedList<>();
 
     @Override
     protected Supplier<?> compile() throws StopComplieException {
@@ -38,27 +38,24 @@ public abstract class NumCtx extends SupplierCtx {
 
     @Override
     public Supplier<?> executor() {
-        return () -> arithmeticCtxes.stream()
-                .map(arithmeticCtx -> {
+        return () -> arithmeticPairs.stream()
+                .map(arithmeticPair -> {
                     String key;
-                    if (arithmeticCtx.keyOrSupplier instanceof SupplierCtx keySupplier) {
-                        arithmeticCtx.keyOrSupplier = exeSupplierCtx(keySupplier);
+                    if (arithmeticPair.keyOrSupplier instanceof SupplierCtx keySupplier) {
                         try {
-                            key = normalizeToQueryKey(arithmeticCtx.keyOrSupplier);
+                            key = normalizeToQueryKey(exeSupplierCtx(keySupplier));
                         } catch (UnsupportedQueryKey e) {
                             throw UnsupportedQueryKey.of(name(), keySupplier);
                         }
                     } else {
-                        key = ((String) arithmeticCtx.keyOrSupplier);
-                    }
-                    if (arithmeticCtx.stepOrSupplier instanceof SupplierCtx stepSupplier) {
-                        arithmeticCtx.stepOrSupplier = exeSupplierCtx(stepSupplier);
+                        key = ((String) arithmeticPair.keyOrSupplier);
                     }
                     return doArithmeticOps(
                             key,
-                            arithmeticCtx.stepOrSupplier,
-                            arithmeticCtx.millis,
-                            arithmeticCtx.priority
+                            arithmeticPair.stepOrSupplier instanceof SupplierCtx stepSupplier ?
+                                    exeSupplierCtx(stepSupplier) : arithmeticPair.stepOrSupplier,
+                            arithmeticPair.millis,
+                            arithmeticPair.priority
                     );
                 })
                 .toList();
@@ -77,55 +74,85 @@ public abstract class NumCtx extends SupplierCtx {
             } catch (ArrayIndexOutOfBoundsException e) {
                 return;
             }
-
-            ArithmeticCtx arithmeticCtx = new ArithmeticCtx();
+            // inc key step
+            ArithmeticPair arithmeticPair = new ArithmeticPair();
+            // inc (inlineCommand)
             SupplierCtx keySupplier = compileInlineCommand();
             if (keySupplier != null) {
-                arithmeticCtx.keyOrSupplier = keySupplier;
+                arithmeticPair.keyOrSupplier = keySupplier;
                 token = stream().token();
             } else {
-                arithmeticCtx.keyOrSupplier = token;
-                try {
-                    token = stream().nextToken();
-                } catch (ArrayIndexOutOfBoundsException e) {
-                    throw new CommandCompileException("keyword '" + name() + "' require key-step pair to operate a number");
+                // inc $param
+                if (!compileParameter(false, (dataType, parameter) -> {
+                    if (dataType != null) {
+                        throw new CommandCompileException("the key to query should be a raw string of an legal inline command");
+                    }
+                    arithmeticPair.keyOrSupplier = parameter;
+                    return false;
+                })) {
+                    // inc rawStringKey
+                    arithmeticPair.keyOrSupplier = token;
+                    try {
+                        token = stream().nextToken();
+                    } catch (ArrayIndexOutOfBoundsException e) {
+                        throw new CommandCompileException("keyword '" + name() + "' require key-step pair to operate a number");
+                    }
                 }
             }
+            // inc key step
             SupplierCtx stepSupplier;
             try {
                 stepSupplier = compileInlineCommand();
             } catch (ArrayIndexOutOfBoundsException e) {
                 throw new CommandCompileException("keyword '" + name() + "' require key-step pair to operate a number");
             }
+            // inc key (inlineCommand)
             if (stepSupplier != null) {
-                arithmeticCtx.stepOrSupplier = stepSupplier;
+                arithmeticPair.stepOrSupplier = stepSupplier;
             } else {
-                if (!token.matches("-?(\\d+)?(\\.)?(\\d+)?") || ".".equals(token) || token.isEmpty()) {
-                    throw new IncreaseUnsupportedException("can not parse step '" + token + "' to number." + stream().errToken(token));
+                // inc key $param
+                boolean isParameter = compileParameter(false, (dataType, parameter) -> {
+                    if (dataType != null && dataType != DataType.STRING && dataType != DataType.NUMBER) {
+                        throw new CommandCompileException("can not parse parameter '' to number." + stream().errToken(parameter.getParameterName()));
+                    }
+                    arithmeticPair.stepOrSupplier = parameter;
+                    return false;
+                });
+
+                // 这里为什么不预先转为Number对象呢？
+                // inc key rowStepString
+                if (!isParameter) {
+                    if (!token.matches("-?(\\d+)?(\\.)?(\\d+)?") || ".".equals(token) || token.isEmpty()) {
+                        throw new IncreaseUnsupportedException("can not parse step '" + token + "' to number." + stream().errToken(token));
+                    }
+                    arithmeticPair.stepOrSupplier = token;
                 }
-                arithmeticCtx.stepOrSupplier = token;
                 stream().next();
             }
+            // inc key step [-options]
             compileOptions(op -> {
                 if (op instanceof ExpireOpCtx expireCtx) {
-                    arithmeticCtx.millis = expireCtx.value();
+                    // inc key step -ep=millis
+                    arithmeticPair.millis = expireCtx.value();
                 } else if (op instanceof HExpireOpCtx expireCtx) {
-                    arithmeticCtx.millis = expireCtx.value();
-                    arithmeticCtx.priority = OpsTaskPriority.HIGH;
+                    // inc key step -hep=millis
+                    arithmeticPair.millis = expireCtx.value();
+                    arithmeticPair.priority = OpsTaskPriority.HIGH;
                 } else if (op instanceof LExpireOpCtx expireCtx) {
-                    arithmeticCtx.millis = expireCtx.value();
-                    arithmeticCtx.priority = OpsTaskPriority.LOW;
+                    // inc key step -lep=millis
+                    arithmeticPair.millis = expireCtx.value();
+                    arithmeticPair.priority = OpsTaskPriority.LOW;
                 }
                 addOption(op);
                 return true;
             });
-            arithmeticCtxes.add(arithmeticCtx);
+            arithmeticPairs.add(arithmeticPair);
         }
     }
 
     @Override
     protected void beforeCompilePipe() {
-        if (arithmeticCtxes.isEmpty()) {
+        if (arithmeticPairs.isEmpty()) {
             throw new IllegalJavaClassStoredException("keyword '" + name() + "' require at lease one key-step pair to operate a number");
         }
     }
@@ -198,7 +225,7 @@ public abstract class NumCtx extends SupplierCtx {
 
     abstract Number newValue(Number n1, Number n2);
 
-    protected static class ArithmeticCtx {
+    protected static class ArithmeticPair {
         Object keyOrSupplier;
         Object stepOrSupplier;
         Long millis;

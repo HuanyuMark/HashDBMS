@@ -4,6 +4,7 @@ import org.hashdb.ms.compiler.SupplierCompileStream;
 import org.hashdb.ms.compiler.exception.CommandCompileException;
 import org.hashdb.ms.compiler.option.LongOpCtx;
 import org.hashdb.ms.compiler.option.Options;
+import org.hashdb.ms.data.DataType;
 import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.OpsTaskPriority;
 import org.hashdb.ms.data.task.UnmodifiableCollections;
@@ -54,13 +55,19 @@ public abstract class WriteSupplierCtx extends SupplierCtx {
                 return;
             }
             Pair pair = new Pair();
-
             // 有可能是内联命令
-            SupplierCtx keySupplier = compileInlineCommand();
+            SupplierCtx keySupplier;
+            try {
+                keySupplier = compileInlineCommand();
+            } catch (ArrayIndexOutOfBoundsException e) {
+                stream().prev();
+                String errorToken = stream().token();
+                throw new CommandCompileException("keyword '" + name() + "' require key-value pair to write." + stream().errToken(errorToken));
+            }
             if (keySupplier != null) {
                 pair.keyOrSupplier = keySupplier;
             } else {
-                boolean isParameter = compileParameter((dataType, value) -> {
+                boolean isParameter = compileParameter(false, (dataType, value) -> {
                     pair.keyOrSupplier = value;
                     return false;
                 });
@@ -86,16 +93,11 @@ public abstract class WriteSupplierCtx extends SupplierCtx {
             }
 
             if (valueSupplier != null) {
-//                if (!DataType.canStore(valueSupplier.supplyType())) {
-//                    throw new CommandExecuteException("can not store the return type of inline command: '" +
-//                            valueSupplier.command()
-//                            + "'." +stream().errToken(valueSupplier.command()));
-//                }
                 pair.rawOrSupplierValue = valueSupplier;
             } else {
                 try {
-                    boolean isParameter = compileParameter((dataType, value) -> {
-                        if (value instanceof SupplierCtx inlineCmd && !inlineCmd.storeType().supportClone(inlineCmd.supplyType())) {
+                    boolean isParameter = compileParameter(true, (dataType, value) -> {
+                        if (value instanceof SupplierCtx inlineCmd && inlineCmd.storeType().unsupportedClone(inlineCmd.supplyType())) {
                             throw new CommandCompileException("can not writer value type '" + inlineCmd.storeType() + "' of '" + inlineCmd.command() + "'");
                         }
                         pair.rawOrSupplierValue = value;
@@ -105,6 +107,7 @@ public abstract class WriteSupplierCtx extends SupplierCtx {
                         compileJsonValues((dataType, value) -> {
                             if (dataType != null) {
                                 pair.rawOrSupplierValue = dataType.clone(value);
+                                pair.storeType = dataType;
                                 return false;
                             }
                             pair.rawOrSupplierValue = value;
@@ -173,5 +176,6 @@ public abstract class WriteSupplierCtx extends SupplierCtx {
         Object rawOrSupplierValue;
         Long expireTime;
         OpsTaskPriority priority;
+        DataType storeType;
     }
 }

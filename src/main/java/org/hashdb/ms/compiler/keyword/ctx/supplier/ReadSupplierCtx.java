@@ -4,7 +4,6 @@ import org.hashdb.ms.compiler.exception.CommandCompileException;
 import org.hashdb.ms.compiler.exception.LikePatternSyntaxException;
 import org.hashdb.ms.compiler.keyword.KeywordModifier;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
-import org.hashdb.ms.compiler.option.LimitOpCtx;
 import org.hashdb.ms.data.task.UnmodifiableCollections;
 import org.hashdb.ms.exception.UnsupportedQueryKey;
 import org.jetbrains.annotations.NotNull;
@@ -25,9 +24,9 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
     /**
      * 为什么要用Object?
      * 因为这里的key由要么已经被编译生成的
-     * 既可能是字符串,也可能是 OpsTask (这儿些Task是由内联)
+     * 既可能是字符串,也可能是 SupplierCtx (这儿些Ctx是由内联命令(子流)编译而成)
      */
-    protected final List<Object> keyOrSupplier = new LinkedList<>();
+    protected final List<Object> keyOrSuppliers = new LinkedList<>();
     protected boolean like = false;
 
     @Override
@@ -38,10 +37,9 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
     @Override
     protected Supplier<?> compile() {
         doCompile();
-        if (keyOrSupplier.isEmpty()) {
+        if (keyOrSuppliers.isEmpty()) {
             throw new CommandCompileException("keyword '" + name() + "' require at lease one key to query");
         }
-        var limitOption = getOption(LimitOpCtx.class);
         return executor();
     }
 
@@ -50,7 +48,7 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
         return () -> {
             if (like) {
                 // 需要模糊匹配
-                var patternOrSupplier = keyOrSupplier.getFirst();
+                var patternOrSupplier = keyOrSuppliers.getFirst();
                 Pattern pattern;
                 if (patternOrSupplier instanceof SupplierCtx supplierCtx) {
                     // 有内联命令, 则执行其命令, 获取返回结果
@@ -65,7 +63,7 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
                 return doQueryLike(pattern);
             }
             // 需要批量查询
-            return keyOrSupplier.stream().map(keyOrSupplier -> {
+            return keyOrSuppliers.stream().map(keyOrSupplier -> {
                 String key;
                 if (keyOrSupplier instanceof SupplierCtx supplierCtx) {
                     // 有内联命令, 则执行其命令, 获取返回结果
@@ -109,7 +107,7 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
             // 如果从这个token开始, 可以编译为一个内联命令, 则将token更新为内联命令执行完的token的下一个token
             CompileCtx<?> inlineSupplierCtx = compileInlineCommand();
             if (inlineSupplierCtx != null) {
-                keyOrSupplier.add(inlineSupplierCtx);
+                keyOrSuppliers.add(inlineSupplierCtx);
                 try {
                     token = stream().token();
                 } catch (ArrayIndexOutOfBoundsException e) {
@@ -129,7 +127,7 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
 
             // 判断是不是配置项, 如果是, 则从现在的token开始, 将所有配置项编译完成后退出
             if (compileOptions(optionCtx -> {
-                if (keyOrSupplier.isEmpty()) {
+                if (keyOrSuppliers.isEmpty()) {
                     throw new CommandCompileException("key '" + name() + "' require key name to query." + stream().errToken(stream().token()));
                 }
                 addOption(optionCtx);
@@ -141,12 +139,20 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
                 try {
                     // 提前编译, 并且校验语法错误
                     Pattern pattern = Pattern.compile(token);
-                    keyOrSupplier.add(pattern);
+                    keyOrSuppliers.add(pattern);
                 } catch (PatternSyntaxException e) {
                     throw new LikePatternSyntaxException(e);
                 }
             } else {
-                keyOrSupplier.add(token);
+                if (!compileParameter(false, (dataType, parameter) -> {
+                    if (dataType != null) {
+                        throw new CommandCompileException("the key to query should be a raw string or an legal inline command." + stream().errToken(parameter.getParameterName()));
+                    }
+                    keyOrSuppliers.add(parameter);
+                    return false;
+                })) {
+                    keyOrSuppliers.add(token);
+                }
             }
             // 下一个token
             stream().next();
@@ -155,7 +161,7 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
 
     @Override
     protected void beforeCompilePipe() {
-        if (keyOrSupplier.isEmpty()) {
+        if (keyOrSuppliers.isEmpty()) {
             throw new CommandCompileException("key '" + name() + "' require key name to query." + stream().errToken(stream().token()));
         }
     }
@@ -197,6 +203,4 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
 //        }
         like = true;
     }
-
-
 }

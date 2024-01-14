@@ -46,7 +46,7 @@ public class CommandExecutor {
         // 从缓存中取出编译结果
         var transientValue = session.getLocalCommandCache().get(command);
         if (transientValue != null) {
-            return transientValue.get().run();
+            return transientValue.get().rerun();
         }
         var compileStream = new SystemCompileStream(session, command);
         var execRes = compileStream.run();
@@ -70,16 +70,23 @@ public class CommandExecutor {
      * @return 可传输的编译结果
      */
     public TransportableCompileResult compile(String command) {
+        // 查询缓存
+        var transientValue = session.getLocalCommandCache().get(command);
+        if (transientValue != null) {
+            return new TransportableCompileResult(transientValue.get(), true);
+        }
         var compileStream = new SystemCompileStream(session, command);
         var systemCompileCtx = compileStream.compile();
         if (systemCompileCtx != null) {
-            return new TransportableCompileResult(compileStream);
+            return new TransportableCompileResult(compileStream, false);
         }
         var db = session.getDatabase();
         if (db == null) {
             throw new DBClientException("No database selected");
         }
         var supplierCompileStream = new SupplierCompileStream(session, compileStream.tokens, null, false);
-        return new TransportableCompileResult(supplierCompileStream);
+        // 放入缓存
+        session.getLocalCommandCache().putRaw(command, supplierCompileStream);
+        return new TransportableCompileResult(supplierCompileStream, false);
     }
 }

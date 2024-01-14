@@ -16,13 +16,18 @@ import java.util.List;
  */
 @StandardException
 public class UnsupportedQueryKey extends DBClientException {
+
     @Contract("_ -> new")
     public static @NotNull UnsupportedQueryKey of(List<?> unsupportedKeys) {
-        return new UnsupportedQueryKey("can not query key of these value: " + JsonService.stringfy(unsupportedKeys));
+        return of(unsupportedKeys, null);
+    }
+
+    public static @NotNull UnsupportedQueryKey of(List<?> unsupportedKeys, String errorMsg) {
+        return new UnsupportedQueryKey("can not query key of these value: " + JsonService.stringfy(unsupportedKeys) + "." + (errorMsg == null ? "" : errorMsg));
     }
 
     public static UnsupportedQueryKey of(Enum<?> keyword, SupplierCtx supplierCtx) {
-        return new UnsupportedQueryKey("keyword '"+keyword.name()+"' require string return type to query, but " +
-                "receive a illegal type from supplier command '"+supplierCtx.command()+"'");
+        return new UnsupportedQueryKey("keyword '" + keyword.name() + "' require string return type to query, but " +
+                "receive a illegal type from supplier command '" + supplierCtx.command() + "'");
     }
 }

@@ -2,8 +2,7 @@ package org.hashdb.ms.compiler.option;
 
 import org.hashdb.ms.compiler.DatabaseCompileStream;
 import org.hashdb.ms.compiler.exception.CommandCompileException;
-import org.hashdb.ms.util.Lazy;
-import org.hashdb.ms.util.ReflectCacheData;
+import org.hashdb.ms.util.ReflectCache;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -50,13 +49,13 @@ public enum Options {
     public final String fullName;
 
     Options(Class<? extends OptionCtx<?>> optionClass, List<String> aliases) {
-        this.optionCache = new OptionCache(this, optionClass);
+        this.optionCache = new OptionCache(optionClass);
         addAlias(aliases, this);
         fullName = name();
     }
 
     Options(String fullName, Class<? extends OptionCtx<?>> optionClass, List<String> aliases) {
-        this.optionCache = new OptionCache(this, optionClass);
+        this.optionCache = new OptionCache(optionClass);
         addAlias(aliases, this);
         this.fullName = fullName;
     }
@@ -70,14 +69,23 @@ public enum Options {
         }
     }
 
-    public static boolean isOption(@NotNull String optionStr) {
+    public static Options getOption(@NotNull String optionStr) {
         String normalizedOptionStr = optionStr.toUpperCase();
-        try {
-            valueOf(normalizedOptionStr);
-            return true;
-        } catch (IllegalArgumentException e) {
-            return aliasMap.containsKey(normalizedOptionStr);
+        if (normalizedOptionStr.length() < 2 || normalizedOptionStr.charAt(0) != '-') {
+            return null;
         }
+        // '--????'
+        int assignPos = normalizedOptionStr.indexOf("=");
+        int endIndex = assignPos == -1 ? normalizedOptionStr.length() : assignPos;
+        if (normalizedOptionStr.charAt(1) == '-') {
+            try {
+                return valueOf(normalizedOptionStr.substring(2, endIndex));
+            } catch (IllegalArgumentException e) {
+                return null;
+            }
+        }
+        // '-????'
+        return aliasMap.get(normalizedOptionStr.substring(1, endIndex));
     }
 
     @Nullable
@@ -87,12 +95,13 @@ public enum Options {
             return null;
         }
         int assignPos = unknownToken.indexOf("=");
+        int endIndex = assignPos == -1 ? unknownToken.length() : assignPos;
         // 如果找不到 = 这个配置项本身就可能支持默认值, 可以缺省 value
         var valueStr = assignPos == -1 ? "" : unknownToken.substring(assignPos + 1);
         // "-????" 可能是配置项的长名也可能是短名
         if (unknownToken.charAt(1) == '-') {
             // "--???" 是长名
-            var normalizedOptionToken = assignPos == -1 ? unknownToken.substring(2).toUpperCase() : unknownToken.substring(2, assignPos).toUpperCase();
+            var normalizedOptionToken = unknownToken.substring(2, endIndex).toUpperCase();
             try {
                 // 这个 token 是 配置项token
                 return valueOf(normalizedOptionToken).optionCache.create(valueStr, assignPos, stream);
@@ -101,34 +110,26 @@ public enum Options {
             }
         }
         // "-[这个字符不是'-'而是其它字符]???" 是短名
-        var normalizedOptionToken = assignPos == -1 ? unknownToken.substring(1).toLowerCase() : unknownToken.substring(1, assignPos).toLowerCase();
-        var options = aliasMap.get(normalizedOptionToken.toLowerCase());
+        var normalizedOptionToken = unknownToken.substring(1, endIndex).toLowerCase();
+        var options = aliasMap.get(normalizedOptionToken);
         if (options == null) {
             throw new CommandCompileException("illegal option alias: '" + normalizedOptionToken + "'." + stream.errToken(unknownToken));
         }
         return options.optionCache.create(valueStr, assignPos, stream);
     }
 
-    public static class OptionCache extends ReflectCacheData<OptionCtx<?>> {
+    public static class OptionCache extends ReflectCache<OptionCtx<?>> {
+        private final static Map<String, OptionCtx<?>> flyweightMap = new HashMap<>();
 
-        private final Options option;
-
-        private final static Lazy<Map<String, OptionCtx<?>>> flyweightMap = Lazy.of(HashMap::new);
-
-        public OptionCache(Options option, Class<? extends OptionCtx<?>> clazz) {
+        public OptionCache(Class<? extends OptionCtx<?>> clazz) {
             super(clazz);
-            this.option = option;
-        }
-
-        public Options option() {
-            return option;
         }
 
         public OptionCtx<?> create(String valueStr, int assignPos, DatabaseCompileStream stream) {
             if (!FlyweightOpCtx.class.isAssignableFrom(clazz)) {
                 return create().prepareCompile(valueStr, assignPos, stream);
             }
-            return flyweightMap.get().computeIfAbsent(valueStr, v -> create().prepareCompile(valueStr, assignPos, stream));
+            return flyweightMap.computeIfAbsent(valueStr, v -> create().prepareCompile(valueStr, assignPos, stream));
         }
     }
 }

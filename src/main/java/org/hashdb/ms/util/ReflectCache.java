@@ -11,7 +11,7 @@ import java.util.function.Function;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public class ReflectCacheData<T> {
+public class ReflectCache<T> {
     protected final Class<? extends T> clazz;
     protected final Lazy<Constructor<? extends T>> constructor;
 
@@ -24,7 +24,7 @@ public class ReflectCacheData<T> {
     };
 
     @SuppressWarnings("unchecked")
-    public ReflectCacheData(
+    public ReflectCache(
             Class<? extends T> clazz
     ) {
         this.clazz = clazz;
@@ -32,7 +32,7 @@ public class ReflectCacheData<T> {
     }
 
     @SuppressWarnings("unchecked")
-    public ReflectCacheData(
+    public ReflectCache(
             Class<? extends T> clazz,
             Function<Class<?>, Constructor<?>> constructorFinder
     ) {
@@ -58,7 +58,7 @@ public class ReflectCacheData<T> {
     }
 
 
-    public static final ReflectCacheData<?> NULL = new ReflectCacheData<>(Object.class) {
+    public static final ReflectCache<?> NULL = new ReflectCache<>(Object.class) {
         @Override
         public Class<?> clazz() {
             throw new UnsupportedOperationException();

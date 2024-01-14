@@ -12,6 +12,7 @@ import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.Keyword;
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.consumer.ConsumerCtx;
+import org.hashdb.ms.compiler.keyword.ctx.supplier.ParameterAccessorCtx;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
 import org.hashdb.ms.compiler.option.OptionCtx;
 import org.hashdb.ms.compiler.option.Options;
@@ -21,7 +22,6 @@ import org.hashdb.ms.exception.DBClientException;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.exception.IllegalJavaClassStoredException;
 import org.hashdb.ms.exception.UnsupportedQueryKey;
-import org.hashdb.ms.net.Parameter;
 import org.hashdb.ms.util.JsonService;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -132,32 +132,28 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
     }
 
     /**
-     * @param valueChecker 同{@link #compileJsonValues(BiFunction)}
+     * @param store        这个参数是否参与存储过程。也即是这个参数的值是否会被存入参数集中
+     * @param valueChecker 若DataType不为空, 则解析出的参数为jsonValue否则为内联命令
      * @return 如果在编译过程中, 编译到有token是参数, 则返回true, 否则返回false
      * 如果是参数, 则会获取当前session里的参数, 如果没有, 则抛出{@link NotFoundParameterException} 异常
      * @throws NotFoundParameterException 如果找不到参数, 则抛出异常
      */
     // TODO: 2024/1/13 这里应该还有些问题:
     // 如果这条命令被缓存后, 用到的参数在参数集中被删除, 那么这条被缓存的命令理应过期
-    protected boolean compileParameter(BiFunction<DataType, Object, Boolean> valueChecker) throws ArrayIndexOutOfBoundsException, NotFoundParameterException {
+    protected boolean compileParameter(boolean store, BiFunction<DataType, ParameterAccessorCtx, Boolean> valueChecker) throws ArrayIndexOutOfBoundsException, NotFoundParameterException {
         boolean match = false;
         while (true) {
             String token = stream.token();
             if (!token.startsWith("$")) {
                 return match;
             }
-            Parameter parameter = stream.session().getParameter(token);
-            if (parameter == null) {
-                throw new NotFoundParameterException("can not found parameter '" + token + "'." + stream.errToken(token));
-            }
+            var parameterAccessorCtx = new ParameterAccessorCtx(token, store);
             match = true;
             // 登记该组流使用该参数, 防止参数变更后缓存的编译流过期
-            stream.session().useParameter(parameter, stream.rootStream().command());
-            stream.next();
-            if (parameter.value() instanceof SupplierCtx && !valueChecker.apply(null, parameter.value())) {
+            if (parameterAccessorCtx.value() instanceof SupplierCtx && !valueChecker.apply(null, parameterAccessorCtx)) {
                 return true;
             }
-            if (!valueChecker.apply(DataType.typeOfRawValue(parameter), parameter.value())) {
+            if (!valueChecker.apply(parameterAccessorCtx.storeType(), parameterAccessorCtx)) {
                 return true;
             }
         }
@@ -430,7 +426,7 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
         } catch (ArrayIndexOutOfBoundsException e) {
             throw new DBSystemException(e);
         }
-        if (Options.isOption(token)) {
+        if (Options.getOption(token) != null) {
             throw new CommandCompileException("keyword '" + name() + "' can not support any options");
         }
     }

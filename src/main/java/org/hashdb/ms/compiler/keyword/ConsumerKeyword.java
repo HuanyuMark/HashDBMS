@@ -11,7 +11,7 @@ import org.hashdb.ms.compiler.keyword.ctx.consumer.set.SSetCtx;
 import org.hashdb.ms.data.DataType;
 import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.exception.StopComplieException;
-import org.hashdb.ms.util.ReflectCacheData;
+import org.hashdb.ms.util.ReflectCache;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -110,7 +110,7 @@ public enum ConsumerKeyword implements Keyword<ConsumerKeyword> {
         }
     }
 
-    public static class ConsumerCtxConstructor extends ReflectCacheData<ConsumerCtx<?>> {
+    public static class ConsumerCtxConstructor extends ReflectCache<ConsumerCtx<?>> {
         public ConsumerCtxConstructor(Class<? extends ConsumerCtx<?>> keywordCtxClass) {
             super(keywordCtxClass, (clazz) -> {
                 try {

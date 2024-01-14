@@ -1,6 +1,6 @@
 package org.hashdb.ms.compiler.keyword;
 
-import org.hashdb.ms.util.ReflectCacheData;
+import org.hashdb.ms.util.ReflectCache;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -14,5 +14,5 @@ public interface Keyword<E extends Enum<E>> {
 
     boolean match(@NotNull String unknownToken);
 
-    ReflectCacheData<? extends CompilerNode> constructor();
+    ReflectCache<? extends CompilerNode> constructor();
 }

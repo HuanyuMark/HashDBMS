@@ -9,7 +9,7 @@ import org.hashdb.ms.net.client.CloseMessage;
 import org.hashdb.ms.net.client.CommandMessage;
 import org.hashdb.ms.net.service.*;
 import org.hashdb.ms.util.JsonService;
-import org.hashdb.ms.util.ReflectCacheData;
+import org.hashdb.ms.util.ReflectCache;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -41,7 +41,7 @@ public enum MessageType {
 
     private final MessageTypeDeserializer deserializer;
 
-    private ReflectCacheData<? extends Message> messageClass;
+    private ReflectCache<? extends Message> messageClass;
 
     private static Map<Class<? extends Message>, MessageType> messageTypeMap;
 
@@ -60,7 +60,7 @@ public enum MessageType {
             messageTypeMap = new HashMap<>();
         }
         messageTypeMap.put(messageClass, type);
-        type.messageClass = new ReflectCacheData<>(messageClass);
+        type.messageClass = new ReflectCache<>(messageClass);
     }
 
     public Message deserialize(JsonParser jp, JsonNode rootNode, DeserializationContext context) throws IOException {
@@ -71,7 +71,7 @@ public enum MessageType {
         Message deserialize(JsonParser jp, JsonNode rootNode, DeserializationContext context) throws IOException;
     }
 
-    public ReflectCacheData<? extends Message> getReflectCache() {
+    public ReflectCache<? extends Message> getReflectCache() {
         return messageClass;
     }
 
