@@ -40,16 +40,38 @@ public class JsonService {
     public static final ObjectMapper COMMON = new ObjectMapper();
     private static final Version JACKSON_SERIALIZER_VERSION = new Version(1, 0, 1, "dev compiler", "hashdb", "hashDBMS");
 
-    public static String stringfy(Object obj) {
+    public static String toString(Object obj) {
         try {
             return COMMON.writeValueAsString(obj);
-        } catch (Exception e) {
+        } catch (IOException e) {
+            throw new DBSystemException(e);
+        }
+    }
+
+    public static byte[] toBytes(Object obj) {
+        try {
+            return COMMON.writeValueAsBytes(obj);
+        } catch (IOException e) {
             throw new DBSystemException(e);
         }
     }
 
     public static <T> @Nullable T parse(String json, Class<T> clazz) throws JsonProcessingException {
         T value = COMMON.readValue(json, clazz);
+        return (T) normalizeNumber(value);
+    }
+
+    public static @Nullable Object parse(byte[] source) throws IOException {
+        return parse(source, Object.class);
+    }
+
+    public static <T> @Nullable T parse(byte[] source, Class<T> clazz) throws IOException {
+        T value = COMMON.readValue(source, clazz);
+        return (T) normalizeNumber(value);
+    }
+
+    public static <T> @Nullable T parse(byte[] source, int offset, int length, Class<T> clazz) throws IOException {
+        T value = COMMON.readValue(source, offset, length, clazz);
         return (T) normalizeNumber(value);
     }
 

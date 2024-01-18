@@ -32,6 +32,16 @@ public class AsyncService {
         return Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors() >> 1, threadFactory);
     });
 
+    public static ThreadFactory virtualFactory(String threadPrefix) {
+        return Thread.ofVirtual()
+                .name(threadPrefix, 0)
+                .inheritInheritableThreadLocals(true)
+                .uncaughtExceptionHandler((thread, e) -> {
+                    System.err.printf("Thread: [%s] throw exception: %s\n", thread.getName(), e);
+                })
+                .factory();
+    }
+
     public static ExecutorService service() {
         return executorService.get();
     }

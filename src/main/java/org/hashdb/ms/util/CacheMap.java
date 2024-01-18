@@ -1,11 +1,13 @@
 package org.hashdb.ms.util;
 
 import lombok.Getter;
-import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 /**
  * Date: 2024/1/10 23:33
@@ -14,20 +16,21 @@ import java.util.Map;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public class CacheMap<K, V> extends LinkedHashMap<K, CacheValue<K, V>> {
+public class CacheMap<K, V> {
 
-//    private final LinkedHashMap<K, CacheValue<K,V>> base;
+    private final LinkedHashMap<K, CacheValue> base;
     /**
-     * 当这个map的元素都被清空时,在{@link  #aliveTime} 毫秒后,通知
-     * 监听者, 这个map已经闲置了 {@link #aliveTime} 毫秒
+     * 所有键被命中后, 都会在这个基础上增加存活时间, 以一个ln的速率增加
      */
-    @Setter
     @Getter
     private long aliveTime;
 
-    @Setter
     @Getter
-    private int cacheSize;
+    private final int cacheSize;
+
+    private Function<K, V> accessor;
+
+    private BiFunction<K, V, V> saver;
 
     public CacheMap() {
         this(-1, Integer.MAX_VALUE, 16, 0.75F);
@@ -42,54 +45,127 @@ public class CacheMap<K, V> extends LinkedHashMap<K, CacheValue<K, V>> {
     }
 
     public CacheMap(long aliveTime, int cacheSize, int initialCapacity, float loadFactor) {
-        super(initialCapacity, loadFactor, true);
-        assert aliveTime > 0;
-        this.aliveTime = aliveTime;
+        // LRU  根据最近访问次数排优先队列
+        base = new LinkedHashMap<>(initialCapacity, loadFactor, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<K, CacheValue> eldest) {
+                if (size() < cacheSize) {
+                    return false;
+                }
+                eldest.getValue().cancel();
+                return true;
+            }
+        };
+        setAliveTime(aliveTime);
         this.cacheSize = cacheSize;
     }
 
-    public CacheValue<K, V> putRaw(@NotNull K key, V value) {
-        if (value == null) {
-            throw new NullPointerException();
+    public void setAliveTime(long aliveTime) {
+        this.aliveTime = aliveTime;
+        if (aliveTime > 0) {
+            accessor = key -> {
+                CacheValue res = base.get(key);
+                if (res == null) {
+                    return null;
+                }
+                res.hitAndDelay();
+                return res.value;
+            };
+            saver = (key, value) -> {
+                if (value == null) {
+                    throw new NullPointerException();
+                }
+                var v = new CacheValue(key, value);
+                v.hitAndDelay();
+                var oldValue = base.put(key, v);
+                if (oldValue == null) {
+                    return null;
+                }
+                oldValue.cancel();
+                return oldValue.value;
+            };
+            return;
         }
-        CacheValue<K, V> v = new CacheValue<>(key, value, this);
-        v.hitAndDelay(aliveTime);
-        return super.put(key, v);
+        accessor = key -> {
+            CacheValue res = base.get(key);
+            if (res == null) {
+                return null;
+            }
+            return res.value;
+        };
+        saver = (key, value) -> {
+            if (value == null) {
+                throw new NullPointerException();
+            }
+            var oldValue = base.put(key, new CacheValue(key, value));
+            if (oldValue == null) {
+                return null;
+            }
+            return oldValue.value;
+        };
     }
 
-    @Override
-    public CacheValue<K, V> get(Object key) {
-        CacheValue<K, V> res = super.get(key);
-        if (res != null) {
-            res.hitAndDelay(aliveTime);
-        }
-        return res;
+    public V save(@NotNull K key, V value) {
+        return saver.apply(key, value);
     }
 
-    @Override
-    public CacheValue<K, V> remove(@NotNull Object key) {
-        CacheValue<K, V> res = super.remove(key);
-        if (res != null) {
-            res.cancel();
-        }
-        return res;
+    public V hit(K key) {
+        return accessor.apply(key);
     }
 
-    @Override
-    public boolean remove(Object key, Object value) {
-        boolean ok = super.remove(key, value);
-        if (ok && value instanceof CacheValue<?, ?> v) {
-            v.cancel();
+    public V expire(@NotNull K key) {
+        CacheValue res = base.remove(key);
+        if (res == null) {
+            return null;
         }
-        return ok;
+        res.cancel();
+        return res.value;
     }
 
-    @Override
-    protected boolean removeEldestEntry(Map.Entry<K, CacheValue<K, V>> eldest) {
-        if (size() >= cacheSize) {
-            eldest.getValue().cancel();
-            return true;
+    public V get(@NotNull K key) {
+        return hit(key);
+    }
+
+    public V put(@NotNull K key, V value) {
+        return save(key, value);
+    }
+
+    public V remove(@NotNull K key) {
+        return expire(key);
+    }
+
+    class CacheValue {
+        protected V value;
+        private final K key;
+
+        /**
+         * 命中次数
+         */
+        private final AtomicLong hitCount = aliveTime <= 0 ? null : new AtomicLong(0);
+
+        private volatile boolean canceled = false;
+
+        CacheValue(K key, V value) {
+            this.key = key;
+            this.value = value;
         }
-        return false;
+
+        void cancel() {
+            canceled = true;
+        }
+
+        /**
+         * 线程安全, 在本线程只执行了一次涉及共享变量的原子操作
+         */
+        void hitAndDelay() {
+            long hitVersion = hitCount.getAndIncrement();
+            long newAliveTime = (long) (aliveTime * Math.log(Math.E + hitVersion));
+            AsyncService.setTimeout(() -> {
+                if (canceled || hitVersion < hitCount.get()) {
+                    return;
+                }
+                expire(key);
+            }, newAliveTime);
+        }
     }
 }

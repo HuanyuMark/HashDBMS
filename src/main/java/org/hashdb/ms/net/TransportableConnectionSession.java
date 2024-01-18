@@ -1,13 +1,17 @@
 package org.hashdb.ms.net;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.hashdb.ms.HashDBMSApp;
+import org.hashdb.ms.config.CommandCacheConfig;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.manager.DBSystem;
+import org.hashdb.ms.net.bio.BIOConnectionSession;
 import org.hashdb.ms.util.CacheMap;
 import org.hashdb.ms.util.Lazy;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Date: 2023/12/6 11:24
@@ -19,56 +23,53 @@ import org.hashdb.ms.util.Lazy;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class TransportableConnectionSession extends AbstractConnectionSession implements ConnectionSessionModel {
+public class TransportableConnectionSession extends AbstractConnectionSession implements ConnectionSession {
     private static final Lazy<DBSystem> SYSTEM = Lazy.of(() -> HashDBMSApp.ctx().getBean(DBSystem.class));
 
     //    private static final
     @JsonProperty
     private Integer dbId;
-    private Long commandCacheAliveTime;
-    private Integer cacheSize;
+
+    @JsonProperty(required = true)
+    private CommandCacheConfig commandCacheConfig;
 
     /**
      * 给json序列化预留的构造器, 不能主动调用
      */
+    @JsonCreator
     public TransportableConnectionSession() {
     }
 
     /**
-     * 需要主动调用这个构造器来传输 {@link ConnectionSession}
+     * 需要主动调用这个构造器来传输 {@link BIOConnectionSession}
      */
-    public TransportableConnectionSession(ConnectionSession session) {
+    public TransportableConnectionSession(BIOConnectionSession session, CommandCacheConfig config) {
         Database database = session.getDatabase();
         if (database != null) {
             dbId = database.getInfos().getId();
         }
-        commandCacheAliveTime = session.getLocalCommandCache().getAliveTime();
+        commandCacheConfig = config;
     }
 
     @Override
     public Database getDatabase() {
-        return database != null ? database : (database = SYSTEM.get().getDatabase(dbId));
-    }
-
-    public long getCommandCacheAliveTime() {
-        return commandCacheAliveTime;
-    }
-
-    public void setCommandCacheAliveTime(Long commandCacheAliveTime) {
-        this.commandCacheAliveTime = commandCacheAliveTime;
-        if (commandCacheAliveTime != null && cacheSize != null) {
-            localCommandCache = new CacheMap<>(commandCacheAliveTime, cacheSize);
+        if (dbId == null) {
+            return null;
         }
-    }
-
-    public Integer getCacheSize() {
-        return cacheSize;
-    }
-
-    public void setCacheSize(Integer cacheSize) {
-        this.cacheSize = cacheSize;
-        if (commandCacheAliveTime != null && cacheSize != null) {
-            localCommandCache = new CacheMap<>(commandCacheAliveTime, cacheSize);
+        if (super.getDatabase() != null) {
+            return super.getDatabase();
         }
+        Database db = SYSTEM.get().getDatabase(dbId);
+        setDatabase(db);
+        return db;
+    }
+
+    public void setCommandCacheConfig(@NotNull CommandCacheConfig config) {
+        this.commandCacheConfig = config;
+        localCommandCache = new CacheMap<>(config.getAliveDuration(), config.getCacheSize());
+    }
+
+    public CommandCacheConfig getCommandCacheConfig() {
+        return commandCacheConfig;
     }
 }

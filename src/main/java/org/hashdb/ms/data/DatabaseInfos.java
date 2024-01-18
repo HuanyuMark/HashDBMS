@@ -32,7 +32,7 @@ public class DatabaseInfos implements Serializable {
 
     @Override
     public String toString() {
-        return JsonService.stringfy(this);
+        return JsonService.toString(this);
     }
 
     public String getName() {

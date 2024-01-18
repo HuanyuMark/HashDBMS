@@ -10,7 +10,8 @@ server:
 db:
   file:
   #  持久化文件根路径
-    path: E://hashdb
+#    hashdb/
+    path: hashdb/ # 当前工作路径下的hashdb/文件夹
   #  每块数据文件的大小， 单位为字节
     chunk-size: 1 * 1024 * 1024
   #  全量保存数据库的间隔， 单位为毫秒
@@ -19,12 +20,12 @@ db:
     expired-key-delete-priority: LOW
     store-like-json-sequence: false
   aof:
-    path: E://hashdb
+    path: hashdb/
 
 
 logging:
   level:
-    root: INFO
+    root: DEBUG
 spring:
   profiles:
     active:

@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.compiler.exception.CommandCompileException;
 import org.hashdb.ms.compiler.keyword.CompilerNode;
 import org.hashdb.ms.exception.DBClientException;
-import org.hashdb.ms.net.ConnectionSessionModel;
+import org.hashdb.ms.net.ConnectionSession;
 import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 
@@ -24,7 +24,7 @@ import java.util.function.Function;
 @Slf4j
 public abstract class CommonCompileStream<R extends CompilerNode> implements CompileStream<R> {
 
-    protected final ConnectionSessionModel session;
+    protected final ConnectionSession session;
 
     protected Lazy<String> command;
     /**
@@ -43,7 +43,7 @@ public abstract class CommonCompileStream<R extends CompilerNode> implements Com
     @JsonProperty
     protected boolean write = false;
 
-    protected CommonCompileStream(ConnectionSessionModel session) {
+    protected CommonCompileStream(ConnectionSession session) {
         this.session = session;
     }
 
@@ -331,7 +331,7 @@ public abstract class CommonCompileStream<R extends CompilerNode> implements Com
         return write;
     }
 
-    public ConnectionSessionModel session() {
+    public ConnectionSession session() {
         return session;
     }
 

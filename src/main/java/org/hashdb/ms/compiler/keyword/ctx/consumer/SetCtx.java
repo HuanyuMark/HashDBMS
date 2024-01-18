@@ -64,10 +64,10 @@ public class SetCtx extends InterpretCtx {
                 filterAllKeywords();
             }
             compileJsonValues((dataType, value) -> {
-                pair.valueOrSupplier = value;
+                pair.value = value;
                 return false;
             });
-            if (pair.valueOrSupplier == null) {
+            if (pair.value == null) {
                 throw new CommandCompileException("keyword '" + name() + "' require key-value pair to operate");
             }
             precompileResult.values.add(pair);
@@ -76,6 +76,6 @@ public class SetCtx extends InterpretCtx {
 
     public static class Pair {
         public Object keyOrSupplier;
-        public Object valueOrSupplier;
+        public SupplierCtx value;
     }
 }

@@ -6,11 +6,14 @@ import org.hashdb.ms.compiler.keyword.SystemKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.sys.DBCreateCtx;
 import org.hashdb.ms.compiler.keyword.ctx.sys.SystemCompileCtx;
 import org.hashdb.ms.manager.DBSystem;
-import org.hashdb.ms.net.ConnectionSessionModel;
+import org.hashdb.ms.net.ConnectionSession;
 import org.hashdb.ms.net.TransportableConnectionSession;
+import org.hashdb.ms.util.AsyncService;
 import org.hashdb.ms.util.JsonService;
 import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Date: 2023/11/30 1:11
@@ -26,7 +29,7 @@ public final class SystemCompileStream extends CommonCompileStream<SystemCompile
      */
     private SystemCompileCtx<?> compileResult;
 
-    public SystemCompileStream(ConnectionSessionModel session, String command) {
+    public SystemCompileStream(ConnectionSession session, String command) {
         super(session);
         if (command.isEmpty()) {
             throw new CommandCompileException("illegal command '" + command + "'");
@@ -40,7 +43,7 @@ public final class SystemCompileStream extends CommonCompileStream<SystemCompile
         eraseParentheses(tokens);
     }
 
-    private SystemCompileStream(SystemCompileCtx<?> compileResult, ConnectionSessionModel session) {
+    private SystemCompileStream(SystemCompileCtx<?> compileResult, ConnectionSession session) {
         super(session);
         this.compileResult = compileResult;
     }
@@ -89,7 +92,29 @@ public final class SystemCompileStream extends CommonCompileStream<SystemCompile
         }
 
         Object normalizeValue = CompileStream.normalizeValue(result);
-        return JsonService.stringfy(normalizeValue == null ? "null" : normalizeValue);
+        return JsonService.toString(normalizeValue == null ? "null" : normalizeValue);
+    }
+
+    @Override
+    public @Nullable CompletableFuture<Object> execute() {
+        SystemCompileCtx<?> compileCtx = compile();
+        if (compileCtx == null) {
+            return null;
+        }
+        CompletableFuture<?> future;
+        if (compileCtx instanceof DBCreateCtx dbCreateCtx) {
+            future = SYSTEM.get().submitOpsTask(dbCreateCtx.getResult());
+        } else {
+            assert compileCtx.getResult() != null;
+            future = CompletableFuture.completedFuture(compileCtx.getResult().get());
+        }
+
+        return future.thenApplyAsync(result -> {
+            if (result instanceof Boolean ok) {
+                return ok ? "\"SUCC\"" : "\"FAIL\"";
+            }
+            return CompileStream.normalizeValue(result);
+        }, AsyncService.service());
     }
 
     @Override
@@ -100,6 +125,6 @@ public final class SystemCompileStream extends CommonCompileStream<SystemCompile
             return ok ? "\"SUCC\"" : "\"FAIL\"";
         }
         Object normalizeValue = CompileStream.normalizeValue(result);
-        return JsonService.stringfy(normalizeValue == null ? "null" : normalizeValue);
+        return JsonService.toString(normalizeValue == null ? "null" : normalizeValue);
     }
 }

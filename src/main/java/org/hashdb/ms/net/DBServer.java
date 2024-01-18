@@ -2,26 +2,17 @@ package org.hashdb.ms.net;
 
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.config.DBServerConfig;
+import org.hashdb.ms.event.CloseServerEvent;
 import org.hashdb.ms.event.StartServerEvent;
 import org.hashdb.ms.manager.DBSystem;
-import org.hashdb.ms.util.AsyncService;
 import org.hashdb.ms.util.JsonService;
-import org.hashdb.ms.util.Runners;
-import org.jetbrains.annotations.Contract;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.context.event.EventListener;
-import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.net.BindException;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
-import java.util.Arrays;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Date: 2023/12/1 1:26
@@ -30,13 +21,11 @@ import java.util.concurrent.CompletableFuture;
  * @version 0.0.1
  */
 @Slf4j
-@Component
-public class DBServer implements DisposableBean {
-    private ServerSocketChannel serverChannel;
+public abstract class DBServer implements DisposableBean, AutoCloseable {
 
-    private final DBServerConfig serverConfig;
+    protected final DBServerConfig serverConfig;
 
-    private final DBSystem dbSystem;
+    protected final DBSystem dbSystem;
 
     public DBServer(DBServerConfig serverConfig, DBSystem system) {
         this.serverConfig = serverConfig;
@@ -44,45 +33,45 @@ public class DBServer implements DisposableBean {
     }
 
     @EventListener(StartServerEvent.class)
-    public void startServer() {
+    public void startServer() throws IOException {
         JsonService.loadConfig();
         try {//开启服务器后先广播一次确认主机，然后再进行全量数据同步
 //            beginReplication(msg = new verificateMasterMessage());
-
+            var serverChanel = ServerSocketChannel.open();
             try {
-                serverChannel = ServerSocketChannel.open();
-                serverChannel.configureBlocking(true);
-                serverChannel.bind(new InetSocketAddress(serverConfig.getPort()));
+                serverChannelOptimizer(serverChanel);
+                serverChanel.bind(new InetSocketAddress(serverConfig.getPort()));
             } catch (BindException e) {
                 log.error("port {} is in use", serverConfig.getPort());
+                System.exit(1);
                 throw e;
             }
             log.info("server is running at port: {}", serverConfig.getPort());
-            start();
+            doStart(serverChanel);
         } catch (IOException e) {
             log.error("server start error", e);
         }
     }
+
+    protected abstract void serverChannelOptimizer(ServerSocketChannel serverSocketChannel) throws IOException;
 
     /**
      * 客户端发起连接：
      * SocketChannel clientChannel = SocketChannel.open();
      * clientChannel.bind(new InetSocketAddress(服务器ip, 服务器端口));
      */
-    @SuppressWarnings("InfiniteLoopStatement")
-    private void start() throws IOException {
-        while (true) {
-            // 接收新链接
-            try {
-                var connection = serverChannel.accept();          //这里的Connection是连接
-                handleNewSession(connection);
-            } catch (AsynchronousCloseException e) {
-                break;
-            }
-        }
+    protected abstract void doStart(ServerSocketChannel serverChannel) throws IOException;
+
+    @Override
+    @EventListener(CloseServerEvent.class)
+    public void close() throws Exception {
+        doClose();
     }
 
-//    private void beginReplication(verificateMasterMessage msg){
+    abstract protected void doClose() throws Exception;
+
+
+    //    private void beginReplication(verificateMasterMessage msg){
 //        ReplicationConfig config = dbSystem.getReplicationConfig();
 //        if(config.getIdentity() == ServerIdentity.MASTER){
 //            //接受其他从机发来的连接
@@ -90,59 +79,6 @@ public class DBServer implements DisposableBean {
 //            //从机向主机发起连接
 //        }
 //    };
-
-    private void handleNewSession(SocketChannel con) {
-        AsyncService.start(() -> {
-            // 新建新连接的会话上下文
-            new ConnectionSession(con);
-        });
-    }
-
-    @Override
-    public void destroy() throws Exception {
-        serverChannel.close();
-    }
-
-    @Contract(" -> new")
-    private @NotNull CompletableFuture<?> test() {
-        return AsyncService.start(() -> Runners.everlasting(() -> {
-            try {
-                var con = serverChannel.accept();
-
-                ByteBuffer buffer = ByteBuffer.allocate(1024);
-                AsyncService.start(() -> {
-                    try (
-                            ConnectionSession session = new ConnectionSession(con);
-                    ) {
-                        while (con.isConnected()) {
-                            try {
-                                int unRead = con.read(buffer);
-//                            ObjectInputStream inputStream = new ObjectInputStream(new ByteArrayInputStream(buffer.array()));
-//                            Object o = inputStream.readObject();
-                                if (unRead == -1) {
-                                    continue;
-                                }
-                                byte[] bytes = Arrays.copyOf(buffer.array(), buffer.position());
-                                buffer.clear();
-                                String o = new String(bytes);
-                                System.out.println("unRead" + unRead + " obj: " + o);
-                                if ("close".equals(o)) {
-                                    con.close();
-                                }
-                                con.write(ByteBuffer.wrap("pong".getBytes()));
-                            } catch (IOException e) {
-                                throw new RuntimeException(e);
-                            }
-                        }
-
-                        log.info("disconnect {}", con);
-                    }
-                });
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }));
-    }
 
 
     private void demo() {
@@ -165,4 +101,5 @@ public class DBServer implements DisposableBean {
 //            }
 //        }
     }
+
 }

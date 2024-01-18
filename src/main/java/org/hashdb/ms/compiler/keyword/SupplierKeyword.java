@@ -30,7 +30,8 @@ public enum SupplierKeyword implements Keyword<SupplierKeyword> {
     EXPIRE(ExpireCtx.class),
     INC(IncCtx.class),
     MUL(MulCtx.class),
-    $$PARAMETER_ACCESS$$(ParameterAccessorCtx.class);
+    $$PARAMETER_ACCESS$$(ParameterCtx.class),
+    $$VALUE$$(JsonValueCtx.class);
 
     private final ReflectCache<? extends SupplierCtx> constructor;
 
@@ -40,7 +41,7 @@ public enum SupplierKeyword implements Keyword<SupplierKeyword> {
 
     public static ReflectCache<? extends SupplierCtx> getCompileCtxConstructor(@NotNull String unknownToken) {
         SupplierKeyword supplierKeyword = typeOfIgnoreCase(unknownToken);
-        if (supplierKeyword == null || supplierKeyword == $$PARAMETER_ACCESS$$) {
+        if (supplierKeyword == null || unknownToken.startsWith("$$") && unknownToken.endsWith("$$")) {
             return null;
         }
         return supplierKeyword.constructor;

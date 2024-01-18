@@ -4,13 +4,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.compiler.exception.UnknownTokenException;
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
-import org.hashdb.ms.net.ConnectionSessionModel;
+import org.hashdb.ms.net.ConnectionSession;
 import org.hashdb.ms.net.TransportableConnectionSession;
 import org.hashdb.ms.util.JsonService;
 import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Date: 2023/11/24 15:58
@@ -24,19 +25,19 @@ public final class SupplierCompileStream extends DatabaseCompileStream {
 
     private final Lazy<SupplierCtx> compileResult = Lazy.empty();
 
-    SupplierCompileStream(ConnectionSessionModel session, String command) {
+    SupplierCompileStream(ConnectionSession session, String command) {
         super(session, command);
     }
 
-    SupplierCompileStream(ConnectionSessionModel session, String @NotNull [] childTokens, DatabaseCompileStream fatherStream, boolean shouldNormalize) {
+    SupplierCompileStream(ConnectionSession session, String @NotNull [] childTokens, DatabaseCompileStream fatherStream, boolean shouldNormalize) {
         super(session, childTokens, fatherStream, shouldNormalize);
     }
 
-    SupplierCompileStream(ConnectionSessionModel session, String[] tokens, DatabaseCompileStream fatherStream) {
+    SupplierCompileStream(ConnectionSession session, String[] tokens, DatabaseCompileStream fatherStream) {
         super(session, tokens, fatherStream);
     }
 
-    private SupplierCompileStream(ConnectionSessionModel session, SupplierCtx supplierCtx) {
+    private SupplierCompileStream(ConnectionSession session, SupplierCtx supplierCtx) {
         super(session);
         compileResult.computedWith(supplierCtx);
     }
@@ -45,7 +46,7 @@ public final class SupplierCompileStream extends DatabaseCompileStream {
         return new SupplierCompileStream(session, supplierCtx);
     }
 
-    public static @NotNull SupplierCompileStream open(ConnectionSessionModel session, @NotNull String command) {
+    public static @NotNull SupplierCompileStream open(ConnectionSession session, @NotNull String command) {
         Objects.requireNonNull(session);
         return new SupplierCompileStream(session, command);
     }
@@ -80,6 +81,22 @@ public final class SupplierCompileStream extends DatabaseCompileStream {
     }
 
     @Override
+    public CompletableFuture<Object> execute() {
+        var future = session.getDatabase().submitOpsTask(compile().compileResult());
+        return future.thenApply(result -> {
+            if (result instanceof Boolean ok) {
+                return ok ? "\"SUCC\"" : "\"FAIL\"";
+            }
+            return CompileStream.normalizeValue(result);
+        });
+    }
+
+    public byte[] runAndGetResultBytes() {
+        Object result = session.getDatabase().submitOpsTaskSync(compile().compileResult());
+        return toBytes(result);
+    }
+
+    @Override
     public String runWithExecutor() {
         // 直接使用已生成的编译上下文
         // 直接提交， 进入执行时
@@ -87,11 +104,24 @@ public final class SupplierCompileStream extends DatabaseCompileStream {
         return toString(result);
     }
 
+    public byte[] runWithExecutorAndResultBytes() {
+        Object result = session.getDatabase().submitOpsTaskSync(compileResult.get().executeWithStream(this));
+        return toBytes(result);
+    }
+
     String toString(Object result) {
         if (result instanceof Boolean ok) {
             return ok ? "\"SUCC\"" : "\"FAIL\"";
         }
         Object normalizeValue = CompileStream.normalizeValue(result);
-        return JsonService.stringfy(normalizeValue == null ? "null" : normalizeValue);
+        return JsonService.toString(normalizeValue == null ? "null" : normalizeValue);
+    }
+
+    byte[] toBytes(Object result) {
+        if (result instanceof Boolean ok) {
+            return (ok ? "\"SUCC\"" : "\"FAIL\"").getBytes();
+        }
+        Object normalizeValue = CompileStream.normalizeValue(result);
+        return JsonService.toBytes(normalizeValue == null ? "null" : normalizeValue);
     }
 }

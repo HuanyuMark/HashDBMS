@@ -6,6 +6,7 @@ import org.hashdb.ms.aspect.methodAccess.DisposableCall;
 import org.hashdb.ms.config.ReplicationConfig;
 import org.hashdb.ms.data.DataType;
 import org.hashdb.ms.data.Database;
+import org.hashdb.ms.event.CloseServerEvent;
 import org.hashdb.ms.event.ReplicationConfigLoadedEvent;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.net.exception.DatabaseClashException;
@@ -202,13 +203,17 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
      */
     @Override
     public void destroy() throws Exception {
-        log.info("closing DBMS ...");
+        // 关闭服务器
+        publisher.publishEvent(new CloseServerEvent());
+        log.info("start closing System ...");
         var dbmsCostTime = TimeCounter.start();
+        // 保存系统信息
         persistentService.persist(systemInfo);
         if (log.isTraceEnabled()) {
             log.trace("system info storing success");
             log.info("storing database ...");
         }
+        // 保存数据库数据
         systemInfo.getDatabaseInfosMap().values().forEach(lazyDb -> {
             if (!lazyDb.isCached()) {
                 return;
@@ -217,13 +222,13 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
             var reportTimeout = AsyncService.setTimeout(() -> {
                 log.warn("Timed out waiting for the database {} to complete all tasks", db);
             }, 10_000);
-            db.stopConsumeOpsTask().join();
+            db.close();
             reportTimeout.cancel(true);
             persistentService.persist(db);
             if (log.isTraceEnabled()) {
                 log.trace("db '{}' storing success", db);
             }
         });
-        log.info("DBMS closed, cost {} ms", dbmsCostTime.stop());
+        log.info("System closed, cost {} ms", dbmsCostTime.stop());
     }
 }

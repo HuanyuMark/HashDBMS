@@ -5,7 +5,7 @@ import org.hashdb.ms.compiler.SystemCompileStream;
 import org.hashdb.ms.compiler.exception.CommandInterpretException;
 import org.hashdb.ms.compiler.keyword.SystemKeyword;
 import org.hashdb.ms.data.OpsTask;
-import org.hashdb.ms.net.ConnectionSessionModel;
+import org.hashdb.ms.net.ConnectionSession;
 
 /**
  * Date: 2023/11/30 14:46
@@ -57,7 +57,7 @@ public class DBCreateCtx extends SystemCompileCtx<Boolean> {
     }
 
     @Override
-    public OpsTask<Boolean> executor(ConnectionSessionModel session) {
+    public OpsTask<Boolean> executor(ConnectionSession session) {
         return OpsTask.of(() -> {
             system().newDatabase(id, name);
             return Boolean.TRUE;

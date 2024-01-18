@@ -34,6 +34,10 @@ public class DelCtx extends ReadSupplierCtx {
 
     @Override
     protected HValue<?> doQuery(String key) {
-        return stream().db().del(key);
+        String originalString = extractOriginalString(key);
+        if (originalString == null) {
+            return stream().db().del(key);
+        }
+        return new HValue<>(originalString, stream().session().setParameter(originalString, null));
     }
 }

@@ -5,7 +5,7 @@ import org.hashdb.ms.compiler.exception.CommandCompileException;
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.consumer.ConsumerCtx;
-import org.hashdb.ms.net.ConnectionSessionModel;
+import org.hashdb.ms.net.ConnectionSession;
 import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 
@@ -23,7 +23,7 @@ public final class ConsumerCompileStream extends DatabaseCompileStream {
 
     private final CompileCtx<?> fatherCompileCtx;
 
-    ConsumerCompileStream(ConnectionSessionModel session,
+    ConsumerCompileStream(ConnectionSession session,
                           String @NotNull [] childTokens,
                           DatabaseCompileStream fatherSteam,
                           CompileCtx<?> fatherCompileCtx) {

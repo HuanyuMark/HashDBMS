@@ -63,12 +63,9 @@ public class LSetCtx extends MutableListCtx implements Precompilable {
         }
 
         if (opsTarget instanceof RandomAccess) {
-            return indexValuePairs.stream().map(pair -> {
-                if (pair.valueOrSupplier instanceof SupplierCtx vs) {
-                    pair.valueOrSupplier = selectOneValue(exeSupplierCtx(vs));
-                }
-                return opsTarget.set(((Number) (pair.indexOrSupplier)).intValue(), pair.valueOrSupplier);
-            }).toList();
+            return indexValuePairs.stream().map(pair ->
+                            opsTarget.set(((Number) (pair.indexOrSupplier)).intValue(), selectOneValue(exeSupplierCtx(pair.value))))
+                    .toList();
         }
 
         List<Object> result = new ArrayList<>();
@@ -121,10 +118,7 @@ public class LSetCtx extends MutableListCtx implements Precompilable {
 
     private void replaceValueByItr(List<Object> result, ListIterator<Object> elIter, IndexValuePair pair, Object el) {
         result.add(el);
-        if (pair.valueOrSupplier instanceof SupplierCtx vs) {
-            pair.valueOrSupplier = selectOneValue(exeSupplierCtx(vs));
-        }
-        elIter.set(pair.valueOrSupplier);
+        elIter.set(selectOneValue(exeSupplierCtx(pair.value)));
     }
 
     @Override
@@ -163,14 +157,10 @@ public class LSetCtx extends MutableListCtx implements Precompilable {
             }
             try {
                 compileJsonValues((dataType, value) -> {
-                    if (value instanceof SupplierCtx v) {
-                        if (v.storeType().unsupportedClone(v.supplyType())) {
-                            throw new CommandCompileException("keyword '" + name() + "' can not set value type '" + v.storeType() + "' of '" + v.command() + "'. " + stream().errToken(v.command()));
-                        }
-                        pair.valueOrSupplier = value;
-                        return false;
+                    if (value.storeType().unsupportedClone(value.supplyType())) {
+                        throw new CommandCompileException("keyword '" + name() + "' can not set value type '" + value.storeType() + "' of '" + value.command() + "'. " + stream().errToken(value.command()));
                     }
-                    pair.valueOrSupplier = dataType.clone(value);
+                    pair.value = value;
                     return false;
                 });
             } catch (ArrayIndexOutOfBoundsException e) {
@@ -203,7 +193,7 @@ public class LSetCtx extends MutableListCtx implements Precompilable {
                 } catch (NumberFormatException e) {
                     throw new CommandInterpretException("can not parse string '" + keyStr + "' to number." + stream().errToken(keyStr));
                 }
-                indexValuePair.valueOrSupplier = pair.valueOrSupplier;
+                indexValuePair.value = pair.value;
             }
             indexValuePairs.add(indexValuePair);
         }
@@ -211,7 +201,7 @@ public class LSetCtx extends MutableListCtx implements Precompilable {
 
     protected class IndexValuePair implements Comparable<IndexValuePair> {
         Object indexOrSupplier;
-        Object valueOrSupplier;
+        SupplierCtx value;
 
         private long normalizeIndex() {
             if (indexOrSupplier instanceof SupplierCtx indexSupplier) {

@@ -7,7 +7,7 @@ import org.hashdb.ms.compiler.keyword.CompilerNode;
 import org.hashdb.ms.compiler.keyword.SystemKeyword;
 import org.hashdb.ms.data.OpsTask;
 import org.hashdb.ms.manager.DBSystem;
-import org.hashdb.ms.net.ConnectionSessionModel;
+import org.hashdb.ms.net.ConnectionSession;
 import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.Nullable;
 
@@ -40,7 +40,7 @@ public abstract class SystemCompileCtx<R> implements CompilerNode {
 
     abstract OpsTask<R> doCompile(SystemCompileStream stream);
 
-    abstract public OpsTask<R> executor(ConnectionSessionModel session);
+    abstract public OpsTask<R> executor(ConnectionSession session);
 
     @Override
     public abstract SystemKeyword name();

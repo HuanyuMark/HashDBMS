@@ -19,6 +19,7 @@ import java.util.function.Supplier;
 public class BlockingQueueTaskConsumer implements TaskConsumer {
 
     protected final BlockingDeque<OpsTask<?>> opsTaskDeque = new LinkedBlockingDeque<>();
+    // TODO: 2024/1/14 应该要允许用户调整这个消费者线程执行的优先级
     protected CompletableFuture<?> opsTaskConsumeLoop;
     protected final AtomicBoolean receiveNewTask = new AtomicBoolean(false);
 
@@ -37,13 +38,11 @@ public class BlockingQueueTaskConsumer implements TaskConsumer {
                     opsTaskConsumeLoop = null;
                     break;
                 }
-                OpsTask<?> task;
                 try {
-                    task = opsTaskDeque.take();
+                    exeTask(opsTaskDeque);
                 } catch (InterruptedException e) {
                     throw new WorkerInterruptedException(e);
                 }
-                task.get();
             }
         });
         // 需要接收新任务
@@ -54,6 +53,10 @@ public class BlockingQueueTaskConsumer implements TaskConsumer {
             return future;
         }
         return CompletableFuture.completedFuture(true);
+    }
+
+    protected void exeTask(BlockingDeque<OpsTask<?>> taskDeque) throws InterruptedException {
+        taskDeque.take().get();
     }
 
     @Override

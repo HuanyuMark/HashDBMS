@@ -1,11 +1,21 @@
 package org.hashdb.ms.config;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.MessageToMessageCodec;
+import io.netty.handler.logging.LoggingHandler;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.aspect.methodAccess.ConfigLoadOnly;
+import org.hashdb.ms.net.nio.ClientChannelInitializer;
+import org.hashdb.ms.net.nio.NettyServer;
+import org.hashdb.ms.net.nio.SessionFactoryHandler;
+import org.hashdb.ms.net.nio.msg.v1.Message;
+import org.hashdb.ms.net.nio.protocol.MessageCodecHandler;
 import org.slf4j.event.Level;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
@@ -32,19 +42,32 @@ public class DBServerConfig {
 
     private CommandCacheConfig commandCache = new CommandCacheConfig();
 
-    @Getter
-    public static class CommandCacheConfig {
-        /**
-         * 单位ms, 命令的缓存时间
-         */
-        long aliveDuration = 30 * 60_000;
+    @Bean
+    @ConditionalOnClass(NettyServer.class)
+    public LoggingHandler loggingHandler() {
+        return new LoggingHandler();
+    }
 
-        int cacheSize = 1000;
+    @Bean
+    @ConditionalOnClass(NettyServer.class)
+    public SessionFactoryHandler sessionFactoryHandler() {
+        return new SessionFactoryHandler();
+    }
 
-        @ConfigLoadOnly
-        public void setAliveDuration(long aliveDuration) {
-            this.aliveDuration = aliveDuration;
-        }
+    @Bean
+    @ConditionalOnClass(NettyServer.class)
+    public MessageCodecHandler hashProtocolCodecHandler() {
+        return new MessageCodecHandler();
+    }
+
+    @Bean
+    @ConditionalOnClass(NettyServer.class)
+    public ClientChannelInitializer clientChannelInitializer(
+            MessageToMessageCodec<ByteBuf, Message<?>> messageCodec,
+            SessionFactoryHandler sessionFactoryHandler,
+            LoggingHandler loggingHandler
+    ) {
+        return new ClientChannelInitializer(messageCodec, sessionFactoryHandler, loggingHandler);
     }
 
     public void setPort(int port) {

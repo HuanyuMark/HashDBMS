@@ -6,13 +6,15 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.compiler.ConsumerCompileStream;
 import org.hashdb.ms.compiler.DatabaseCompileStream;
+import org.hashdb.ms.compiler.SupplierCompileStream;
 import org.hashdb.ms.compiler.exception.*;
 import org.hashdb.ms.compiler.keyword.CompilerNode;
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.Keyword;
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.consumer.ConsumerCtx;
-import org.hashdb.ms.compiler.keyword.ctx.supplier.ParameterAccessorCtx;
+import org.hashdb.ms.compiler.keyword.ctx.supplier.JsonValueCtx;
+import org.hashdb.ms.compiler.keyword.ctx.supplier.ParameterCtx;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
 import org.hashdb.ms.compiler.option.OptionCtx;
 import org.hashdb.ms.compiler.option.Options;
@@ -42,6 +44,7 @@ import java.util.function.Function;
 public abstract class CompileCtx<S extends DatabaseCompileStream> implements CompilerNode {
     protected Map<Class<? extends OptionCtx<?>>, OptionCtx<?>> options;
 
+    protected int costExpectant;
     @JsonIgnore
     private S stream;
     /**
@@ -66,9 +69,7 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
      *                     如果 dataType有值, value 可能是一个内联命令,也可能是一个合法的存储数据类型
      *                     这个value可能是解析完成json串, 也可能是内联命令. 如果该方法返回true,则继续解析下一个token, 以此类推
      */
-    protected void compileJsonValues(BiFunction<DataType, ?, Boolean> valueChecker) throws CommandCompileException, ArrayIndexOutOfBoundsException {
-        @SuppressWarnings("unchecked")
-        BiFunction<DataType, Object, Boolean> vc = (BiFunction<DataType, Object, Boolean>) valueChecker;
+    protected void compileJsonValues(BiFunction<DataType, SupplierCtx, Boolean> valueChecker) throws CommandCompileException, ArrayIndexOutOfBoundsException {
         while (true) {
             String token = stream.token();
             DataType valueType = DataType.typeOfSymbol(token);
@@ -86,13 +87,13 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
                     if (supplierCtx == null) {
                         throw new CommandCompileException("can not parse json(?) '" + token + "' to type '" + valueType + "'." + stream.errToken(token));
                     }
-                    if (!vc.apply(valueType, supplierCtx)) {
+                    if (!valueChecker.apply(valueType, supplierCtx)) {
                         return;
                     }
                     continue;
                 }
 
-                if (!vc.apply(valueType, value)) {
+                if (!valueChecker.apply(valueType, new JsonValueCtx(valueType, value))) {
                     stream.next();
                     return;
                 }
@@ -111,7 +112,7 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
                 if (supplierCtx == null) {
                     throw new IllegalValueException("can not '" + name() + "' value '" + token + "'." + stream.errToken(token));
                 }
-                if (!vc.apply(null, supplierCtx)) {
+                if (!valueChecker.apply(null, supplierCtx)) {
                     return;
                 }
                 continue;
@@ -123,7 +124,7 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
 //                throw new IllegalValueException("json value: '" + token + "' is unsupported to store in database");
 //            }
 
-            if (!vc.apply(supposedType, value)) {
+            if (!valueChecker.apply(supposedType, new JsonValueCtx(supposedType, value))) {
                 stream.next();
                 return;
             }
@@ -140,14 +141,15 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
      */
     // TODO: 2024/1/13 这里应该还有些问题:
     // 如果这条命令被缓存后, 用到的参数在参数集中被删除, 那么这条被缓存的命令理应过期
-    protected boolean compileParameter(boolean store, BiFunction<DataType, ParameterAccessorCtx, Boolean> valueChecker) throws ArrayIndexOutOfBoundsException, NotFoundParameterException {
+    protected boolean compileParameter(boolean store, BiFunction<DataType, ParameterCtx, Boolean> valueChecker) throws ArrayIndexOutOfBoundsException, NotFoundParameterException {
         boolean match = false;
         while (true) {
             String token = stream.token();
             if (!token.startsWith("$")) {
                 return match;
             }
-            var parameterAccessorCtx = new ParameterAccessorCtx(token, store);
+            var parameterAccessorCtx = new ParameterCtx(stream, token, store);
+            parameterAccessorCtx.compileWithStream((SupplierCompileStream) stream);
             match = true;
             // 登记该组流使用该参数, 防止参数变更后缓存的编译流过期
             if (parameterAccessorCtx.value() instanceof SupplierCtx && !valueChecker.apply(null, parameterAccessorCtx)) {
@@ -231,6 +233,12 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
 
     @NotNull
     protected Object exeSupplierCtx(@NotNull SupplierCtx supplierCtx, boolean copy) {
+        if (supplierCtx instanceof JsonValueCtx jsonValueCtx) {
+            return jsonValueCtx.executor();
+        }
+        if (supplierCtx instanceof ParameterCtx parameterCtx) {
+            return parameterCtx.executor();
+        }
         Object o = supplierCtx.compileResult().get();
         if (o == null) {
             throw new CommandExecuteException("common '" + stream.command() + "' can not receive null value return form inline common '" +
@@ -481,8 +489,12 @@ public abstract class CompileCtx<S extends DatabaseCompileStream> implements Com
             throw new IllegalExpressionException("uncompleted expression." + stream.errToken(any));
         }
         if (lastIndex - 2 <= 0) {
-            throw new CommandCompileException("function 'R(string)' require a not blank string." + stream.errToken(any));
+            throw new CommandCompileException("the param of function 'R(string)' should be not blank." + stream.errToken(any));
         }
         return true;
+    }
+
+    public int costExpectant() {
+        return costExpectant;
     }
 }

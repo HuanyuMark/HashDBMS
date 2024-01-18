@@ -13,6 +13,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -31,7 +32,7 @@ import java.util.stream.Stream;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public class Database extends BlockingQueueTaskConsumer implements Iterable<HValue<?>>, IDatabase {
+public class Database extends BlockingQueueTaskConsumer implements Iterable<HValue<?>>, IDatabase, AutoCloseable {
 
     /**
      * 数据库信息
@@ -47,8 +48,42 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
     public final Object SAVE_TASK_LOCK = new Object();
 
     private final AtomicInteger usingCount = new AtomicInteger(0);
+    // TODO: 2024/1/15  给用户提供一个选项, 设置读操作多线程化阈值(负数为不使用)与设置读操作时的并行度
+    private final List<OpsTask<?>> readTask = new LinkedList<>();
 
-    public void use() {
+    @Override
+    protected void exeTask(BlockingDeque<OpsTask<?>> taskDeque) throws InterruptedException {
+        // TODO: 2024/1/15  给用户提供一个选项, 选择是否使用读操作多线程化阈值(负数为不使用)与设置读操作时的并行度, 即下面TODO提及的阈值
+        // 判断任务的读写属性, 如果是读,则先收集然后用并行流处理,否则挨个处理
+        OpsTask<?> task = taskDeque.take();
+        while (task.isRead()) {
+            readTask.add(task);
+            // 提前检查避免一直阻塞在迭代末尾的take上
+            if (taskDeque.isEmpty()) {
+                break;
+            }
+            task = taskDeque.take();
+        }
+        // 执行读任务
+        // TODO: 2024/1/15  这里选择串/并行的标准太过草率, 不要用任务多少来比较线程切换/串行的时间开销
+        // 最好是在编译期将命令的执行期望消耗时间进行累加,然后与一个阈值进行比较,这样很能得到正确的结果
+        if (readTask.size() > 10) {
+            // 如果读任务多, 则并行执行, 线程切换开销可以被覆盖
+            readTask.parallelStream().forEach(OpsTask::get);
+        } else {
+            // 读任务过少, 则串行执行, 否则线程切换开销大于串行执行
+            for (OpsTask<?> opsTask : readTask) {
+                opsTask.get();
+            }
+        }
+        readTask.clear();
+        // 执行写任务
+        if (!task.isRead()) {
+            task.get();
+        }
+    }
+
+    public void retain() {
         usingCount.incrementAndGet();
     }
 
@@ -550,5 +585,11 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
     @Override
     public String toString() {
         return "Database" + info;
+    }
+
+    @Override
+    public void close() {
+        stopConsumeOpsTask().join();
+        stopSaveTask();
     }
 }

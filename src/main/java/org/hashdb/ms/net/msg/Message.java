@@ -40,4 +40,12 @@ public abstract class Message implements Serializable, Cloneable {
     }
 
     abstract public MessageType getType();
+
+//    public Message response(NIOConnectionSession session) {
+//        return null;
+//    }
+//
+//    public Message doResponse(NIOConnectionSession session) {
+//        return null;
+//    }
 }

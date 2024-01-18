@@ -9,6 +9,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -78,10 +79,18 @@ public interface CompileStream<R extends CompilerNode> {
         return null;
     }
 
+    default CompletableFuture<Object> execute() {
+        return null;
+    }
+
     boolean isWrite();
 
     default String rerun() {
         return run();
+    }
+
+    default CompletableFuture<Object> reExecute() {
+        return execute();
     }
 
     default String runWithExecutor() {

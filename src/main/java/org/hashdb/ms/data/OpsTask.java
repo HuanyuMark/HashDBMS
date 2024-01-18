@@ -1,6 +1,6 @@
 package org.hashdb.ms.data;
 
-import lombok.RequiredArgsConstructor;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.util.Futures;
 import org.jetbrains.annotations.Contract;
@@ -20,12 +20,26 @@ public interface OpsTask<T> extends Supplier<T> {
 
     CompletableFuture<T> future();
 
+    boolean isRead();
+
     @Slf4j
-    @RequiredArgsConstructor
     class OpsTaskImpl<T> implements OpsTask<T> {
         public static final OpsTask<?> EMPTY = new OpsTaskImpl<>(() -> null);
         private final CompletableFuture<T> future = new CompletableFuture<>();
         private final Supplier<T> supplier;
+
+        @Getter
+        private final boolean read;
+
+        public OpsTaskImpl(Supplier<T> supplier) {
+            this.supplier = supplier;
+            this.read = true;
+        }
+
+        public OpsTaskImpl(boolean read, Supplier<T> supplier) {
+            this.supplier = supplier;
+            this.read = read;
+        }
 
         @Override
         public T result() {
@@ -56,9 +70,21 @@ public interface OpsTask<T> extends Supplier<T> {
         return new OpsTaskImpl<>(supplier);
     }
 
+    static <T> @NotNull OpsTask<T> of(boolean read, Supplier<T> supplier) {
+        return new OpsTaskImpl<>(read, supplier);
+    }
+
+
     @Contract("_ -> new")
     static @NotNull OpsTask<?> of(Runnable task) {
         return new OpsTaskImpl<>(() -> {
+            task.run();
+            return null;
+        });
+    }
+
+    static @NotNull OpsTask<?> of(boolean read, Runnable task) {
+        return new OpsTaskImpl<>(read, () -> {
             task.run();
             return null;
         });

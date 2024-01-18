@@ -43,7 +43,7 @@ public enum MessageType {
 
     private ReflectCache<? extends Message> messageClass;
 
-    private static Map<Class<? extends Message>, MessageType> messageTypeMap;
+    private static volatile Map<Class<? extends Message>, MessageType> messageTypeMap;
 
     MessageType(Class<? extends Message> messageClass) {
         registerMessageClass(messageClass, this);

@@ -1,4 +1,4 @@
-package org.hashdb.ms.net;
+package org.hashdb.ms.net.bio;
 
 import org.hashdb.ms.net.msg.Message;
 

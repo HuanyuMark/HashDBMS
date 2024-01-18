@@ -5,7 +5,7 @@ import org.hashdb.ms.compiler.keyword.SystemKeyword;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.DatabaseInfos;
 import org.hashdb.ms.data.OpsTask;
-import org.hashdb.ms.net.ConnectionSessionModel;
+import org.hashdb.ms.net.ConnectionSession;
 
 /**
  * Date: 2024/1/3 10:53
@@ -21,7 +21,7 @@ public class DBCurrentCtx extends SystemCompileCtx<DatabaseInfos> {
     }
 
     @Override
-    public OpsTask<DatabaseInfos> executor(ConnectionSessionModel session) {
+    public OpsTask<DatabaseInfos> executor(ConnectionSession session) {
         return OpsTask.of(() -> {
             Database database = session.getDatabase();
             if (database == null) {

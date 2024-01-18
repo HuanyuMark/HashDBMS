@@ -23,7 +23,7 @@ public class UnsupportedQueryKey extends DBClientException {
     }
 
     public static @NotNull UnsupportedQueryKey of(List<?> unsupportedKeys, String errorMsg) {
-        return new UnsupportedQueryKey("can not query key of these value: " + JsonService.stringfy(unsupportedKeys) + "." + (errorMsg == null ? "" : errorMsg));
+        return new UnsupportedQueryKey("can not query key of these value: " + JsonService.toString(unsupportedKeys) + "." + (errorMsg == null ? "" : errorMsg));
     }
 
     public static UnsupportedQueryKey of(Enum<?> keyword, SupplierCtx supplierCtx) {

@@ -20,6 +20,7 @@ import java.util.regex.PatternSyntaxException;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
+// TODO: 2024/1/14 要支持读取R(string)原始字符串, 以及like操作
 public abstract class ReadSupplierCtx extends SupplierCtx {
     /**
      * 为什么要用Object?
@@ -76,13 +77,16 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
                 } else {
                     key = ((String) keyOrSupplier);
                 }
-
                 return doQuery(key);
             }).toList();
         };
     }
 
     protected List<?> doQueryLike(Pattern pattern) {
+        throw new UnsupportedOperationException();
+    }
+
+    protected List<?> doQueryLikeParameter(Pattern pattern) {
         throw new UnsupportedOperationException();
     }
 
@@ -151,6 +155,7 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
                     keyOrSuppliers.add(parameter);
                     return false;
                 })) {
+                    isOriginalString(token);
                     keyOrSuppliers.add(token);
                 }
             }
@@ -202,5 +207,8 @@ public abstract class ReadSupplierCtx extends SupplierCtx {
 //            throw new CommandCompileException(errorMsgSupplier.get());
 //        }
         like = true;
+    }
+
+    private record KeyPattern(Pattern pattern, boolean isParameter) {
     }
 }

@@ -6,7 +6,7 @@ import org.hashdb.ms.compiler.keyword.SystemKeyword;
 import org.hashdb.ms.data.OpsTask;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.net.ConnectionSession;
-import org.hashdb.ms.net.ConnectionSessionModel;
+import org.hashdb.ms.net.bio.BIOConnectionSession;
 import org.hashdb.ms.net.exception.NotFoundDatabaseException;
 
 /**
@@ -55,7 +55,7 @@ public class DBUseCtx extends SystemCompileCtx<Boolean> {
             if (dbName == null) {
                 throw new CommandInterpretException("keyword '" + name() + "' require param: database id(Integer) or name(String)");
             }
-            if (stream.session() instanceof ConnectionSession session) {
+            if (stream.session() instanceof BIOConnectionSession session) {
                 session.setDatabase(system().getDatabase(dbName));
                 return PLACE_HOLDER;
             }
@@ -66,7 +66,7 @@ public class DBUseCtx extends SystemCompileCtx<Boolean> {
                 throw NotFoundDatabaseException.of("{\"id\":" + dbId + ",\"name\":\"" + dbName + "\"}");
             }
         }
-        if (stream.session() instanceof ConnectionSession session) {
+        if (stream.session() instanceof BIOConnectionSession session) {
             session.setDatabase(system().getDatabase(dbId));
             return PLACE_HOLDER;
         }
@@ -74,7 +74,7 @@ public class DBUseCtx extends SystemCompileCtx<Boolean> {
     }
 
     @Override
-    public OpsTask<Boolean> executor(ConnectionSessionModel session) {
+    public OpsTask<Boolean> executor(ConnectionSession session) {
         return PLACE_HOLDER;
     }
 }

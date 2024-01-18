@@ -5,7 +5,7 @@ import org.hashdb.ms.compiler.exception.CommandInterpretException;
 import org.hashdb.ms.compiler.keyword.SystemKeyword;
 import org.hashdb.ms.data.DatabaseInfos;
 import org.hashdb.ms.data.OpsTask;
-import org.hashdb.ms.net.ConnectionSessionModel;
+import org.hashdb.ms.net.ConnectionSession;
 
 import java.util.Collection;
 
@@ -28,7 +28,7 @@ public class DBShowCtx extends SystemCompileCtx<Collection<DatabaseInfos>> {
     }
 
     @Override
-    public OpsTask<Collection<DatabaseInfos>> executor(ConnectionSessionModel session) {
+    public OpsTask<Collection<DatabaseInfos>> executor(ConnectionSession session) {
         return OpsTask.of(() -> system().getSystemInfo().getDatabaseInfosMap().keySet());
     }
 

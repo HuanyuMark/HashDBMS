@@ -46,6 +46,7 @@ public class HValue<T> implements Cloneable {
     /**
      * 如果为空，则永不过期
      */
+    // TODO: 2024/1/14 可以提供给用户一个默认设置过期时间的选项, 通过设置ExpireTimeStrategy来指定, 固定减少/增加多少,区间,ln增长等等
     @Getter
     private Long expireMilliseconds;
     @Getter
@@ -266,6 +267,6 @@ public class HValue<T> implements Cloneable {
 
     @Override
     public String toString() {
-        return JsonService.stringfy(this);
+        return JsonService.toString(this);
     }
 }

@@ -5,13 +5,14 @@ import org.hashdb.ms.compiler.exception.CommandCompileException;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.exception.DBSystemException;
-import org.hashdb.ms.net.ConnectionSessionModel;
+import org.hashdb.ms.net.ConnectionSession;
 import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
@@ -27,13 +28,15 @@ public abstract sealed class DatabaseCompileStream extends CommonCompileStream<C
 
     private List<Runnable> rerunCbs;
 
+    protected int costExpectant;
+
     /**
      * 构造主流
      *
      * @param session 会话
      * @param command 原始命令
      */
-    protected DatabaseCompileStream(ConnectionSessionModel session, @NotNull String command) {
+    protected DatabaseCompileStream(ConnectionSession session, @NotNull String command) {
         super(session);
         if (command.isEmpty()) {
             throw new CommandCompileException("illegal command '" + command + "'");
@@ -51,7 +54,7 @@ public abstract sealed class DatabaseCompileStream extends CommonCompileStream<C
      * @param fatherStream    父 流
      * @param shouldNormalize 是否需要规范化
      */
-    protected DatabaseCompileStream(ConnectionSessionModel session, String @NotNull [] childTokens, DatabaseCompileStream fatherStream, boolean shouldNormalize) {
+    protected DatabaseCompileStream(ConnectionSession session, String @NotNull [] childTokens, DatabaseCompileStream fatherStream, boolean shouldNormalize) {
         super(session);
         if (childTokens.length == 0) {
             log.error("compiler error: father tokens: {} child tokens: {}", childTokens, childTokens);
@@ -69,11 +72,11 @@ public abstract sealed class DatabaseCompileStream extends CommonCompileStream<C
         }
     }
 
-    protected DatabaseCompileStream(ConnectionSessionModel session, String @NotNull [] childTokens, DatabaseCompileStream fatherStream) {
+    protected DatabaseCompileStream(ConnectionSession session, String @NotNull [] childTokens, DatabaseCompileStream fatherStream) {
         this(session, childTokens, fatherStream, true);
     }
 
-    protected DatabaseCompileStream(ConnectionSessionModel session) {
+    protected DatabaseCompileStream(ConnectionSession session) {
         super(session);
     }
 
@@ -160,5 +163,20 @@ public abstract sealed class DatabaseCompileStream extends CommonCompileStream<C
             rerunCbs.parallelStream().forEach(Runnable::run);
         }
         return run();
+    }
+
+    @Override
+    public CompletableFuture<Object> reExecute() {
+        if (rerunCbs != null) {
+            rerunCbs.parallelStream().forEach(Runnable::run);
+        }
+        return execute();
+    }
+
+    /**
+     * @return 消耗期望值, 表示执行这个命令预期的所消耗的时间
+     */
+    public int costExpectant() {
+        return costExpectant;
     }
 }
