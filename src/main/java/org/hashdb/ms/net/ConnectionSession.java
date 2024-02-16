@@ -9,13 +9,15 @@ import org.hashdb.ms.net.client.CloseMessage;
 import org.hashdb.ms.util.CacheMap;
 import org.hashdb.ms.util.Lazy;
 
+import java.io.Closeable;
+
 /**
  * Date: 2024/1/3 11:11
  *
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public interface ConnectionSession extends AutoCloseable {
+public interface ConnectionSession extends Closeable {
     Lazy<DBServerConfig> dbServerConfig = Lazy.of(() -> HashDBMSApp.ctx().getBean(DBServerConfig.class));
     Lazy<DBSystem> dbSystem = Lazy.of(() -> HashDBMSApp.ctx().getBean(DBSystem.class));
     /**

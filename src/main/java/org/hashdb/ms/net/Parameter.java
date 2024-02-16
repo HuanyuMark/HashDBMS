@@ -31,7 +31,12 @@ public class Parameter {
 
     void notifyUpdate(Object newValue) {
         value = newValue;
-        updateCbs.parallelStream().forEach(cb -> cb.accept(newValue));
+        if (updateCbs.size() > 50) {
+            updateCbs.parallelStream().forEach(cb -> cb.accept(newValue));
+        }
+        for (Consumer<Object> updateCb : updateCbs) {
+            updateCb.accept(newValue);
+        }
     }
 
     public void onUpdate(Consumer<Object> cb) {

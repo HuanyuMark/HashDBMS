@@ -64,6 +64,11 @@ public interface DbOpsTask<T> extends OpsTask<T> {
         public CompletableFuture<T> future() {
             return future;
         }
+
+        @Override
+        public boolean isRead() {
+            return false;
+        }
     }
 
     static DbOpsTask<?> empty() {

@@ -11,7 +11,6 @@ import org.hashdb.ms.util.JsonService;
 import org.hashdb.ms.util.Runners;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
-import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -30,7 +29,7 @@ import java.util.concurrent.CompletableFuture;
  * @version 0.0.1
  */
 @Slf4j
-@Component
+//@Component
 public class BIOServer extends DBServer {
     protected final List<ConnectionSession> connectionSessionList = new LinkedList<>();
     private ServerSocketChannel serverChannel;
@@ -47,8 +46,8 @@ public class BIOServer extends DBServer {
             try {
                 var connection = serverChannel.accept();          //这里的Connection是连接
                 connectionSessionList.add(new BIOConnectionSession(connection));
-            } catch (AsynchronousCloseException e) {
-                break;
+            } catch (AsynchronousCloseException ignore) {
+
             }
         }
     }

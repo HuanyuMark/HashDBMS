@@ -11,8 +11,14 @@ import org.hashdb.ms.net.TransportableConnectionSession;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class TransportableCompileResult {
+import java.util.concurrent.CompletableFuture;
 
+public class TransportableCompileResult implements CommandExecutor {
+    /**
+     * 接收端要设置
+     */
+    @JsonIgnore
+    private TransportableConnectionSession session;
     @Getter
     @JsonProperty
     private boolean write;
@@ -40,6 +46,23 @@ public class TransportableCompileResult {
     protected TransportableCompileResult() {
     }
 
+    public TransportableCompileResult mountSession(TransportableConnectionSession session) {
+        if (this.stream != null) {
+            throw new DBSystemException("can not mount session again. existing session " + this.session + "");
+        }
+        this.session = session;
+        return this;
+    }
+
+    @Override
+    public CompletableFuture<Object> execute(String command) {
+        if (session == null) {
+            throw new DBSystemException("call mountSession first");
+        }
+        // TODO: 2024/1/19 这里要实现
+        return null;
+    }
+
     /**
      * @param stream       命令编译流
      * @param assumeCached 预测接收端是否缓存了该命令
@@ -62,7 +85,7 @@ public class TransportableCompileResult {
         // 如果其它服务器没穿该值, 说明在那个服务器里, 这条命令被缓存了并
         // 假定收到这个这个编译结果的服务器也知道
         if (compilerCtx == null) {
-            return CommandExecutor.runWithCache(session, command);
+            return LocalCommandExecutor.runWithCache(session, command);
         }
         if (compilerCtx instanceof SupplierCtx supplierCtx) {
             return SupplierCompileStream.createWithTransportable(supplierCtx, session).runWithExecutor();

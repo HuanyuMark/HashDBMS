@@ -24,6 +24,9 @@ import java.util.stream.Collectors;
 @Slf4j
 public abstract sealed class DatabaseCompileStream extends CommonCompileStream<CompileCtx<?>> permits ConsumerCompileStream, SupplierCompileStream {
 
+    private static final int rerunCallbackParallelismExecuteThreshold = Runtime.getRuntime().availableProcessors() > 4 ?
+            Runtime.getRuntime().availableProcessors() << 2 : 0;
+
     protected DatabaseCompileStream fatherStream;
 
     private List<Runnable> rerunCbs;
@@ -167,8 +170,14 @@ public abstract sealed class DatabaseCompileStream extends CommonCompileStream<C
 
     @Override
     public CompletableFuture<Object> reExecute() {
-        if (rerunCbs != null) {
+        if (rerunCbs == null) {
+            return execute();
+        }
+        if (rerunCbs.size() > rerunCallbackParallelismExecuteThreshold) {
             rerunCbs.parallelStream().forEach(Runnable::run);
+        }
+        for (Runnable rerunCb : rerunCbs) {
+            rerunCb.run();
         }
         return execute();
     }

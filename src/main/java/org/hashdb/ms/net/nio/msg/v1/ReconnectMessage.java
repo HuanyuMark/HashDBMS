@@ -16,7 +16,7 @@ public class ReconnectMessage extends Message<Long> {
     }
 
     @Override
-    public MessageType type() {
-        return MessageType.RECONNECT;
+    public MessageMeta getMeta() {
+        return MessageMeta.RECONNECT;
     }
 }

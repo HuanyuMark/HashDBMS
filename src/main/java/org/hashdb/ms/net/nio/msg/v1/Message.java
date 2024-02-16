@@ -1,10 +1,7 @@
 package org.hashdb.ms.net.nio.msg.v1;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.hashdb.ms.net.nio.NettyConnectionSession;
-import org.hashdb.ms.net.nio.protocol.BodyParser;
+import org.hashdb.ms.net.nio.TransientConnectionSession;
 import org.hashdb.ms.util.JsonService;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.concurrent.atomic.AtomicLong;
@@ -20,31 +17,37 @@ public abstract class Message<B> {
 
     protected final long id;
 
-    private NettyConnectionSession session;
+    private TransientConnectionSession session;
 
     private byte[] bodyBytes;
 
-    public abstract MessageType type();
+    public abstract MessageMeta getMeta();
 
-    public NettyConnectionSession session() {
+    public TransientConnectionSession session() {
         return session;
     }
 
-    public void session(NettyConnectionSession session) {
+    public void session(TransientConnectionSession session) {
+        if (this.session != null) {
+            throw new IllegalArgumentException("session can not be set again: " + this);
+        }
         this.session = session;
     }
 
 
     /**
      * @param id   由协议层调用,实例化Message
-     * @param body
+     * @param body 消息体
      */
-    public Message(long id, B body) {
+    public Message(long id, @Nullable B body) {
+        if (id > 0) {
+            throw new IllegalArgumentException("Constructor 'Message(long,B)' should be call in message codec. can not be call manually");
+        }
         this.id = id;
         this.body = body;
     }
 
-    public Message(B body) {
+    public Message(@Nullable B body) {
         id = messageIdAccumulator.incrementAndGet();
         this.body = body;
     }
@@ -60,20 +63,12 @@ public abstract class Message<B> {
         return body;
     }
 
-    /**
-     * 规定该body的解析方式
-     */
-    public @NotNull BodyParser bodyParser() {
-        return BodyParser.JSON;
-    }
-
     @Override
     public String toString() {
         return JsonService.toString(this);
     }
 
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    public long getSessionId() {
+    public long sessionId() {
         return session == null ? -1 : session.id();
     }
 }

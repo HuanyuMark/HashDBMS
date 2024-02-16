@@ -2,8 +2,8 @@ package org.hashdb.ms.net;
 
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.config.DBServerConfig;
+import org.hashdb.ms.event.ApplicationContextLoadedEvent;
 import org.hashdb.ms.event.CloseServerEvent;
-import org.hashdb.ms.event.StartServerEvent;
 import org.hashdb.ms.manager.DBSystem;
 import org.hashdb.ms.util.JsonService;
 import org.springframework.beans.factory.DisposableBean;
@@ -32,7 +32,7 @@ public abstract class DBServer implements DisposableBean, AutoCloseable {
         this.dbSystem = system;
     }
 
-    @EventListener(StartServerEvent.class)
+    @EventListener(ApplicationContextLoadedEvent.class)
     public void startServer() throws IOException {
         JsonService.loadConfig();
         try {//开启服务器后先广播一次确认主机，然后再进行全量数据同步

@@ -6,6 +6,7 @@ server:
   log-level: INFO
   identity: MASTER
   master: { host: 127.0.0.1, port: 3051 }
+  inactive-timeout: 10_000
 
 db:
   file:
@@ -25,7 +26,7 @@ db:
 
 logging:
   level:
-    root: DEBUG
+    root: INFO
 spring:
   profiles:
     active:

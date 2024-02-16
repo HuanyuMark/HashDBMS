@@ -2,17 +2,19 @@ package org.hashdb.ms.net.nio;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.config.DBServerConfig;
-import org.hashdb.ms.event.CloseServerEvent;
-import org.hashdb.ms.event.StartServerEvent;
+import org.hashdb.ms.event.ApplicationContextLoadedEvent;
 import org.hashdb.ms.manager.DBSystem;
+import org.hashdb.ms.util.JsonService;
 import org.hashdb.ms.util.TimeCounter;
-import org.hashdb.ms.util.VirtualNioEventLoopGroup;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
 
 /**
  * Date: 2024/1/16 19:17
@@ -21,6 +23,7 @@ import org.springframework.context.event.EventListener;
  * @version 0.0.1
  */
 @Slf4j
+@Component
 public class NettyServer implements DisposableBean, AutoCloseable {
     protected final DBServerConfig serverConfig;
 
@@ -32,13 +35,12 @@ public class NettyServer implements DisposableBean, AutoCloseable {
 
     protected final EventLoopGroup workerGroup;
 
+    private volatile boolean closed;
+
     {
-        // 使用虚拟+nio eventloop
-        bossGroup = new VirtualNioEventLoopGroup(1);
-        workerGroup = new VirtualNioEventLoopGroup();
-        // 使用虚拟线程, 但是放弃了netty的优化
-//        bossGroup = new NioEventLoopGroup(1, AsyncService.virtualFactory("v-b-nio-"));
-//        workerGroup = new NioEventLoopGroup(AsyncService.virtualFactory("v-w-nio-"));
+        int acceptor = Runtime.getRuntime().availableProcessors() - 1 >> 1;
+        bossGroup = new NioEventLoopGroup(acceptor <= 0 ? acceptor : 1);
+        workerGroup = new NioEventLoopGroup();
     }
 
     public NettyServer(DBServerConfig serverConfig, DBSystem dbSystem, ClientChannelInitializer clientChannelInitializer) {
@@ -47,41 +49,52 @@ public class NettyServer implements DisposableBean, AutoCloseable {
         this.clientChannelInitializer = clientChannelInitializer;
     }
 
-    @EventListener(StartServerEvent.class)
+    @EventListener(ApplicationContextLoadedEvent.class)
     public void run() {
-        var costTime = TimeCounter.costTime(() -> {
-            var bootstrap = new ServerBootstrap();
-            serverChannel = bootstrap.group(bossGroup, workerGroup)
-                    .channel(NioServerSocketChannel.class)
-                    .childHandler(clientChannelInitializer)
-                    .bind(serverConfig.getPort())
-                    .channel();
+        JsonService.loadConfig();
+        var startTime = TimeCounter.start();
+        var bootstrap = new ServerBootstrap();
+        ChannelFuture channelFuture = bootstrap.group(bossGroup, workerGroup)
+                .channel(NioServerSocketChannel.class)
+                .childHandler(clientChannelInitializer)
+                .bind(serverConfig.getPort());
+        serverChannel = channelFuture.channel();
+        channelFuture.addListener(f -> {
+            if (f.isSuccess()) {
+                log.info("server is running at [tcp: {}] cost {}ms", serverConfig.getPort(), startTime.stop());
+                return;
+            }
+            log.error("server start failed", f.cause());
+            System.exit(1);
         });
-        log.info("server is running at [tcp: {}] cost {}ms", serverConfig.getPort(), costTime);
     }
 
 
     @Override
-    @EventListener(CloseServerEvent.class)
     public void close() throws Exception {
+        if (closed) {
+            return;
+        }
         log.info("server closing");
         var costTime = TimeCounter.costTime(() -> {
-            var channelFuture = serverChannel.close();
-            var bossFuture = bossGroup.shutdownGracefully();
-            var workerFuture = workerGroup.shutdownGracefully();
             try {
-                channelFuture.sync();
+                clientChannelInitializer.close();
+                serverChannel.close().sync();
+                var bossFuture = bossGroup.shutdownGracefully();
+                var workerFuture = workerGroup.shutdownGracefully();
                 bossFuture.sync();
                 workerFuture.sync();
             } catch (InterruptedException e) {
                 log.warn("interrupted", e);
             }
         });
+        closed = true;
         log.info("server closed. cost {}ms", costTime);
     }
 
     @Override
+    // 关闭服务器
     public void destroy() throws Exception {
-
+        close();
     }
 }

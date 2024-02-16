@@ -10,6 +10,12 @@ import java.lang.reflect.Field;
 /**
  * Date: 2024/1/18 2:13
  * 结合netty的fastThreadLocal优化与虚拟线程
+ * 这个类有大bug, 虽然本线程的threadLocal都同步到虚拟线程了
+ * 但是还有本线程的FastThreadLocalMap无法同步到虚拟线程
+ * 需要netty本身设计的FashThreadLocalThread支持虚拟化, 将以上
+ * 三个上下文变量都同步到VirtualThread里才行
+ * <p>
+ * 如果真需要实现携程的功能,需要使用 {@link java.lang.VirtualThread.VThreadContinuation}
  *
  * @author huanyuMake-pecdle
  * @version 0.0.1
@@ -55,9 +61,9 @@ public class VirtualFastThreadLocalThread extends FastThreadLocalThread {
 
     @Override
     public void start() {
-        if (log.isDebugEnabled()) {
-            log.debug("vt '{}' start '{}'", virtualThread, this);
-        }
+//        if (log.isDebugEnabled()) {
+        log.info("vt '{}' start '{}'", virtualThread, this);
+//        }
         virtualThread.start();
     }
 

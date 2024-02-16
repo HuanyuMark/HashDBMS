@@ -16,7 +16,7 @@ public class DefaultActMessage extends ActMessage<String> {
     }
 
     @Override
-    public MessageType type() {
-        return MessageType.ACT;
+    public MessageMeta getMeta() {
+        return MessageMeta.ACT;
     }
 }

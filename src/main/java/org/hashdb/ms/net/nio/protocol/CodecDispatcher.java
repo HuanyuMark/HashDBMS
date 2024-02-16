@@ -7,8 +7,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageCodec;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.net.exception.UnsupportedProtocolException;
+import org.hashdb.ms.net.nio.NamedChannelHandler;
 import org.hashdb.ms.net.nio.msg.v1.Message;
-import org.springframework.stereotype.Component;
 
 import java.util.List;
 
@@ -20,47 +20,46 @@ import java.util.List;
  * @version 0.0.1
  */
 @Slf4j
-@Component
 @ChannelHandler.Sharable
-public class MessageCodecHandler extends MessageToMessageCodec<ByteBuf, Message<?>> {
-    private static final byte[] magic = {'h', 'a', 's', 'h'};
+public class CodecDispatcher extends MessageToMessageCodec<ByteBuf, Message<?>> implements NamedChannelHandler {
+    public static final byte[] MAGIC_BYTES = {'h', 'a', 's', 'h'};
 
-    private static final int MAGIC_NUM;
+    public static final int MAGIC_NUM;
 
     static {
-        ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer().writeBytes(magic);
+        var byteBuf = ByteBufAllocator.DEFAULT.buffer().writeBytes(MAGIC_BYTES);
         MAGIC_NUM = byteBuf.readInt();
         byteBuf.release();
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, Message<?> msg, List<Object> outList) throws Exception {
-        ByteBuf out = msg.session().supportedProtocol().encode(ctx, msg);
+    protected void encode(ChannelHandlerContext ctx, Message<?> msg, List<Object> outList) {
+        var out = msg.session().protocol().codec().encode(ctx, msg);
         outList.add(out);
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         // check message
         if (in.readableBytes() < 22 || in.readInt() != MAGIC_NUM) {
             var bytes = new byte[Math.min(in.readableBytes(), 90)];
             in.readBytes(bytes);
             log.warn("illegal message. buf: {} content: '{}'", in, new String(bytes));
-            in.release();
             return;
         }
-        // check version
-        ProtocolCodec protocolCodec;
+        // check protocol
+        Protocol protocol;
         try {
-            protocolCodec = ProtocolCodec.ofCode(in.readByte());
+            protocol = Protocol.resolve(in.readByte());
         } catch (UnsupportedProtocolException e) {
-            // 不支持的协议版本
-            ctx.writeAndFlush(e.msg());
+            // 不支持的协议
+            ctx.write(e.msg(0));
             return;
         }
-        var message = protocolCodec.decode(ctx, in);
-        out.add(message);
-        in.release();
+        var message = protocol.codec().decode(ctx, in);
+        if (message != null) {
+            out.add(message);
+        }
         log.info("MESSAGE PARSE {}", message);
     }
 }

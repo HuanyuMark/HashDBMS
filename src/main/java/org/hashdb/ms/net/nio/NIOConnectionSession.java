@@ -2,7 +2,7 @@ package org.hashdb.ms.net.nio;
 
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.compiler.CommandExecutor;
+import org.hashdb.ms.compiler.LocalCommandExecutor;
 import org.hashdb.ms.exception.DBClientException;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.net.AbstractConnectionSession;
@@ -45,7 +45,7 @@ public class NIOConnectionSession extends AbstractConnectionSession {
     private static int maxId;
     private final int id = ++maxId;
 
-    private final CommandExecutor commandExecutor = CommandExecutor.create(this);
+    private final LocalCommandExecutor commandExecutor = LocalCommandExecutor.create(this);
 
     private static int maxConnections = 0;
 

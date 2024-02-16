@@ -6,7 +6,6 @@ import org.hashdb.ms.aspect.methodAccess.DisposableCall;
 import org.hashdb.ms.config.ReplicationConfig;
 import org.hashdb.ms.data.DataType;
 import org.hashdb.ms.data.Database;
-import org.hashdb.ms.event.CloseServerEvent;
 import org.hashdb.ms.event.ReplicationConfigLoadedEvent;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.net.exception.DatabaseClashException;
@@ -27,6 +26,8 @@ import java.util.Date;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
@@ -202,9 +203,7 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
      * 保存系统信息, 数据库信息, 数据库数据
      */
     @Override
-    public void destroy() throws Exception {
-        // 关闭服务器
-        publisher.publishEvent(new CloseServerEvent());
+    public void destroy() {
         log.info("start closing System ...");
         var dbmsCostTime = TimeCounter.start();
         // 保存系统信息
@@ -229,6 +228,12 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
                 log.trace("db '{}' storing success", db);
             }
         });
-        log.info("System closed, cost {} ms", dbmsCostTime.stop());
+        String forkJoinPoolClosingMsg;
+        if (ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS)) {
+            forkJoinPoolClosingMsg = "gracefully";
+        } else {
+            forkJoinPoolClosingMsg = "rudely. remaining task " + ForkJoinPool.commonPool().getQueuedTaskCount();
+        }
+        log.info("System closed {}, cost {} ms", forkJoinPoolClosingMsg, dbmsCostTime.stop());
     }
 }

@@ -12,7 +12,7 @@ import org.hashdb.ms.net.nio.msg.v1.ErrorMessage;
  */
 @StandardException
 public class DBClientException extends RuntimeException {
-    public ErrorMessage msg() {
-        return new ErrorMessage(this);
+    public ErrorMessage msg(long actId) {
+        return new ErrorMessage(actId, this);
     }
 }

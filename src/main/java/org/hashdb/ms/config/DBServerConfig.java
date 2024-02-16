@@ -1,16 +1,14 @@
 package org.hashdb.ms.config;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.MessageToMessageCodec;
+import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.aspect.methodAccess.ConfigLoadOnly;
 import org.hashdb.ms.net.nio.ClientChannelInitializer;
 import org.hashdb.ms.net.nio.NettyServer;
-import org.hashdb.ms.net.nio.SessionFactoryHandler;
-import org.hashdb.ms.net.nio.msg.v1.Message;
-import org.hashdb.ms.net.nio.protocol.MessageCodecHandler;
+import org.hashdb.ms.net.nio.SessionMountedHandler;
+import org.hashdb.ms.net.nio.protocol.CodecDispatcher;
 import org.slf4j.event.Level;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -42,32 +40,34 @@ public class DBServerConfig {
 
     private CommandCacheConfig commandCache = new CommandCacheConfig();
 
+    private int inactiveTimeout = 10_000;
+
     @Bean
     @ConditionalOnClass(NettyServer.class)
     public LoggingHandler loggingHandler() {
-        return new LoggingHandler();
+        return new LoggingHandler(LogLevel.INFO);
     }
 
     @Bean
     @ConditionalOnClass(NettyServer.class)
-    public SessionFactoryHandler sessionFactoryHandler() {
-        return new SessionFactoryHandler();
+    public SessionMountedHandler sessionFactoryHandler() {
+        return new SessionMountedHandler();
     }
 
     @Bean
     @ConditionalOnClass(NettyServer.class)
-    public MessageCodecHandler hashProtocolCodecHandler() {
-        return new MessageCodecHandler();
+    public CodecDispatcher hashProtocolCodecHandler() {
+        return new CodecDispatcher();
     }
 
     @Bean
     @ConditionalOnClass(NettyServer.class)
     public ClientChannelInitializer clientChannelInitializer(
-            MessageToMessageCodec<ByteBuf, Message<?>> messageCodec,
-            SessionFactoryHandler sessionFactoryHandler,
+            CodecDispatcher messageCodec,
+            SessionMountedHandler sessionMountedHandler,
             LoggingHandler loggingHandler
     ) {
-        return new ClientChannelInitializer(messageCodec, sessionFactoryHandler, loggingHandler);
+        return new ClientChannelInitializer(messageCodec, sessionMountedHandler, loggingHandler);
     }
 
     public void setPort(int port) {
@@ -97,5 +97,9 @@ public class DBServerConfig {
     @ConfigLoadOnly
     public void setCommandCache(CommandCacheConfig commandCache) {
         this.commandCache = commandCache;
+    }
+
+    public void setInactiveTimeout(int inactiveTimeout) {
+        this.inactiveTimeout = inactiveTimeout;
     }
 }

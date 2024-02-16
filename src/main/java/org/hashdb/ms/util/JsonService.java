@@ -8,6 +8,9 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufOutputStream;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.compiler.keyword.CompilerNode;
@@ -24,6 +27,8 @@ import org.hashdb.ms.net.msg.MessageType;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -56,6 +61,16 @@ public class JsonService {
         }
     }
 
+    public static ByteBuf toByteBuf(Object obj) {
+        var out = new ByteBufOutputStream(ByteBufAllocator.DEFAULT.buffer());
+        try {
+            COMMON.writeValue(((OutputStream) out), obj);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return out.buffer();
+    }
+
     public static <T> @Nullable T parse(String json, Class<T> clazz) throws JsonProcessingException {
         T value = COMMON.readValue(json, clazz);
         return (T) normalizeNumber(value);
@@ -73,6 +88,10 @@ public class JsonService {
     public static <T> @Nullable T parse(byte[] source, int offset, int length, Class<T> clazz) throws IOException {
         T value = COMMON.readValue(source, offset, length, clazz);
         return (T) normalizeNumber(value);
+    }
+
+    public static <T> T parse(InputStream inputStream, Class<T> clazz) throws IOException {
+        return (T) normalizeNumber(COMMON.readValue(inputStream, clazz));
     }
 
     public static <T> T parse(JsonParser jp, Class<T> clazz) throws IOException {

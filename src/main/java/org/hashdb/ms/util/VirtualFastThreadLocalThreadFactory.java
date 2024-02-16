@@ -1,6 +1,7 @@
 package org.hashdb.ms.util;
 
 import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.concurrent.FastThreadLocalThread;
 
 /**
  * Date: 2024/1/18 2:29
@@ -12,7 +13,7 @@ public class VirtualFastThreadLocalThreadFactory extends DefaultThreadFactory {
 
     @Override
     protected Thread newThread(Runnable r, String name) {
-        return new VirtualFastThreadLocalThread(threadGroup, r, name);
+        return new FastThreadLocalThread(threadGroup, r, name);
     }
 
     public VirtualFastThreadLocalThreadFactory(Class<?> poolType) {

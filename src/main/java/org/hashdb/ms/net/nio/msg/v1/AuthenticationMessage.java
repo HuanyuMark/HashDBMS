@@ -18,8 +18,8 @@ public class AuthenticationMessage extends Message<AuthenticationMessage.Body> {
     }
 
     @Override
-    public MessageType type() {
-        return MessageType.AUTHENTICATION;
+    public MessageMeta getMeta() {
+        return MessageMeta.AUTHENTICATION;
     }
 
     public record Body(String username, String password) {

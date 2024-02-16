@@ -1,26 +1,37 @@
 package org.hashdb.ms.net.nio.msg.v1;
 
+import org.hashdb.ms.exception.DBClientException;
+
 /**
  * Date: 2024/1/17 16:21
  *
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public class CloseMessage extends Message<String> {
+public class CloseMessage extends ErrorMessage {
 
     public CloseMessage(long id, String body) {
         super(id, body);
     }
 
-    /**
-     * @param body 原因
-     */
-    public CloseMessage(String body) {
-        super(body);
+    public CloseMessage(Message<?> request, String cause) {
+        super(request, cause);
+    }
+
+    public CloseMessage(long actId, Body body) {
+        super(actId, body);
+    }
+
+    public CloseMessage(Message<?> request, DBClientException e) {
+        super(request, e);
+    }
+
+    public CloseMessage(long actId, DBClientException e) {
+        super(actId, e);
     }
 
     @Override
-    public MessageType type() {
+    public MessageMeta getMeta() {
         return null;
     }
 }

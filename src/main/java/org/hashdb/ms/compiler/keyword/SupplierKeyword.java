@@ -5,6 +5,10 @@ import org.hashdb.ms.util.ReflectCache;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Date: 2023/11/24 16:22
  * 提供者关键字的特点就是, 构造的任务没有入参
@@ -33,7 +37,13 @@ public enum SupplierKeyword implements Keyword<SupplierKeyword> {
     $$PARAMETER_ACCESS$$(ParameterCtx.class),
     $$VALUE$$(JsonValueCtx.class);
 
+    private static final Map<String, SupplierKeyword> enumsDic;
     private final ReflectCache<? extends SupplierCtx> constructor;
+
+    static {
+        SupplierKeyword[] values = values();
+        enumsDic = Arrays.stream(values).collect(() -> new HashMap<>(values.length * 5, 0.2F), (m, e) -> m.put(e.name(), e), HashMap::putAll);
+    }
 
     SupplierKeyword(Class<? extends SupplierCtx> keywordCtxClass) {
         this.constructor = new ReflectCache<>(keywordCtxClass);
@@ -45,15 +55,6 @@ public enum SupplierKeyword implements Keyword<SupplierKeyword> {
             return null;
         }
         return supplierKeyword.constructor;
-    }
-
-    public static boolean is(@NotNull String keyword) {
-        try {
-            valueOf(keyword.toUpperCase());
-            return true;
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
     }
 
     public static SupplierCtx createCtx(@NotNull String unknownToken) {
@@ -77,10 +78,6 @@ public enum SupplierKeyword implements Keyword<SupplierKeyword> {
     @Nullable
     public static SupplierKeyword typeOfIgnoreCase(@NotNull String unknownToken) {
         String normalizedStr = unknownToken.toUpperCase();
-        try {
-            return valueOf(normalizedStr);
-        } catch (IllegalArgumentException e) {
-            return null;
-        }
+        return enumsDic.get(normalizedStr);
     }
 }

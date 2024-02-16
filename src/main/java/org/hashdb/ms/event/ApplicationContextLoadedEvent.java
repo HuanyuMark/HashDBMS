@@ -7,5 +7,5 @@ package org.hashdb.ms.event;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public class StartServerEvent {
+public class ApplicationContextLoadedEvent {
 }

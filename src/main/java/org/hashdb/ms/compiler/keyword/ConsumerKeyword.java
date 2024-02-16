@@ -15,6 +15,9 @@ import org.hashdb.ms.util.ReflectCache;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Function;
 
 /**
@@ -58,7 +61,14 @@ public enum ConsumerKeyword implements Keyword<ConsumerKeyword> {
     LPOPRPUSH(LPopRPush.class),
     RPOPLPUSH(RPopLPush.class),
     SSET(SSetCtx.class);
+
+    private static final Map<String, ConsumerKeyword> enumsDic;
     private final ConsumerCtxConstructor compileCtxFactory;
+
+    static {
+        ConsumerKeyword[] values = values();
+        enumsDic = Arrays.stream(values).collect(() -> new HashMap<>(values.length * 5, 0.2F), (m, e) -> m.put(e.name(), e), HashMap::putAll);
+    }
 
     ConsumerKeyword(Class<? extends ConsumerCtx<?>> keywordCtxClass) {
         this.compileCtxFactory = new ConsumerCtxConstructor(keywordCtxClass);

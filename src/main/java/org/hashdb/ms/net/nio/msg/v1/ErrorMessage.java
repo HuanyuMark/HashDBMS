@@ -8,27 +8,31 @@ import org.hashdb.ms.exception.DBClientException;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public class ErrorMessage extends Message<ErrorMessage.Body> {
+public class ErrorMessage extends ActMessage<ErrorMessage.Body> {
 
-    public ErrorMessage(long id, Body body) {
-        super(id, body);
+    public ErrorMessage(long actId, Body body) {
+        super(actId, body);
     }
 
-    public ErrorMessage(Body body) {
-        super(body);
+    public ErrorMessage(Message<?> request, DBClientException e) {
+        this(request.id, e);
     }
 
-    public ErrorMessage(DBClientException e) {
-        super(new Body(e.getClass().getSimpleName(), e.getCause().getMessage()));
+    public ErrorMessage(long actId, DBClientException e) {
+        super(actId, new Body(e.getClass().getSimpleName(), e.getCause().getMessage()));
     }
 
-    public ErrorMessage(String cause) {
-        super(new Body("Exception", cause));
+    public ErrorMessage(long actId, String cause) {
+        super(actId, new Body("Exception", cause));
+    }
+
+    public ErrorMessage(Message<?> request, String cause) {
+        this(request.id, cause);
     }
 
     @Override
-    public MessageType type() {
-        return MessageType.ERROR;
+    public MessageMeta getMeta() {
+        return MessageMeta.ERROR;
     }
 
     public record Body(

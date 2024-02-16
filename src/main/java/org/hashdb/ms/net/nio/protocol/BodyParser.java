@@ -1,6 +1,14 @@
 package org.hashdb.ms.net.nio.protocol;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufInputStream;
+import io.netty.buffer.EmptyByteBuf;
+import lombok.extern.slf4j.Slf4j;
+import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.net.exception.UnsupportedBodyTypeException;
+import org.hashdb.ms.net.nio.MetaEnum;
+import org.hashdb.ms.net.nio.SessionMeta;
 import org.hashdb.ms.util.JsonService;
 
 import java.io.IOException;
@@ -11,29 +19,55 @@ import java.io.IOException;
  * @author huanyuMake-pecdle
  * @version 0.0.1
  */
-public enum BodyParser {
-    JSON(JsonService::toBytes, (source, offset, length) -> {
+@Slf4j
+public enum BodyParser implements MetaEnum {
+    JSON(JsonService::toByteBuf, (bodyClass, buf) -> {
         try {
-            return JsonService.parse(source, offset, length, Object.class);
+            return JsonService.parse(new ByteBufInputStream(buf), bodyClass);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new DBSystemException(e);
         }
-    });
+    }),
+    NULL(BodyParser::emptyBody, (bodyClass, buf) -> null),
+    SESSION_META(msg -> {
+        if (!(msg instanceof SessionMeta meta)) {
+            throw new IllegalArgumentException("BodyParser 'SESSION_META' can not serialize '" + msg + "', expect type: 'SESSION_META'");
+        }
+        var buf = ByteBufAllocator.DEFAULT.buffer();
+        buf.writeInt(meta.key());
+        return buf;
+    }, (bodyClass, buf) -> SessionMeta.resolve(buf.readInt()));
 
-    private static final byte[] EMPTY_BODY = new byte[0];
+    private static ByteBuf EMPTY_BODY = emptyBody();
+
+    private static ByteBuf emptyBody(Object any) {
+        if (EMPTY_BODY == null) {
+            EMPTY_BODY = new EmptyByteBuf(ByteBufAllocator.DEFAULT).asReadOnly();
+        }
+        return EMPTY_BODY;
+    }
+
+    public static ByteBuf emptyBody() {
+        return emptyBody(null);
+    }
 
     private final Encoder encoder;
 
     private final Decoder decoder;
 
-    static final BodyParser[] constant = BodyParser.values();
+    static final BodyParser[] ENUM_MAP = BodyParser.values();
+
+    @Override
+    public int key() {
+        return ordinal();
+    }
 
     interface Encoder {
-        byte[] encode(Object body);
+        ByteBuf encode(Object body);
     }
 
     interface Decoder {
-        Object decode(byte[] source, int offset, int length);
+        Object decode(Class<?> bodyClass, ByteBuf buf);
     }
 
     BodyParser(Encoder encoder, Decoder decoder) {
@@ -41,22 +75,22 @@ public enum BodyParser {
         this.decoder = decoder;
     }
 
-    public static BodyParser ofCode(byte b) throws UnsupportedBodyTypeException {
+    public static BodyParser resolve(byte b) throws UnsupportedBodyTypeException {
         try {
-            return constant[b];
+            return ENUM_MAP[b];
         } catch (ArrayIndexOutOfBoundsException e) {
             throw UnsupportedBodyTypeException.unsupported(b);
         }
     }
 
-    public byte[] encode(Object body) {
+    public ByteBuf encode(Object body) {
         if (body == null) {
             return EMPTY_BODY;
         }
         return encoder.encode(body);
     }
 
-    public Object decode(byte[] source, int offset, int length) {
-        return decoder.decode(source, offset, length);
+    public Object decode(Class<?> bodyClass, ByteBuf buf) {
+        return decoder.decode(bodyClass, buf);
     }
 }

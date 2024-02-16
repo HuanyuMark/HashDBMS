@@ -26,6 +26,7 @@ public class VirtualNioEventLoopGroup extends NioEventLoopGroup {
         return new VirtualFastThreadLocalThreadFactory(getClass(), Thread.MAX_PRIORITY);
     }
 
+
     public VirtualNioEventLoopGroup() {
     }
 

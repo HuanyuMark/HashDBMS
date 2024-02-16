@@ -7,6 +7,11 @@ package org.hashdb.ms.net.nio.msg.v1;
  * @version 0.0.1
  */
 public class ActAuthenticationMessage extends ActMessage<ActAuthenticationMessage.Body> {
+
+    public ActAuthenticationMessage(long actId, Body body) {
+        super(actId, body);
+    }
+
     public ActAuthenticationMessage(long id, long actId, Body body) {
         super(id, actId, body);
     }
@@ -16,8 +21,8 @@ public class ActAuthenticationMessage extends ActMessage<ActAuthenticationMessag
     }
 
     @Override
-    public MessageType type() {
-        return MessageType.ACT_AUTHENTICATION;
+    public MessageMeta getMeta() {
+        return MessageMeta.ACT_AUTHENTICATION;
     }
 
     public record Body(String msg, boolean success, String username) {

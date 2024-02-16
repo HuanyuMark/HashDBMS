@@ -15,13 +15,23 @@ public abstract class ActMessage<B> extends Message<B> {
         this.actId = actId;
     }
 
+    public ActMessage(long id, Message<?> request, B body) {
+        super(id, body);
+        this.actId = request.id;
+    }
+
     public ActMessage(long actId, B body) {
         super(body);
         this.actId = actId;
     }
 
-    public static DefaultActMessage defaultAct(long actId) {
-        return new DefaultActMessage(actId, "\"SUCC\"");
+    public ActMessage(Message<?> request, B body) {
+        super(body);
+        this.actId = request.id;
+    }
+
+    public static ActMessage<String> act(long actId) {
+        return new DefaultActMessage(actId, "SUCC");
     }
 
     public long actId() {

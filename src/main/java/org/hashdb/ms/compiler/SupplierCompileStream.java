@@ -6,6 +6,7 @@ import org.hashdb.ms.compiler.keyword.SupplierKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
 import org.hashdb.ms.net.ConnectionSession;
 import org.hashdb.ms.net.TransportableConnectionSession;
+import org.hashdb.ms.util.AsyncService;
 import org.hashdb.ms.util.JsonService;
 import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
@@ -83,12 +84,12 @@ public final class SupplierCompileStream extends DatabaseCompileStream {
     @Override
     public CompletableFuture<Object> execute() {
         var future = session.getDatabase().submitOpsTask(compile().compileResult());
-        return future.thenApply(result -> {
+        return future.thenApplyAsync(result -> {
             if (result instanceof Boolean ok) {
-                return ok ? "\"SUCC\"" : "\"FAIL\"";
+                return ok ? "SUCC" : "FAIL";
             }
             return CompileStream.normalizeValue(result);
-        });
+        }, AsyncService.service());
     }
 
     public byte[] runAndGetResultBytes() {

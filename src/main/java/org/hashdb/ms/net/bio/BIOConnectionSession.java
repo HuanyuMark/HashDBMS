@@ -3,7 +3,7 @@ package org.hashdb.ms.net.bio;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.compiler.CommandExecutor;
+import org.hashdb.ms.compiler.LocalCommandExecutor;
 import org.hashdb.ms.compiler.exception.CommandExecuteException;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.HValue;
@@ -199,7 +199,7 @@ public class BIOConnectionSession extends AbstractConnectionSession implements C
         });
 
         // 根据会话创建会话特化的编译器
-        var commandExecutor = CommandExecutor.create(this);
+        var commandExecutor = LocalCommandExecutor.create(this);
         // 添加命令消息的处理器
         chain.add((msg, chain) -> {
             if (!(msg instanceof CommandMessage commandMessage)) {

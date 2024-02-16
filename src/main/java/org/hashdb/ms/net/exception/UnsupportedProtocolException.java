@@ -11,7 +11,7 @@ import org.hashdb.ms.exception.DBClientException;
  */
 @StandardException
 public class UnsupportedProtocolException extends DBClientException {
-    public static UnsupportedBodyTypeException unsupported(byte unsupportedBodyType) {
+    public static UnsupportedBodyTypeException unsupported(int unsupportedBodyType) {
         return new UnsupportedBodyTypeException("unsupported protocol '" + unsupportedBodyType + "'");
     }
 }

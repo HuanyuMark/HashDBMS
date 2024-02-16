@@ -16,7 +16,7 @@ public class AppCommandMessage extends Message<String> {
     }
 
     @Override
-    public MessageType type() {
-        return MessageType.APP_COMMAND;
+    public MessageMeta getMeta() {
+        return MessageMeta.APP_COMMAND;
     }
 }

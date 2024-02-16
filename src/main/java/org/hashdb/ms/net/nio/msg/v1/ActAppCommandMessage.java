@@ -15,8 +15,12 @@ public class ActAppCommandMessage extends ActMessage<Object> {
         super(actId, body);
     }
 
+    public ActAppCommandMessage(Message<?> request, Object body) {
+        super(request, body);
+    }
+
     @Override
-    public MessageType type() {
-        return MessageType.ACT_APP_COMMAND;
+    public MessageMeta getMeta() {
+        return MessageMeta.ACT_APP_COMMAND;
     }
 }

@@ -76,6 +76,7 @@ public class ParameterCtx extends SupplierCtx {
         // 如果需要存储, 那么就需要克隆, 在命令运行前(编译时)克隆最佳
         if (store) {
             // 在命令被重新运行时重新拷贝一份当前value
+            // TODO: 2024/2/5 这里应该不需要注册再运行回调，jsonValue会自动在重运行时克隆更新
             stream.rootStream().onRerun(() -> cloneValue(parameter.value()));
         } else {
             // 在参数值被用户更改时更新当前value
