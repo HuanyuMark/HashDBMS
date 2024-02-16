@@ -11,7 +11,6 @@ import java.util.List;
  * Date: 2023/11/25 2:42
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class LPushCtx extends PushCtx {
 
@@ -26,7 +25,7 @@ public class LPushCtx extends PushCtx {
 
     @Override
     protected void doPushCollection(List<Object> opsTarget, Collection<Object> other) {
-        opsTarget.addAll(0,other);
+        opsTarget.addAll(0, other);
     }
 
     @Override

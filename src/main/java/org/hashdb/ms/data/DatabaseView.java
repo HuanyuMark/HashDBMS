@@ -10,7 +10,6 @@ import java.util.regex.Pattern;
  * 数据库视图, 根据给定的模式串, 筛选一遍key, 再将操作代理给原数据库
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class DatabaseView implements IDatabase, TaskConsumer {
     protected final Pattern pattern;

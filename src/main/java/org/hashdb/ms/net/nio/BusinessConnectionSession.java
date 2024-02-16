@@ -22,7 +22,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Date: 2024/1/16 21:15
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 public class BusinessConnectionSession extends ChannelSession {

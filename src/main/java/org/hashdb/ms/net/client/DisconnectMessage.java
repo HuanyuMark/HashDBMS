@@ -5,13 +5,10 @@ import lombok.EqualsAndHashCode;
 import org.hashdb.ms.net.msg.Message;
 import org.hashdb.ms.net.msg.MessageType;
 
-import java.util.UUID;
-
 /**
  * Date: 2023/12/1 3:11
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

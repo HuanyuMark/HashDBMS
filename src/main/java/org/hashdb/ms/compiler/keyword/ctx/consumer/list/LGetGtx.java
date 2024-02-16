@@ -9,7 +9,6 @@ import java.util.*;
  * Date: 2023/11/29 11:11
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class LGetGtx extends RandomAccessCtx {
     public LGetGtx(CompileCtx<?> fatherCompileCtx) {
@@ -23,14 +22,14 @@ public class LGetGtx extends RandomAccessCtx {
 
     @Override
     protected List<Object> access(List<Object> opeList, List<Long> indexes) {
-        if(opeList instanceof RandomAccess) {
-            return indexes.stream().map(i->opeList.get(i.intValue())).toList();
+        if (opeList instanceof RandomAccess) {
+            return indexes.stream().map(i -> opeList.get(i.intValue())).toList();
         }
 
         var result = new LinkedList<>();
         int elIndex;
         // 用尾遍历
-        if(opeList.size() - indexes.getFirst() < indexes.getLast()) {
+        if (opeList.size() - indexes.getFirst() < indexes.getLast()) {
             elIndex = opeList.size() - 1;
             var elIter = opeList.reversed().iterator();
             var indexIter = indexes.reversed().iterator();

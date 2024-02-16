@@ -12,7 +12,6 @@ import java.util.function.Function;
  * Date: 2023/12/10 20:38
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public abstract class ConsumerKeywordNode extends KeywordNode {
 

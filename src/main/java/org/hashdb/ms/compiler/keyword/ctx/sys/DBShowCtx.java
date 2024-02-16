@@ -13,7 +13,6 @@ import java.util.Collection;
  * Date: 2023/11/30 15:53
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class DBShowCtx extends SystemCompileCtx<Collection<DatabaseInfos>> {
     @Override

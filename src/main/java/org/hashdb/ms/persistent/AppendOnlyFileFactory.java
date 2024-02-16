@@ -19,7 +19,6 @@ import java.util.regex.Pattern;
  * Date: 2024/1/5 20:32
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 public class AppendOnlyFileFactory {

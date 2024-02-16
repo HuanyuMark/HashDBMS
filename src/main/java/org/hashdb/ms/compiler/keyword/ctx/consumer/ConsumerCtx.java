@@ -22,7 +22,6 @@ import java.util.function.Function;
  * Date: 2023/11/25 13:28
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 public abstract class ConsumerCtx<I> extends CompileCtx<ConsumerCompileStream> {

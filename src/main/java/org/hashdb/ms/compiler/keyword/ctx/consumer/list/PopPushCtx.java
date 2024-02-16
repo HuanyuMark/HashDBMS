@@ -16,7 +16,6 @@ import java.util.stream.Stream;
  * Date: 2023/11/30 0:18
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public abstract class PopPushCtx extends MutableListCtx {
     @Override

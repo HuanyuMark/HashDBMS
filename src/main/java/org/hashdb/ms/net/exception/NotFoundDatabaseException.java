@@ -7,7 +7,6 @@ import org.hashdb.ms.exception.DBClientException;
  * Date: 2023/11/21 17:17
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @StandardException
 public class NotFoundDatabaseException extends DBClientException {

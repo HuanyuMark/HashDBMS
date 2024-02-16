@@ -7,7 +7,6 @@ import org.hashdb.ms.aspect.methodAccess.ConfigLoadOnly;
  * Date: 2024/1/15 14:30
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Getter
 public class CommandCacheConfig {

@@ -17,7 +17,6 @@ import java.util.function.Function;
  * Date: 2023/11/29 16:29
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public abstract class InterpretCtx extends ConsumerCtx<Object> {
     protected PrecompileResult<Object> precompileResult;

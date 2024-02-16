@@ -7,7 +7,6 @@ import org.hashdb.ms.exception.DBClientException;
  * Date: 2024/1/18 1:36
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @StandardException
 public class UnsupportedProtocolException extends DBClientException {

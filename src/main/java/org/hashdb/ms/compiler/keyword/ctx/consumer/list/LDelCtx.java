@@ -9,7 +9,6 @@ import java.util.*;
  * Date: 2023/11/29 11:11
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class LDelCtx extends RandomAccessCtx {
 
@@ -24,8 +23,8 @@ public class LDelCtx extends RandomAccessCtx {
 
     @Override
     protected List<Object> access(List<Object> opeList, List<Long> indexes) {
-        if(opeList instanceof RandomAccess) {
-            return indexes.stream().map(i->opeList.remove(i.intValue())).toList();
+        if (opeList instanceof RandomAccess) {
+            return indexes.stream().map(i -> opeList.remove(i.intValue())).toList();
         }
 
         var result = new LinkedList<>();

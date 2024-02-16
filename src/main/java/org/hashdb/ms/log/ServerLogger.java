@@ -10,7 +10,6 @@ import org.slf4j.spi.LoggingEventBuilder;
  * Date: 2023/12/3 16:34
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class ServerLogger implements Logger {
 

@@ -8,7 +8,6 @@ package org.hashdb.ms.compiler.option;
  * 2. 如果这条命令的返回值是 Immutable , 则可以将其转为新的 mutable 对象, 然后对这个 mutable 对象进行修改
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class CopyOpCtx extends BooleanOpCtx {
     public CopyOpCtx(Boolean defaultValue) {

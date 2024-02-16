@@ -13,7 +13,6 @@ import java.util.function.Supplier;
  * Date: 2023/11/22 11:40
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public interface OpsTask<T> extends Supplier<T> {
     T result();

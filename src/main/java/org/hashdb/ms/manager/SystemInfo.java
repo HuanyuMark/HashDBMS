@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.DatabaseInfos;
-import org.hashdb.ms.data.PlainPair;
+import org.hashdb.ms.data.SimplePair;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.net.exception.DatabaseInUseException;
 import org.hashdb.ms.util.Lazy;
@@ -21,7 +21,6 @@ import java.util.stream.Collectors;
  * DBMS 系统信息
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 @Getter
@@ -93,13 +92,13 @@ public class SystemInfo {
         Map<Integer, String> idNameMap = databaseIdMap.entrySet().parallelStream().map(entry -> {
             Lazy<Database> lazy = entry.getValue();
             String dbName;
-            if (lazy.isCached()) {
+            if (lazy.isResolved()) {
                 dbName = lazy.get().getInfos().getName();
             } else {
                 dbName = navigableDbInfosMap.get(lazy).getName();
             }
-            return new PlainPair<>(entry.getKey(), dbName);
-        }).collect(Collectors.toMap(PlainPair::key, PlainPair::value));
+            return new SimplePair<>(entry.getKey(), dbName);
+        }).collect(Collectors.toMap(SimplePair::key, SimplePair::value));
         return new StorableSystemInfo(idNameMap);
     }
 }

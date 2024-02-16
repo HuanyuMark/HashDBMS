@@ -18,7 +18,6 @@ import java.lang.reflect.Field;
  * 如果真需要实现携程的功能,需要使用 {@link java.lang.VirtualThread.VThreadContinuation}
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 public class VirtualFastThreadLocalThread extends FastThreadLocalThread {

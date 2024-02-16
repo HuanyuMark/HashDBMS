@@ -1,14 +1,9 @@
 package org.hashdb.ms.data;
 
-import org.springframework.util.NumberUtils;
-
-import java.util.Objects;
-
 /**
  * Date: 2023/11/22 22:24
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Deprecated
 public interface Numeric<T extends Number> {

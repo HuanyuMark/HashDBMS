@@ -17,7 +17,6 @@ import java.io.IOException;
  * Date: 2024/1/17 12:09
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 public enum BodyParser implements MetaEnum {

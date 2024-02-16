@@ -11,11 +11,10 @@ import java.util.concurrent.Future;
  * Date: 2023/11/22 12:10
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class Futures {
     public static <T> T unwrap(Future<T> future) {
-        if(future instanceof CompletableFuture<T> cf) {
+        if (future instanceof CompletableFuture<T> cf) {
             return cf.join();
         }
         try {

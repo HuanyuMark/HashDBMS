@@ -20,7 +20,6 @@ import org.springframework.context.annotation.Configuration;
  * Date: 2023/11/21 12:17
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 @Getter

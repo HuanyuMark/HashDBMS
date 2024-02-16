@@ -5,10 +5,11 @@ import org.jetbrains.annotations.NotNull;
 
 /**
  * Date: 2024/2/1 16:57
+ * todo 使用 {@link SessionUpgradeMessage} 来替换, 现在仅存在SessionUpgrade需求
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
+@Deprecated
 public class SessionSwitchingMessage extends Message<SessionMeta> {
 
     public static final SessionSwitchingMessage DEFAULT = new SessionSwitchingMessage(0, SessionMeta.BUSINESS.key());

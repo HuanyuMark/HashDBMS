@@ -16,7 +16,6 @@ import java.util.stream.Collectors;
  * Date: 2023/11/22 13:38
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public enum DataType {
     STRING(String.class, List.of("STR", "STRING"), String.class),

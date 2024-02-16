@@ -10,7 +10,6 @@ import java.nio.channels.ClosedChannelException;
  * Date: 2023/12/3 14:39
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Getter
 public class ClosedChannelWrapper extends RuntimeException {

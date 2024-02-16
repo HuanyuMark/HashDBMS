@@ -13,7 +13,6 @@ import java.util.List;
  * Date: 2024/1/7 0:34
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 class AppendOnlyFile {

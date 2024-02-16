@@ -25,7 +25,6 @@ import java.util.Map;
  * Date: 2024/1/5 19:58
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @RequiredArgsConstructor
 public class AofHdbPersistentService implements PersistentService {

@@ -5,13 +5,11 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
-import java.util.List;
 
 /**
  * Date: 2023/11/23 23:10
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class RefDataTypeOpsTaskSupplier {
     @Contract(value = "_ -> new", pure = true)

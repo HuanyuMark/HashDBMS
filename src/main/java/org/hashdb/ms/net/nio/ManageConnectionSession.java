@@ -10,7 +10,6 @@ import org.slf4j.Logger;
  * Date: 2024/2/3 21:15
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 public class ManageConnectionSession extends ChannelSession {

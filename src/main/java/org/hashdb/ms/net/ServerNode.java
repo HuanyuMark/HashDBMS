@@ -8,7 +8,6 @@ import java.util.UUID;
  * Date: 2023/12/5 13:47
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Data
 public class ServerNode {

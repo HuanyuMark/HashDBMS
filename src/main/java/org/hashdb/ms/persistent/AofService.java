@@ -12,7 +12,6 @@ import java.util.List;
  * Date: 2023/12/5 14:37
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @RequiredArgsConstructor
 public class AofService {

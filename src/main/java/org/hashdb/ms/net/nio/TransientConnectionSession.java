@@ -9,7 +9,6 @@ import org.hashdb.ms.net.nio.protocol.Protocol;
  * Date: 2024/2/1 17:28
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public interface TransientConnectionSession extends ChannelHook, AutoCloseable {
     AttributeKey<TransientConnectionSession> KEY = AttributeKey.newInstance("session");

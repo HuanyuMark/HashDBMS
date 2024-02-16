@@ -25,7 +25,6 @@ import java.util.function.Function;
  * 可管道化关键字, 需要入参才能执行
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public enum ConsumerKeyword implements Keyword<ConsumerKeyword> {
     PIPE(PipeCtx.class),

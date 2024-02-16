@@ -12,7 +12,6 @@ import java.util.List;
  * Date: 2023/11/24 23:12
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @StandardException
 public class UnsupportedQueryKey extends DBClientException {

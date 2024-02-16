@@ -13,7 +13,6 @@ import org.jetbrains.annotations.Nullable;
  * Date: 2024/1/18 18:36
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 interface ProtocolCodec {
 //    byte[] EMPTY_BODY = new byte[0];

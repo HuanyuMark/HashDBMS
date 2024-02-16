@@ -7,7 +7,6 @@ import org.hashdb.ms.exception.DBClientException;
  * Date: 2024/1/18 1:28
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @StandardException
 public class UnsupportedBodyTypeException extends DBClientException {

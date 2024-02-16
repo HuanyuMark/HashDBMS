@@ -11,7 +11,6 @@ import java.net.Socket;
  * Date: 2023/12/1 2:14
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

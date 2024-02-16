@@ -6,7 +6,6 @@ import org.hashdb.ms.exception.DBClientException;
  * Date: 2024/1/17 16:21
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class CloseMessage extends ErrorMessage {
 

@@ -3,7 +3,7 @@ package org.hashdb.ms.manager;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.config.HdbConfig;
 import org.hashdb.ms.data.Database;
-import org.hashdb.ms.data.PlainPair;
+import org.hashdb.ms.data.SimplePair;
 import org.hashdb.ms.persistent.PersistentService;
 import org.hashdb.ms.util.AtomLazy;
 import org.jetbrains.annotations.NotNull;
@@ -17,7 +17,6 @@ import java.util.stream.Collectors;
  * Date: 2023/11/27 23:34
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 public record StorableSystemInfo(
@@ -44,16 +43,16 @@ public record StorableSystemInfo(
                     return db;
                 });
             }
-            return new PlainPair<>(dbName, atomLazy);
-        }).collect(Collectors.toMap(PlainPair::key, PlainPair::value));
+            return new SimplePair<>(dbName, atomLazy);
+        }).collect(Collectors.toMap(SimplePair::key, SimplePair::value));
         var idDbMap = databaseIdMap.entrySet().parallelStream().map(entry -> {
             var dbName = entry.getValue();
             var lazyDb = nameDbMap.get(dbName);
-            return new PlainPair<>(entry.getKey(), lazyDb);
-        }).collect(Collectors.toMap(PlainPair::key, PlainPair::value));
+            return new SimplePair<>(entry.getKey(), lazyDb);
+        }).collect(Collectors.toMap(SimplePair::key, SimplePair::value));
         var dbInfosMap = persistentService.scanDatabaseInfos().stream()
-                .map(info -> new PlainPair<>(info, nameDbMap.get(info.getName())))
-                .collect(Collectors.toMap(PlainPair::key, PlainPair::value));
+                .map(info -> new SimplePair<>(info, nameDbMap.get(info.getName())))
+                .collect(Collectors.toMap(SimplePair::key, SimplePair::value));
         return new SystemInfo(nameDbMap, idDbMap, dbInfosMap);
     }
 }

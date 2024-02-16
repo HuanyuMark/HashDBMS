@@ -14,7 +14,6 @@ import java.util.Map;
  * Date: 2023/11/24 16:51
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public enum Options {
     EXISTS(ExistsOpCtx.class, List.of("es")),

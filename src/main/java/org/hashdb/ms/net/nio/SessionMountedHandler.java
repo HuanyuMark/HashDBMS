@@ -22,7 +22,6 @@ import java.util.concurrent.ConcurrentMap;
  * Date: 2024/1/17 12:22
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 @ChannelHandler.Sharable

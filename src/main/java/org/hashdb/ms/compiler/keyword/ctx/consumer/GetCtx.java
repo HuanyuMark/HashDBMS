@@ -13,7 +13,6 @@ import java.util.List;
  * 否则运行时编译, 效率低, 其它在这个包下的关键字, 基本都有这个问题, 职责也与这个类相似
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class GetCtx extends InterpretCtx {
     protected GetCtx(CompileCtx<?> fatherCompileCtx) {
@@ -21,6 +20,7 @@ public class GetCtx extends InterpretCtx {
                 new LGetGtx(fatherCompileCtx)
         ));
     }
+
     @Override
     public ConsumerKeyword name() {
         return ConsumerKeyword.GET;

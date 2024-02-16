@@ -14,7 +14,6 @@ import java.util.Objects;
  * Date: 2024/2/3 21:43
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @RequiredArgsConstructor
 class ProtocolSwitchingHandler extends SimpleChannelInboundHandler<ProtocolSwitchingMessage> implements NamedChannelHandler {

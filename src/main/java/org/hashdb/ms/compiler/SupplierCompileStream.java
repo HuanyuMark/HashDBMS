@@ -19,7 +19,6 @@ import java.util.concurrent.CompletableFuture;
  * 编译流, 流式编译一整条命令
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 public final class SupplierCompileStream extends DatabaseCompileStream {
@@ -54,7 +53,7 @@ public final class SupplierCompileStream extends DatabaseCompileStream {
 
     @Override
     public SupplierCtx compile() throws UnknownTokenException {
-        if (compileResult.isCached()) {
+        if (compileResult.isResolved()) {
             return compileResult.get();
         }
         var commandContext = SupplierKeyword.createCtx(token());
@@ -65,7 +64,7 @@ public final class SupplierCompileStream extends DatabaseCompileStream {
     }
 
     public SupplierCtx compile(SupplierCtx mainStatement) throws UnknownTokenException {
-        if (compileResult.isCached()) {
+        if (compileResult.isResolved()) {
             return compileResult.get();
         }
         next();

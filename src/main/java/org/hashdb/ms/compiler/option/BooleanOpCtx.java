@@ -7,7 +7,6 @@ import org.hashdb.ms.compiler.exception.CommandCompileException;
  * Date: 2023/11/25 18:14
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public abstract class BooleanOpCtx extends ParseableOpCtx<Boolean> implements FlyweightOpCtx {
     public BooleanOpCtx(Boolean defaultValue) {

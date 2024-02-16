@@ -30,7 +30,6 @@ import java.util.stream.Collectors;
  * Date: 2023/11/21 3:02
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 @Component

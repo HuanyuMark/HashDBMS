@@ -7,7 +7,6 @@ import org.hashdb.ms.compiler.exception.IllegalValueException;
  * Date: 2023/11/24 16:46
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class LimitOpCtx extends LongOpCtx {
 

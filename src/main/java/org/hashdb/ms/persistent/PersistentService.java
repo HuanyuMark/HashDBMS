@@ -15,7 +15,6 @@ import java.util.List;
  * 持久化服务, 保存数据库，或者恢复数据库
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public interface PersistentService {
     boolean persist(Database database);

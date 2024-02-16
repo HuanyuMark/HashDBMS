@@ -7,7 +7,6 @@ import org.hashdb.ms.compiler.exception.CommandCompileException;
  * Date: 2023/11/24 16:41
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public interface OptionCtx<V> {
     Options key();

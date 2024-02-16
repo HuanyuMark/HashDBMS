@@ -18,7 +18,6 @@ import java.nio.channels.ServerSocketChannel;
  * Date: 2023/12/1 1:26
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 public abstract class DBServer implements DisposableBean, AutoCloseable {

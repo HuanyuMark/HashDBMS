@@ -7,7 +7,6 @@ import org.hashdb.ms.compiler.charactor.NodeType;
  * Date: 2023/12/10 18:52
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public abstract class CompileNode {
     protected final CharacterCompileStream stream;

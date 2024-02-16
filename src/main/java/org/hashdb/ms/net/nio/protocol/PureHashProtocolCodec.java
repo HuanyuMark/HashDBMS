@@ -13,7 +13,6 @@ import java.util.List;
  * magic version
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 public class PureHashProtocolCodec extends ByteToMessageCodec<Message<?>> {

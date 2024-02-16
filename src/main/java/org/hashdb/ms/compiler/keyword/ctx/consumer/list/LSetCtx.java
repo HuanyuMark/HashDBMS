@@ -18,7 +18,6 @@ import java.util.*;
  * Date: 2023/11/29 9:58
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class LSetCtx extends MutableListCtx implements Precompilable {
 

@@ -8,7 +8,6 @@ import org.hashdb.ms.compiler.exception.CommandCompileException;
  * 高优先级删除 配置
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class HExpireOpCtx extends LongOpCtx {
     public static final Long DEFAULT_VALUE = ExpireOpCtx.DEFAULT_EXPIRE_AFTER_MILLISECONDS;

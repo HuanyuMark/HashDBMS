@@ -10,7 +10,6 @@ import org.hashdb.ms.net.msg.ServiceMessage;
  * 比对谁最新票数达标, 最先的达标的结点就升格为主结点
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class VoteMasterMessage extends ServiceMessage {
     @Override

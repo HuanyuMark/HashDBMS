@@ -21,7 +21,6 @@ import java.util.concurrent.ScheduledFuture;
  * 在{@link Database} 中存储 K - V 的pair
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 public class HValue<T> implements Cloneable {

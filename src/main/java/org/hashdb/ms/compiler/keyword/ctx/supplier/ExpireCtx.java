@@ -21,7 +21,6 @@ import java.util.function.Supplier;
  * Date: 2023/11/28 21:01
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class ExpireCtx extends SupplierCtx {
     @Override

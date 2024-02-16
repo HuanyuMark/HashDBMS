@@ -14,7 +14,6 @@ import java.util.Set;
  * Date: 2023/12/27 11:02
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class SSetCtx extends MutableSetCtx implements Precompilable {
     protected SSetCtx(CompileCtx<?> fatherCompileCtx) {

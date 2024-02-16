@@ -7,7 +7,6 @@ import org.hashdb.ms.compiler.exception.CommandCompileException;
  * Date: 2023/11/28 22:59
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class LExpireOpCtx extends LongOpCtx {
     public LExpireOpCtx() {

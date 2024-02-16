@@ -13,7 +13,6 @@ import java.util.UUID;
  * Date: 2023/12/1 13:15
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

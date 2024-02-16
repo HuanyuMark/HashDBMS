@@ -12,7 +12,6 @@ import org.jetbrains.annotations.Nullable;
  * Date: 2024/1/13 21:49
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public abstract class AbstractConnectionSession implements ConnectionSession {
     /**

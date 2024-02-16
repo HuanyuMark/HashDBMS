@@ -17,7 +17,6 @@ import java.util.function.Function;
  * Date: 2023/11/29 20:41
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 public abstract class SetCtx extends ConsumerCtx<Set<Object>> {

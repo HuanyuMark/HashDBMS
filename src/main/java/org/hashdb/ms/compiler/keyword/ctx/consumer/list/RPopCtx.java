@@ -10,9 +10,8 @@ import java.util.stream.IntStream;
  * Date: 2023/11/29 9:51
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
-public class RPopCtx  extends PopCtx {
+public class RPopCtx extends PopCtx {
     protected RPopCtx(CompileCtx<?> fatherCompileCtx) {
         super(fatherCompileCtx);
     }

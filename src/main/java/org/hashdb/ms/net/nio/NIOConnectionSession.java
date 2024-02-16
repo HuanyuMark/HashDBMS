@@ -26,7 +26,6 @@ import java.util.concurrent.ExecutionException;
  * Date: 2024/1/15 23:24
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 @Deprecated

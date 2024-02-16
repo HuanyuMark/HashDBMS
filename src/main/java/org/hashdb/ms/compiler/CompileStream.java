@@ -2,7 +2,7 @@ package org.hashdb.ms.compiler;
 
 import org.hashdb.ms.compiler.keyword.CompilerNode;
 import org.hashdb.ms.data.HValue;
-import org.hashdb.ms.data.PlainPair;
+import org.hashdb.ms.data.SimplePair;
 import org.hashdb.ms.exception.DBClientException;
 
 import java.util.Iterator;
@@ -17,7 +17,6 @@ import java.util.stream.Collectors;
  * Date: 2023/11/25 2:51
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public interface CompileStream<R extends CompilerNode> {
 
@@ -34,7 +33,7 @@ public interface CompileStream<R extends CompilerNode> {
             return ls.parallelStream().map(CompileStream::normalizeValue).toList();
         }
         if (result instanceof Map<?, ?> map) {
-            return map.entrySet().parallelStream().map((entry) -> new PlainPair<>(entry.getKey(), normalizeValue(entry.getValue()))).collect(Collectors.toMap(PlainPair::key, PlainPair::value));
+            return map.entrySet().parallelStream().map((entry) -> new SimplePair<>(entry.getKey(), normalizeValue(entry.getValue()))).collect(Collectors.toMap(SimplePair::key, SimplePair::value));
         }
         return result;
     }

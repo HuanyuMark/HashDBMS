@@ -24,7 +24,6 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
  * Date: ${DATE} ${TIME}
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 @SpringBootApplication

@@ -19,7 +19,6 @@ import java.util.concurrent.CompletableFuture;
  * Date: 2023/11/30 1:11
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public final class SystemCompileStream extends CommonCompileStream<SystemCompileCtx<?>> {
     private static final Lazy<DBSystem> SYSTEM = Lazy.of(() -> HashDBMSApp.ctx().getBean(DBSystem.class));

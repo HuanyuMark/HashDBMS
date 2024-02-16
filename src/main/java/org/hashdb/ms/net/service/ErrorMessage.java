@@ -11,7 +11,6 @@ import org.jetbrains.annotations.NotNull;
  * Date: 2023/12/1 16:19
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

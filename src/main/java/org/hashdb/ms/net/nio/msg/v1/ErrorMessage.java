@@ -6,7 +6,6 @@ import org.hashdb.ms.exception.DBClientException;
  * Date: 2024/1/17 14:05
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class ErrorMessage extends ActMessage<ErrorMessage.Body> {
 

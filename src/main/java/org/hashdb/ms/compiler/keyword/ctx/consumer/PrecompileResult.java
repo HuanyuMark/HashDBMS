@@ -10,7 +10,6 @@ import java.util.List;
  * Date: 2023/11/29 14:59
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class PrecompileResult<T> {
     /**

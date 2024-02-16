@@ -17,7 +17,6 @@ import java.util.List;
  * 请确保收到的byteBuf完整, 不能出现粘包半包
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 @ChannelHandler.Sharable

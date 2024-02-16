@@ -23,7 +23,6 @@ import java.util.function.Supplier;
  * 从会话中读取parameter
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 // TODO: 2024/1/14 将这个类改造成ValueAccessorCtx, 代理所有“值”(json,parameter,inline command)的访问
 // execSupplier()这个方法也改下, 不需要支持复制, 只需要让所有的值访问都是这个Ctx即可,运行时都只会使用全新的值副本

@@ -13,7 +13,6 @@ import org.springframework.context.annotation.Configuration;
  * 大于0, 则每隔多少ms,会将缓冲区的的写命令追加入AOF中持久化
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 @Getter

@@ -9,7 +9,6 @@ import org.hashdb.ms.net.service.ReplicationHeartbeatMessage;
  * Date: 2023/12/7 16:18
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Getter
 @Setter

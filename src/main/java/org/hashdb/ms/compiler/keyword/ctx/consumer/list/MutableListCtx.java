@@ -1,7 +1,7 @@
 package org.hashdb.ms.compiler.keyword.ctx.consumer.list;
 
-import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.exception.CommandExecuteException;
+import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 
 import java.util.List;
 
@@ -9,7 +9,6 @@ import java.util.List;
  * Date: 2023/11/26 2:03
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public abstract class MutableListCtx extends ListCtx {
     protected MutableListCtx(CompileCtx<?> fatherCompileCtx) {
@@ -18,6 +17,6 @@ public abstract class MutableListCtx extends ListCtx {
 
     @Override
     protected Object operateWithImmutableList(List<Object> opsTarget) {
-        throw new CommandExecuteException("can not modify immutable value from supplier command '"+fatherCompileCtx.command()+"'");
+        throw new CommandExecuteException("can not modify immutable value from supplier command '" + fatherCompileCtx.command() + "'");
     }
 }

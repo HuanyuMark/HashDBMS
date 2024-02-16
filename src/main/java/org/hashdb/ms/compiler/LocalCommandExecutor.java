@@ -14,7 +14,6 @@ import java.util.concurrent.ExecutionException;
  * 每一个会话都需要有一个 SystemCompileStreamFactory 来生产 编译流
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class LocalCommandExecutor implements CommandExecutor {
     private final ConnectionSession session;

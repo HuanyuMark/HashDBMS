@@ -1,7 +1,7 @@
 package org.hashdb.ms.data.task;
 
 import org.hashdb.ms.data.OpsTask;
-import org.hashdb.ms.data.PlainPair;
+import org.hashdb.ms.data.SimplePair;
 import org.hashdb.ms.data.result.PopPushResult;
 import org.hashdb.ms.exception.DBClientException;
 import org.jetbrains.annotations.Contract;
@@ -13,7 +13,6 @@ import java.util.*;
  * Date: 2023/11/23 23:22
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class ListOpsTaskSupplier extends RefDataTypeOpsTaskSupplier {
     @Contract(pure = true)
@@ -134,11 +133,11 @@ public class ListOpsTaskSupplier extends RefDataTypeOpsTaskSupplier {
         });
     }
 
-    public static @NotNull OpsTask<List<?>> set(List<?> list, @NotNull List<PlainPair<Integer, Object>> values) {
+    public static @NotNull OpsTask<List<?>> set(List<?> list, @NotNull List<SimplePair<Integer, Object>> values) {
         UnmodifiableCollections.check(list);
         @SuppressWarnings("unchecked")
         var list_ = (List<Object>) list;
-        var values_ = values.stream().map(e -> e.key() < 0 ? new PlainPair<>(list_.size() + e.key(), e.value()) : e).sorted(Comparator.comparingInt(PlainPair::key)).toList();
+        var values_ = values.stream().map(e -> e.key() < 0 ? new SimplePair<>(list_.size() + e.key(), e.value()) : e).sorted(Comparator.comparingInt(SimplePair::key)).toList();
         int largestIndex = values_.getLast().key();
         int smallestIndex = values_.getFirst().key();
         if (smallestIndex < 0 || largestIndex >= list_.size()) {
@@ -154,7 +153,7 @@ public class ListOpsTaskSupplier extends RefDataTypeOpsTaskSupplier {
             var indexIter = values_.listIterator();
             while (elIter.hasNext() && indexIter.hasNext()) {
                 Object el = elIter.next();
-                PlainPair<Integer, ?> entry = indexIter.next();
+                SimplePair<Integer, ?> entry = indexIter.next();
                 if (elIndex == entry.key()) {
                     result.add(el);
                     elIter.set(entry.value());

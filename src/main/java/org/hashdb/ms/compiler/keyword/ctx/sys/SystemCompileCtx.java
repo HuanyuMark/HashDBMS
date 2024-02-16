@@ -15,7 +15,6 @@ import org.jetbrains.annotations.Nullable;
  * Date: 2023/11/30 1:06
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public abstract class SystemCompileCtx<R> implements CompilerNode {
 

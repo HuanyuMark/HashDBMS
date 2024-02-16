@@ -10,7 +10,6 @@ import java.util.function.Function;
  * Date: 2024/1/10 17:13
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public interface DbOpsTask<T> extends OpsTask<T> {
     @Override

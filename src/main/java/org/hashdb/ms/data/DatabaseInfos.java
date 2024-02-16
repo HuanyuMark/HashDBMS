@@ -14,7 +14,6 @@ import java.util.Date;
  * Date: 2023/11/21 12:53
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Getter
 @EqualsAndHashCode

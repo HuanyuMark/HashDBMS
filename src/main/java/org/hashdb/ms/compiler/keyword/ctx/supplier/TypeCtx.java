@@ -15,7 +15,6 @@ import java.util.function.Supplier;
  * TYPE $KEY … $KEY
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class TypeCtx extends SupplierCtx {
     private final List<Object> keyOrSupplier = new LinkedList<>();

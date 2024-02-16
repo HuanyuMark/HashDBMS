@@ -11,7 +11,6 @@ import org.jetbrains.annotations.Nullable;
  * SET $KEY [#TYPE_SYMBOL,]$VALUE[,--[h]expire=$MILLIS] ... $KEY [#TYPE_SYMBOL,]$VALUE[,--[h]expire=$MILLIS]
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class SetCtx extends WriteSupplierCtx {
 

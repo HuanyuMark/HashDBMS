@@ -11,7 +11,6 @@ import org.hashdb.ms.net.msg.ServiceMessage;
  * 命令已经传播完成
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

@@ -6,7 +6,6 @@ import java.util.concurrent.atomic.AtomicLong;
  * Date: 2024/2/1 17:38
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public enum SessionMeta implements MetaEnum {
     /**

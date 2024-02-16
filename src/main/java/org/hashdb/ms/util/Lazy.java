@@ -39,6 +39,16 @@ public class Lazy<T> {
         return new Lazy<>(value);
     }
 
+    public static <T> AtomLazy<T> ofAtomic(Supplier<T> supplier) {
+        Objects.requireNonNull(supplier);
+        return new AtomLazy<>(supplier);
+    }
+
+    public static <T> AtomLazy<T> ofAtomic(T value) {
+        Objects.requireNonNull(value);
+        return new AtomLazy<>(value);
+    }
+
     public static <T> Lazy<T> empty() {
         return new Lazy<>();
     }
@@ -54,7 +64,7 @@ public class Lazy<T> {
         return value;
     }
 
-    public boolean isCached() {
+    public boolean isResolved() {
         return value != null;
     }
 
@@ -76,5 +86,10 @@ public class Lazy<T> {
     @Override
     public int hashCode() {
         return value != null ? value.hashCode() : 0;
+    }
+
+    @Override
+    public String toString() {
+        return value == null ? "[Lazy: Unresolved]" : "[Lazy: " + value + "]";
     }
 }

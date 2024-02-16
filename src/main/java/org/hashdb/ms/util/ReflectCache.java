@@ -9,7 +9,6 @@ import java.util.function.Function;
  * Date: 2023/11/24 20:01
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class ReflectCache<T> {
     protected final Class<? extends T> clazz;

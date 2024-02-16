@@ -17,7 +17,6 @@ import java.util.concurrent.ThreadFactory;
  * 但如果使用默认的ThreadFactory, 就不能使用虚拟线程
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class VirtualNioEventLoopGroup extends NioEventLoopGroup {
 

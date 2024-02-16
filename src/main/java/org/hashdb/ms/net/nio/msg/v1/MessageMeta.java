@@ -19,7 +19,6 @@ import java.util.function.Predicate;
  * Date: 2024/1/16 21:35
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 // TODO: 2024/2/3 将依靠构造器构造Message的手段改成依靠工厂类来构造的手段
 @Slf4j
@@ -54,9 +53,13 @@ public enum MessageMeta implements MetaEnum {
     /**
      * 切换会话的类型
      */
+    @Deprecated
     SESSION_SWITCHING(BodyParser.SESSION_META, false,
             (id, buf) -> new SessionSwitchingMessage(((SessionMeta) BodyParser.SESSION_META.decode(SessionMeta.class, buf)))
-    );
+
+    ),
+    SESSION_UPGRADE(BodyParser.SESSION_META, false,
+            (id, buf) -> new SessionUpgradeMessage(((SessionMeta) BodyParser.SESSION_META.decode(SessionMeta.class, buf))));
 
     private final MessageFactory factory;
 

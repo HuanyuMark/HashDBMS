@@ -10,7 +10,6 @@ import lombok.extern.slf4j.Slf4j;
  * Date: 2024/1/31 0:50
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 @ChannelHandler.Sharable

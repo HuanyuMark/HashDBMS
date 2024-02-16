@@ -7,7 +7,6 @@ import org.hashdb.ms.net.nio.MetaEnum;
  * Date: 2024/1/17 12:10
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public enum Protocol implements MetaEnum {
     HASH_V1(new V1HashProtocolCodec()),

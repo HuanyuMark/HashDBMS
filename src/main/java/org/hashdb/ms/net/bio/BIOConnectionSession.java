@@ -47,7 +47,6 @@ import java.util.function.Function;
  * Date: 2023/11/24 16:01
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 public class BIOConnectionSession extends AbstractConnectionSession implements ConnectionSession {

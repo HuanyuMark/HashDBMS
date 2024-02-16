@@ -13,7 +13,6 @@ import java.util.Objects;
  * Date: 2023/11/21 14:16
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class DBFileFactory {
     public static final String INDEX_FILE_NAME = "index.db";

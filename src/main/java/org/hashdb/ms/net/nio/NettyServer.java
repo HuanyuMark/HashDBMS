@@ -20,7 +20,6 @@ import org.springframework.stereotype.Component;
  * Date: 2024/1/16 19:17
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 @Component

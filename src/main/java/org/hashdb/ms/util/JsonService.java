@@ -38,7 +38,6 @@ import java.util.Map;
  * Date: 2023/11/24 23:13
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 public class JsonService {

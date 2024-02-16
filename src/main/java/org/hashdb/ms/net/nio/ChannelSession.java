@@ -29,7 +29,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Date: 2024/2/15 12:41
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public abstract class ChannelSession extends AbstractConnectionSession implements TransientConnectionSession {
 
@@ -39,9 +38,9 @@ public abstract class ChannelSession extends AbstractConnectionSession implement
     protected Protocol protocol = Protocol.HASH_V1;
     @JsonProperty
     protected Channel channel;
-    protected final Lazy<BusinessConnectionSession.AuthenticationHandler> authenticationHandlerLazy = Lazy.of(BusinessConnectionSession.AuthenticationHandler::new);
+    protected final Lazy<AuthenticationHandler> authenticationHandlerLazy = Lazy.of(AuthenticationHandler::new);
 
-    protected final Lazy<BusinessConnectionSession.CommandExecuteHandler> commandExecuteHandlerLazy = Lazy.of(BusinessConnectionSession.CommandExecuteHandler::new);
+    protected final Lazy<CommandExecuteHandler> commandExecuteHandlerLazy = Lazy.of(CommandExecuteHandler::new);
 
     protected final Lazy<ProtocolSwitchingHandler> protocolSwitchingHandlerLazy = Lazy.of(() -> new ProtocolSwitchingHandler(this));
 
@@ -61,7 +60,7 @@ public abstract class ChannelSession extends AbstractConnectionSession implement
             return;
         }
         // 等待所有命令执行完毕
-        if (commandExecuteHandlerLazy.isCached()) {
+        if (commandExecuteHandlerLazy.isResolved()) {
             commandExecuteHandlerLazy.get().close();
         }
         if (getDatabase() != null) {

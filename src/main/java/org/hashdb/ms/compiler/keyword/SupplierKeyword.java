@@ -15,7 +15,6 @@ import java.util.Map;
  * 所以, 一般就用来当作命令的开头关键字
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public enum SupplierKeyword implements Keyword<SupplierKeyword> {
     GET(GetCtx.class),

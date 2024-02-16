@@ -11,7 +11,6 @@ import java.util.function.Function;
  * Date: 2023/11/29 12:27
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public abstract class SortedAccessCtx extends MutableListCtx {
     protected SortedAccessCtx(CompileCtx<?> fatherCompileCtx) {

@@ -20,7 +20,6 @@ import java.nio.channels.SocketChannel;
  * 使用了NIO实现
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 @Deprecated

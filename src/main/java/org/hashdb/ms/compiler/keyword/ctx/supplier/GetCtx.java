@@ -15,7 +15,6 @@ import java.util.regex.Pattern;
  * GET LIKE $PATTERN1 [,$LIMIT]
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 public class GetCtx extends ReadSupplierCtx {

@@ -15,7 +15,6 @@ import java.util.Objects;
  * Date: 2023/11/25 12:55
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 public final class ConsumerCompileStream extends DatabaseCompileStream {
@@ -34,7 +33,7 @@ public final class ConsumerCompileStream extends DatabaseCompileStream {
 
     @Override
     public ConsumerCtx<?> compile() {
-        if (compileResult.isCached()) {
+        if (compileResult.isResolved()) {
             return compileResult.get();
         }
         var cmdCtx = ConsumerKeyword.createCtx(token(), fatherCompileCtx);

@@ -6,7 +6,6 @@ import org.jetbrains.annotations.NotNull;
  * Date: 2024/1/17 16:15
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class AuthenticationMessage extends Message<AuthenticationMessage.Body> {
     public AuthenticationMessage(long id, Body body) {

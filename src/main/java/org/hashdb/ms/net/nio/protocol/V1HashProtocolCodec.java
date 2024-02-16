@@ -13,7 +13,6 @@ import org.jetbrains.annotations.Nullable;
  * Date: 2024/1/18 18:35
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 public class V1HashProtocolCodec implements ProtocolCodec {

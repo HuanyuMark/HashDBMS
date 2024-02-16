@@ -10,7 +10,6 @@ import java.util.concurrent.atomic.AtomicLong;
  * Date: 2024/1/16 21:20
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public abstract class Message<B> {
     private static final AtomicLong messageIdAccumulator = new AtomicLong(0);

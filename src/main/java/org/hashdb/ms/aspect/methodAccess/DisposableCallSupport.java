@@ -15,20 +15,20 @@ import java.util.concurrent.ConcurrentHashMap;
  * Date: 2023/11/21 17:55
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 @Aspect
 @Component
 public class DisposableCallSupport {
     private final Set<Method> usedFlags = ConcurrentHashMap.newKeySet();
+
     @Before("@annotation(org.hashdb.ms.aspect.methodAccess.DisposableCall) || @within(org.hashdb.ms.aspect.methodAccess.DisposableCall)")
-    public void checkSetAction(JoinPoint joinPoint){
+    public void checkSetAction(JoinPoint joinPoint) {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method target = signature.getMethod();
         // 如果已经被调用过，则抛出异常
-        if(usedFlags.contains(target)) {
-            throw new IllegalCallerException("can`t call method '"+signature+"' more than once");
+        if (usedFlags.contains(target)) {
+            throw new IllegalCallerException("can`t call method '" + signature + "' more than once");
         } else {
             usedFlags.add(target);
         }

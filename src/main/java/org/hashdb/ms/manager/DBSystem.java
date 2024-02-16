@@ -34,7 +34,6 @@ import java.util.function.Consumer;
  * Date: 2023/11/21 1:46
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 @Component
@@ -214,7 +213,7 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
         }
         // 保存数据库数据
         systemInfo.getDatabaseInfosMap().values().forEach(lazyDb -> {
-            if (!lazyDb.isCached()) {
+            if (!lazyDb.isResolved()) {
                 return;
             }
             var db = lazyDb.get();

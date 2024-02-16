@@ -14,7 +14,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * Date: 2023/12/8 16:49
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public abstract class KeywordNode extends CompileNode {
 

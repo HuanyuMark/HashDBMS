@@ -8,7 +8,6 @@ import java.util.*;
  * Date: 2023/11/29 20:23
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class ConcatListView<T> implements List<T> {
     private final LinkedList<List<T>> lists = new LinkedList<>();

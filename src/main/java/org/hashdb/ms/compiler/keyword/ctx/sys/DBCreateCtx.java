@@ -12,7 +12,6 @@ import org.hashdb.ms.net.ConnectionSession;
  * CREATE $ID $NAME
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class DBCreateCtx extends SystemCompileCtx<Boolean> {
 

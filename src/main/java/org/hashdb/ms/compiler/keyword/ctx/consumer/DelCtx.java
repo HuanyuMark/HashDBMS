@@ -11,7 +11,6 @@ import java.util.List;
  * Date: 2023/11/29 11:43
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class DelCtx extends InterpretCtx {
     @Override

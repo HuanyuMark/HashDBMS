@@ -14,7 +14,6 @@ import java.nio.file.Paths;
  * Date: 2023/11/21 12:42
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 @RequiredArgsConstructor

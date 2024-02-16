@@ -9,7 +9,6 @@ import org.hashdb.ms.net.msg.ServiceMessage;
  * Date: 2023/12/1 2:13
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

@@ -1,7 +1,7 @@
 package org.hashdb.ms.compiler.keyword.ctx.consumer.set;
 
-import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.exception.CommandExecuteException;
+import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 
 import java.util.Set;
 
@@ -9,7 +9,6 @@ import java.util.Set;
  * Date: 2023/11/26 2:03
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public abstract class MutableSetCtx extends SetCtx {
     protected MutableSetCtx(CompileCtx<?> fatherCompileCtx) {

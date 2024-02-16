@@ -15,7 +15,6 @@ import java.io.Closeable;
  * Date: 2024/1/3 11:11
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public interface ConnectionSession extends Closeable {
     Lazy<DBServerConfig> dbServerConfig = Lazy.of(() -> HashDBMSApp.ctx().getBean(DBServerConfig.class));

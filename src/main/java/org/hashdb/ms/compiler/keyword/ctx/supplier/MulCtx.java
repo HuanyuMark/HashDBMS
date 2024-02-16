@@ -7,7 +7,6 @@ import org.hashdb.ms.compiler.keyword.SupplierKeyword;
  * Date: 2023/11/29 0:56
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class MulCtx extends NumCtx {
 

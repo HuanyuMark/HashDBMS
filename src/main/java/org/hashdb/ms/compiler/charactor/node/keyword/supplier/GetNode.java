@@ -9,7 +9,6 @@ import java.util.function.Supplier;
  * Date: 2023/12/8 16:48
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class GetNode extends SupplierKeywordNode {
     public GetNode(CharacterCompileStream stream) {

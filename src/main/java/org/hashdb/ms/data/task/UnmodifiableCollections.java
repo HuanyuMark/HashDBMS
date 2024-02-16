@@ -9,7 +9,6 @@ import java.util.Objects;
  * Date: 2023/11/24 14:51
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class UnmodifiableCollections {
     public static final Class<?> unmodifiableCollection;

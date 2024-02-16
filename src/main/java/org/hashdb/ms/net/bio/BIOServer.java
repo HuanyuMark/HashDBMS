@@ -26,7 +26,6 @@ import java.util.concurrent.CompletableFuture;
  * 使用传统的BIO网络模型的服务器
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 //@Component

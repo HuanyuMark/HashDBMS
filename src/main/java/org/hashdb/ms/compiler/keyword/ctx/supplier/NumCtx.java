@@ -23,7 +23,6 @@ import java.util.function.Supplier;
  * Date: 2023/11/29 1:01
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public abstract class NumCtx extends SupplierCtx {
 

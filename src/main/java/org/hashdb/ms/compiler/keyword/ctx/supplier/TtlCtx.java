@@ -10,7 +10,6 @@ import org.hashdb.ms.compiler.keyword.SupplierKeyword;
  * TTL $KEY ... $KEY
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class TtlCtx extends ReadSupplierCtx {
     @Override

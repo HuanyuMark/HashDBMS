@@ -16,7 +16,6 @@ import java.util.function.Supplier;
  * 导致读写的含义混乱(可读可写对象不能有多处引用)
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class JsonValueCtx extends SupplierCtx {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)

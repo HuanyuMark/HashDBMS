@@ -19,7 +19,6 @@ import org.jetbrains.annotations.NotNull;
  * 执行写命令的数据库是哪个
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

@@ -21,7 +21,6 @@ import java.util.Set;
  * Date: 2023/11/26 19:22
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public abstract class PushCtx extends MutableListCtx {
     @Override

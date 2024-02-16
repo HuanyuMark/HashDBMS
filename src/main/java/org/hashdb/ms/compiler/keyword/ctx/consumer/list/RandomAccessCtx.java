@@ -19,7 +19,6 @@ import java.util.List;
  * Date: 2023/11/29 11:14
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public abstract class RandomAccessCtx extends MutableListCtx implements Precompilable {
     private final List<Object> indexOrSuppliers = new LinkedList<>();
