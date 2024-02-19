@@ -8,6 +8,7 @@ import org.hashdb.ms.exception.IncreaseUnsupportedException;
 import org.hashdb.ms.exception.ServiceStoppedException;
 import org.hashdb.ms.persistent.PersistentService;
 import org.hashdb.ms.util.AsyncService;
+import org.hashdb.ms.util.AtomLazy;
 import org.hashdb.ms.util.BlockingQueueTaskConsumer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -17,8 +18,6 @@ import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Stream;
@@ -43,12 +42,11 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
      * {@link HashMap}
      */
     protected final HashMap<String, HValue<?>> table = new HashMap<>();
-    protected final AtomicReference<ScheduledFuture<?>> saveTask = new AtomicReference<>();
+    protected final AtomLazy<ScheduledFuture<?>> saveTask;
     public final Object SAVE_TASK_LOCK = new Object();
-
     private final AtomicInteger usingCount = new AtomicInteger(0);
     // TODO: 2024/1/15  给用户提供一个选项, 设置读操作多线程化阈值(负数为不使用)与设置读操作时的并行度
-    private final List<OpsTask<?>> readTask = new LinkedList<>();
+    private final List<OpsTask<?>> readTaskBatch = new ArrayList<>();
 
     @Override
     protected void exeTask(BlockingDeque<OpsTask<?>> taskDeque) throws InterruptedException {
@@ -56,7 +54,7 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
         // 判断任务的读写属性, 如果是读,则先收集然后用并行流处理,否则挨个处理
         OpsTask<?> task = taskDeque.take();
         while (task.isRead()) {
-            readTask.add(task);
+            readTaskBatch.add(task);
             // 提前检查避免一直阻塞在迭代末尾的take上
             if (taskDeque.isEmpty()) {
                 break;
@@ -66,16 +64,16 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
         // 执行读任务
         // TODO: 2024/1/15  这里选择串/并行的标准太过草率, 不要用任务多少来比较线程切换/串行的时间开销
         // 最好是在编译期将命令的执行期望消耗时间进行累加,然后与一个阈值进行比较,这样很能得到正确的结果
-        if (readTask.size() > 10) {
+        if (readTaskBatch.size() > 10) {
             // 如果读任务多, 则并行执行, 线程切换开销可以被覆盖
-            readTask.parallelStream().forEach(OpsTask::get);
+            readTaskBatch.parallelStream().forEach(OpsTask::get);
         } else {
             // 读任务过少, 则串行执行, 否则线程切换开销大于串行执行
-            for (OpsTask<?> opsTask : readTask) {
+            for (OpsTask<?> opsTask : readTaskBatch) {
                 opsTask.get();
             }
         }
-        readTask.clear();
+        readTaskBatch.clear();
         // 执行写任务
         if (!task.isRead()) {
             task.get();
@@ -95,12 +93,28 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
     }
 
     public CompletableFuture<Boolean> startDaemon() {
-        startSaveTask();
+        saveTask.get();
         return startConsumeOpsTask();
     }
 
-    public boolean startSaveTask() {
-        Supplier<ScheduledFuture<?>> saveTaskSupplier = () -> {
+    public synchronized boolean stopSaveTask() {
+        if (!saveTask.isResolved()) {
+            return true;
+        }
+        // 如果在保存任务中，执行线程被阻塞在IO,网络操作中，则不直接
+        // 抛出中断异常， 让执行线程继续执行
+        saveTask.get().cancel(false);
+        saveTask.computedWith(null);
+        return true;
+    }
+
+    public Database(int id, String name, Date createTime) {
+        this(new DatabaseInfos(id, name, createTime));
+    }
+
+    public Database(DatabaseInfos databaseInfos) {
+        this.info = databaseInfos;
+        saveTask = AtomLazy.of(() -> {
             HdbConfig HDBConfig = HashDBMSApp.ctx().getBean(HdbConfig.class);
             PersistentService persistentService = HashDBMSApp.ctx().getBean(PersistentService.class);
             final long nextSaveTime = HDBConfig.getSaveInterval() + info.getLastSaveTime().getTime();
@@ -111,29 +125,7 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
             return AsyncService.setInterval(() -> {
                 persistentService.persist(this);
             }, HDBConfig.getSaveInterval(), initDelay);
-        };
-
-        saveTask.compareAndSet(null, saveTaskSupplier.get());
-        return true;
-    }
-
-    public synchronized boolean stopSaveTask() {
-        if (saveTask.get() == null) {
-            return true;
-        }
-        // 如果在保存任务中，执行线程被阻塞在IO,网络操作中，则不直接
-        // 抛出中断异常， 让执行线程继续执行
-        saveTask.get().cancel(false);
-        saveTask.set(null);
-        return true;
-    }
-
-    public Database(int id, String name, Date createTime) {
-        this(new DatabaseInfos(id, name, createTime));
-    }
-
-    public Database(DatabaseInfos databaseInfos) {
-        this.info = databaseInfos;
+        });
     }
 
     public Database(int id, String name, Date createTime, @NotNull Map<String, StorableHValue<?>> fromData) {
@@ -141,11 +133,11 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
     }
 
     public Database(DatabaseInfos databaseInfos, @NotNull Map<String, ? extends StorableHValue<?>> fromData) {
-        this.info = databaseInfos;
+        this(databaseInfos);
         restoreAll(fromData);
     }
 
-    private Database restoreAll(Map<String, ? extends StorableHValue<?>> from) {
+    private void restoreAll(Map<String, ? extends StorableHValue<?>> from) {
         for (var entry : from.entrySet()) {
             var key = entry.getKey();
             var value = entry.getValue();
@@ -160,7 +152,6 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
                     clearBy(this, expireMillis, value.deletePriority());
             table.put(key, hValue);
         }
-        return this;
     }
 
     public DatabaseInfos getInfos() {
@@ -262,10 +253,10 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
                 throw new LikePatternSyntaxException(e);
             }
         });
-        if (limit != null) {
-            return stream.limit(limit).toList();
+        if (limit == null) {
+            return stream.toList();
         }
-        return stream.toList();
+        return stream.limit(limit).toList();
     }
 
     public Set<String> keys() {

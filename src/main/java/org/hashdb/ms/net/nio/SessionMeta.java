@@ -1,7 +1,5 @@
 package org.hashdb.ms.net.nio;
 
-import java.util.concurrent.atomic.AtomicLong;
-
 /**
  * Date: 2024/2/1 17:38
  *
@@ -17,16 +15,10 @@ public enum SessionMeta implements MetaEnum {
      */
     MANAGEMENT(ManageConnectionSession.class);
 
-    private static final SessionMeta[] MAP = SessionMeta.values();
-
-    private static final AtomicLong idGenerator = new AtomicLong(0);
-
-    public static long nextId() {
-        return idGenerator.incrementAndGet();
-    }
+    private static final SessionMeta[] SESSION_META_MAP = SessionMeta.values();
 
     public static SessionMeta resolve(int sessionMetaKey) {
-        return MAP[sessionMetaKey];
+        return SESSION_META_MAP[sessionMetaKey];
     }
 
     private final Class<? extends TransientConnectionSession> sessionClass;

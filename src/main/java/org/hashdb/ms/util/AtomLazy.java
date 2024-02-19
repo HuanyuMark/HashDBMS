@@ -1,12 +1,11 @@
 package org.hashdb.ms.util;
 
-import java.util.Objects;
 import java.util.function.Supplier;
 
 /**
  * Date: 2023/11/26 23:54
  * 线程安全懒加载. 但是要注意, 如果 {@link #supplier} 的执行耗时过长
- * 可能会阻塞其它线程获取缓存值
+ * 会阻塞其它线程获取缓存值
  *
  * @author huanyuMake-pecdle
  */
@@ -39,22 +38,11 @@ public class AtomLazy<T> extends Lazy<T> {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof AtomLazy<?> atomLazy)) {
-            if (o instanceof Lazy<?> lazy) {
-                return Objects.equals(value, lazy.value);
-            }
-            return false;
-        }
-        if (!super.equals(o)) return false;
-
-        return value.equals(atomLazy.value);
+        return super.equals(o);
     }
 
     @Override
     public int hashCode() {
-        int result = super.hashCode();
-        result = 31 * result + value.hashCode();
-        return result;
+        return super.hashCode();
     }
 }

@@ -54,14 +54,17 @@ public class Lazy<T> {
     }
 
     /**
-     * 线程不安全, {@link #supplier} 可能会被多次调用
+     * 线程不安全, {@link #supplier} 可能会被多次调用,
+     * 可以选用 {@link AtomLazy<T>} 来确保线程安全
      */
     public T get() {
-        if (value != null) {
-            return value;
+        T res = value;
+        if (res == null) {
+            res = supplier.get();
+            value = res;
+            return res;
         }
-        value = supplier.get();
-        return value;
+        return res;
     }
 
     public boolean isResolved() {

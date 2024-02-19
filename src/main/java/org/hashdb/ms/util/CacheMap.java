@@ -133,9 +133,9 @@ public class CacheMap<K, V> {
         return expire(key);
     }
 
-    class CacheValue {
-        protected V value;
+    private class CacheValue {
         private final K key;
+        protected final V value;
 
         /**
          * 命中次数

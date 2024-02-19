@@ -9,7 +9,7 @@ import org.hashdb.ms.net.nio.MetaEnum;
  * @author huanyuMake-pecdle
  */
 public enum Protocol implements MetaEnum {
-    HASH_V1(new V1HashProtocolCodec()),
+    HASH_V1(new HashV1ProtocolCodec()),
     ;
 
     private static final Protocol[] ENUM_MAP = values();

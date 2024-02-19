@@ -22,7 +22,7 @@ public abstract class AbstractConnectionSession implements ConnectionSession {
 
     @Nullable
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private Database database;
+    protected Database database;
     /**
      * 参数名以'$'开头
      * 参数名-{@link org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx}
@@ -102,5 +102,4 @@ public abstract class AbstractConnectionSession implements ConnectionSession {
     protected void doClose(CloseMessage message) {
         doClose();
     }
-
 }

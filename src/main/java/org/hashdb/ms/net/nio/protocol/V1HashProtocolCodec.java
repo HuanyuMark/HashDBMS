@@ -15,19 +15,15 @@ import org.jetbrains.annotations.Nullable;
  * @author huanyuMake-pecdle
  */
 @Slf4j
+@Deprecated
 public class V1HashProtocolCodec implements ProtocolCodec {
 
     @Override
     public @NotNull ByteBuf encode(ChannelHandlerContext ctx, Message<?> msg) {
         var body = msg.getMeta().bodyParser().encode(msg.body());
         var out = ctx.alloc().buffer(body.readableBytes() + 1 + 30);
-        // 4 magic
-        out.writeBytes(CodecDispatcher.MAGIC_BYTES);
         // 1 protocol
         out.writeByte(msg.session().protocol().key());
-        // 1 deserialize method 其实这个字段可以不记录, 只需要知道消息体类型, 即type字段就知道如何解析了
-        // 但是如果去掉这个byte,那么消息头的大小就变成了21,还需要padding补齐,所以干脆就这样的了
-        out.writeByte(msg.getMeta().bodyParser().key());
         // 4 message meta(message type info)
         out.writeInt(msg.getMeta().key());
         // 8 message id
@@ -50,15 +46,13 @@ public class V1HashProtocolCodec implements ProtocolCodec {
     @Override
     public @Nullable Message<?> decode(ChannelHandlerContext ctx, ByteBuf in) {
         // check body parse method
-        // bodyParser 不用再读取, messageType里就记录有解析body的的方法
-        in.readByte();
         var messageMeta = ProtocolCodec.resolveMessageMeta(ctx, in);
         if (messageMeta == null) {
             return null;
         }
         var id = in.readLong();
-        // 读取body长度
-        in.readInt();
+        // 略过body长度, 这个body长度是在LengthFieldBasedFrameDecoder被用到的字段
+        in.readerIndex(in.readerIndex() + 4);
         // parse body
         try {
             return messageMeta.create(id, in);

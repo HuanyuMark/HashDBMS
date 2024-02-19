@@ -8,9 +8,6 @@ import io.netty.channel.Channel;
  * @author huanyuMake-pecdle
  */
 public interface ChannelHook {
-    default void onChannelActive(Channel channel) {
-    }
-
     default void onChannelChange(Channel channel) {
     }
 

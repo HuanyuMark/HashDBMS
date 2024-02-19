@@ -10,13 +10,12 @@ import org.hashdb.ms.net.exception.MaxConnectionException;
 import org.hashdb.ms.net.exception.ReconnectErrorException;
 import org.hashdb.ms.net.nio.msg.v1.*;
 import org.hashdb.ms.util.AsyncService;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.Closeable;
 import java.net.SocketException;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * Date: 2024/1/17 12:22
@@ -27,19 +26,28 @@ import java.util.concurrent.ConcurrentMap;
 @ChannelHandler.Sharable
 public class SessionMountedHandler extends ChannelDuplexHandler implements Closeable, NamedChannelHandler {
     private volatile boolean closed;
-    private final ConcurrentMap<Long, TransientConnectionSession> sessionMap = new ConcurrentHashMap<>();
+    private final Map<Long, BaseConnectionSession> sessionMap = new ConcurrentHashMap<>();
+
+    private SessionUpgradeHandler upgradeHandler;
+
+    public SessionMountedHandler() {
+    }
+
+    public SessionUpgradeHandler upgradeHandler() {
+        return upgradeHandler == null ? (upgradeHandler = new SessionUpgradeHandler(sessionMap)) : upgradeHandler;
+    }
 
     @Override
     public void write(ChannelHandlerContext ctx, Object unknownMsg, ChannelPromise promise) throws Exception {
         if (unknownMsg instanceof Message<?> msg) {
-            msg.session(ctx.channel().attr(TransientConnectionSession.KEY).get());
+            msg.session(ctx.channel().attr(BaseConnectionSession.KEY).get());
         }
         ctx.write(unknownMsg, promise);
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object m) {
-        var attr = ctx.channel().attr(TransientConnectionSession.KEY);
+        var attr = ctx.channel().attr(BaseConnectionSession.KEY);
         var session = attr.get();
         var msg = (Message<?>) m;
         if (session != null) {
@@ -52,67 +60,31 @@ public class SessionMountedHandler extends ChannelDuplexHandler implements Close
             loadInactiveSession(ctx, attr, reconnectMsg);
             return;
         }
-        // TODO: 2024/2/15 必须要在auth后才能切换Session
-        if (m instanceof SessionSwitchingMessage switchingMsg) {
-            if (switchSession(ctx, attr, switchingMsg) == null) {
-                return;
-            }
-            ctx.fireChannelRead(m);
-            return;
-        }
-        var switchingSession = switchSession(ctx, attr, SessionSwitchingMessage.DEFAULT);
-        if (switchingSession == null) {
-            return;
-        }
-        msg.session(switchingSession);
-        ctx.fireChannelRead(m);
-    }
-
-    private void doCloseSession(TransientConnectionSession session) {
-        sessionMap.remove(session.id());
-        session.stopInactive();
-    }
-
-    private @Nullable TransientConnectionSession switchSession(ChannelHandlerContext ctx, Attribute<TransientConnectionSession> attr, SessionSwitchingMessage msg) {
-        var currentSession = attr.get();
-        var meta = msg.body();
-        if (meta.sessionClass().isInstance(currentSession)) {
-            return currentSession;
-        }
-        TransientConnectionSession newSession;
+        BusinessConnectionSession newSession;
         try {
-            newSession = switch (meta) {
-                case BUSINESS -> new BusinessConnectionSession() {
-                    @Override
-                    protected void onClose(TransientConnectionSession session) {
-                        doCloseSession(session);
-                    }
-                };
-                case MANAGEMENT -> new ManageConnectionSession(currentSession.id()) {
-                    @Override
-                    protected void onClose(TransientConnectionSession session) {
-                        doCloseSession(session);
-                    }
-                };
+            newSession = new BusinessConnectionSession(this) {
+                @Override
+                public void onClose(TransientConnectionSession session) {
+                    sessionMap.remove(session.id());
+                    session.stopInactive();
+                }
             };
         } catch (MaxConnectionException e) {
             attr.set(BusinessConnectionSession.DEFAULT);
             ctx.write(new CloseMessage(0, e));
             ctx.close();
-            return null;
+            return;
         }
-        newSession.onChannelActive(ctx.channel());
-        log.info("store new session {}", newSession);
-        sessionMap.put(newSession.id(), newSession);
         attr.set(newSession);
         msg.session(newSession);
-        return newSession;
+        ctx.fireChannelRead(m);
     }
 
-    private void loadInactiveSession(ChannelHandlerContext ctx, Attribute<TransientConnectionSession> sessionAttribute, ReconnectMessage reconnectMessage) {
+    private void loadInactiveSession(ChannelHandlerContext ctx, Attribute<BaseConnectionSession> sessionAttribute, ReconnectMessage reconnectMessage) {
         log.info("load inactive session");
         var session = sessionMap.get(reconnectMessage.body());
         if (session == null) {
+            // TODO: 2024/2/18 这些固定的Message可以抽离成单例的ButeBuf来发送
             ctx.write(new ErrorMessage(reconnectMessage, new ReconnectErrorException("can not reconnect: not found session")));
             return;
         }
@@ -141,7 +113,7 @@ public class SessionMountedHandler extends ChannelDuplexHandler implements Close
             ctx.fireExceptionCaught(cause);
             return;
         }
-        var session = ctx.channel().attr(TransientConnectionSession.KEY).get();
+        var session = ctx.channel().attr(BaseConnectionSession.KEY).get();
         if (session == null) {
             log.info("ex: {} no session channel closed: {}", cause.getMessage(), ctx.channel());
             ctx.channel().close();
@@ -152,7 +124,7 @@ public class SessionMountedHandler extends ChannelDuplexHandler implements Close
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        var session = ctx.channel().attr(TransientConnectionSession.KEY).get();
+        var session = ctx.channel().attr(BaseConnectionSession.KEY).get();
         if (session == null) {
             ctx.channel().close();
             return;
