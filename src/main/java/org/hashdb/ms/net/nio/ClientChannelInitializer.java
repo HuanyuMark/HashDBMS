@@ -1,14 +1,21 @@
 package org.hashdb.ms.net.nio;
 
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.net.nio.protocol.CodecDispatcher;
+import org.hashdb.ms.HashDBMSApp;
+import org.hashdb.ms.config.DBServerConfig;
+import org.hashdb.ms.net.nio.protocol.Protocol;
+import org.hashdb.ms.net.nio.protocol.ProtocolCodec;
 
 import java.io.Closeable;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Date: 2024/1/16 21:11
@@ -16,32 +23,51 @@ import java.io.Closeable;
  * @author huanyuMake-pecdle
  */
 @Slf4j
+@ChannelHandler.Sharable
 @RequiredArgsConstructor
 public class ClientChannelInitializer extends ChannelInitializer<NioSocketChannel> implements Closeable {
 
-    private final CodecDispatcher messageCodec;
-
     private final SessionMountedHandler sessionMountedHandler;
 
-    private final LoggingHandler loggingHandler;
+    private final LoggingHandler loggingHandler = new LoggingHandler(LogLevel.DEBUG);
 
-    public static LengthFieldBasedFrameDecoder frameDecoder() {
-        return new LengthFieldBasedFrameDecoder(20 * 1024, 18, 4, 0, 0, true);
-    }
+    private final ConnectionCountLimiter connectionCountLimiter = new ConnectionCountLimiter();
 
     @Override
     protected void initChannel(NioSocketChannel ch) {
-        ch.pipeline().addLast(NamedChannelHandler.handlerName(LengthFieldBasedFrameDecoder.class), frameDecoder());
-        ch.pipeline().addLast(NamedChannelHandler.handlerName(loggingHandler), loggingHandler);
-        // 下面这个协议解析器, 需要配合帧解析器运作, 根据body长度进行消息解析, 所以如果messageCodec所定义的长度字段与上述的frameDecoder
-        // 的规定不同, 则粘包粘包现象会存在, 且有frameDecoder可能会抛解析异常
-        ch.pipeline().addLast(messageCodec.handlerName(), messageCodec);
-        ch.pipeline().addLast(sessionMountedHandler.handlerName(), sessionMountedHandler);
-        ch.pipeline().addLast(UncaughtExceptionLogger.HANDLER_NAME, UncaughtExceptionLogger.instance());
+        var heartbeatHandler = new HeartbeatHandler();
+        var codec = new ProtocolCodec(Protocol.HASH_V1);
+        ch.pipeline().addLast(connectionCountLimiter.handlerName(), connectionCountLimiter)
+                .addLast(heartbeatHandler.handlerName(), heartbeatHandler)
+                .addLast(NamedChannelHandler.handlerName(loggingHandler), loggingHandler)
+                .addLast(codec.handlerName(), codec)
+                .addLast(sessionMountedHandler.handlerName(), sessionMountedHandler)
+                .addLast(UncaughtExceptionLogger.HANDLER_NAME, UncaughtExceptionLogger.instance());
     }
 
     @Override
     public void close() {
         sessionMountedHandler.close();
+    }
+
+    static class ConnectionCountLimiter extends ChannelInboundHandlerAdapter implements NamedChannelHandler {
+        private static final AtomicInteger CONNECTION_COUNT_COUNTER = new AtomicInteger();
+
+        private static final int MAX_CONNECTION_COUNT = HashDBMSApp.ctx().getBean(DBServerConfig.class).getMaxConnections();
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) {
+            int currentCount = CONNECTION_COUNT_COUNTER.incrementAndGet();
+            if (currentCount > MAX_CONNECTION_COUNT) {
+                ctx.channel().close(); // 关闭连接
+            }
+            ctx.fireChannelActive();
+        }
+
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) {
+            CONNECTION_COUNT_COUNTER.decrementAndGet();
+            ctx.fireChannelInactive();
+        }
     }
 }

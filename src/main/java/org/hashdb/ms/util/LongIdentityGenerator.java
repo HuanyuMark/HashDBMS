@@ -6,7 +6,6 @@ import java.util.concurrent.atomic.AtomicLong;
  * Date: 2024/2/17 14:49
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class LongIdentityGenerator {
     private final long start;

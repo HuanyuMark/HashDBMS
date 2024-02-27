@@ -91,13 +91,34 @@ public class LocalCommandExecutor implements CommandExecutor {
         return supplierCompileStream.execute();
     }
 
+    public CompileStream<?> compile(String command) {
+        var cache = session.getLocalCommandCache().hit(command);
+        if (cache != null) {
+            cache.invokeRerunCallback();
+            return cache;
+        }
+        var systemCompileStream = new SystemCompileStream(session, command);
+        var systemCompileResult = systemCompileStream.compile();
+        if (systemCompileResult != null) {
+            return systemCompileStream;
+        }
+        var db = session.getDatabase();
+        if (db == null) {
+            throw NoDatabaseSelectedException.of();
+        }
+        var supplierCompileStream = new SupplierCompileStream(session, systemCompileStream.tokens, null, false);
+        // 存入缓存
+        session.getLocalCommandCache().save(command, supplierCompileStream);
+        return supplierCompileStream;
+    }
+
     /**
      * 命令经过编译后, 就可以判断出命令的读写属性, 网络层需要使用该方法
      *
      * @param command 命令
      * @return 可传输的编译结果
      */
-    public TransportableCompileResult compile(String command) {
+    public TransportableCompileResult compile_(String command) {
         // 查询缓存
         var cache = session.getLocalCommandCache().hit(command);
         if (cache != null) {

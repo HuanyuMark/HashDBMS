@@ -79,6 +79,7 @@ public class ParameterCtx extends SupplierCtx {
             stream.rootStream().onRerun(() -> cloneValue(parameter.value()));
         } else {
             // 在参数值被用户更改时更新当前value
+            // TODO: 2024/2/19 这里的v有可能会被编译为JsonValueCtx,
             parameter.onUpdate(v -> valueOrSupplier = analyseValue(v));
         }
         stream.next();

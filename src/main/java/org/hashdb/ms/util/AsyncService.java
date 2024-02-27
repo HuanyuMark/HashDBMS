@@ -11,7 +11,7 @@ import java.util.function.Supplier;
  */
 public class AsyncService {
     private static final Lazy<ExecutorService> executorService = AtomLazy.of(() -> {
-        ThreadFactory threadFactory = Thread.ofVirtual()
+        var threadFactory = Thread.ofVirtual()
                 .name("vt-", 0)
                 .inheritInheritableThreadLocals(true)
                 .uncaughtExceptionHandler((thread, e) -> {
@@ -22,14 +22,14 @@ public class AsyncService {
     });
 
     private static final Lazy<ScheduledExecutorService> scheduledExecutorService = AtomLazy.of(() -> {
-        ThreadFactory threadFactory = Thread.ofVirtual()
+        var threadFactory = Thread.ofVirtual()
                 .name("vs-", 0)
                 .inheritInheritableThreadLocals(true)
                 .uncaughtExceptionHandler((thread, e) -> {
                     System.err.printf("Thread: [%s] throw exception: %s\n", thread.getName(), e);
                 })
                 .factory();
-        return Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors() >> 1, threadFactory);
+        return Executors.newScheduledThreadPool(Integer.MAX_VALUE, threadFactory);
     });
 
     public static ThreadFactory virtualFactory(String threadPrefix) {
@@ -68,6 +68,26 @@ public class AsyncService {
 
     public static <T> ScheduledFuture<T> setTimeout(Callable<T> callable, long milliseconds) {
         return scheduledExecutorService.get().schedule(callable, milliseconds, TimeUnit.MILLISECONDS);
+    }
+
+    public static <T> T waitTimeout(Supplier<T> task, long milliseconds) throws TimeoutException {
+        try {
+            return CompletableFuture.supplyAsync(task, service()).get(milliseconds, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } catch (ExecutionException e) {
+            throw ((RuntimeException) e.getCause());
+        }
+    }
+
+    public static void waitTimeout(Runnable task, long milliseconds) throws TimeoutException {
+        try {
+            CompletableFuture.runAsync(task, service()).get(milliseconds, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } catch (ExecutionException e) {
+            throw ((RuntimeException) e.getCause());
+        }
     }
 
     public static ScheduledFuture<?> setInterval(Runnable runnable, long milliseconds) {

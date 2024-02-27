@@ -1,5 +1,7 @@
 package org.hashdb.ms.net.nio.msg.v1;
 
+import org.jetbrains.annotations.NotNull;
+
 /**
  * Date: 2024/1/17 16:18
  *
@@ -29,5 +31,10 @@ public class ActAuthenticationMessage extends ActMessage<ActAuthenticationMessag
 
     private ActMessage<Body> actId(long actId) {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public @NotNull ActAuthenticationMessage.Body body() {
+        return super.body();
     }
 }

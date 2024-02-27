@@ -1,20 +1,14 @@
 package org.hashdb.ms.net.nio.msg.v1;
 
-import io.netty.buffer.ByteBuf;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.net.exception.IllegalMessageException;
 import org.hashdb.ms.net.nio.MetaEnum;
-import org.hashdb.ms.net.nio.SessionMeta;
-import org.hashdb.ms.net.nio.protocol.BodyParser;
-import org.hashdb.ms.net.nio.protocol.HashV1ProtocolCodec;
-import org.slf4j.LoggerFactory;
 
 /**
  * Date: 2024/1/16 21:35
  *
  * @author huanyuMake-pecdle
  */
-// TODO: 2024/2/3 将依靠构造器构造Message的手段改成依靠工厂类来构造的手段
 @Slf4j
 public enum MessageMeta implements MetaEnum {
     ACT(DefaultActMessage.class),
@@ -35,11 +29,11 @@ public enum MessageMeta implements MetaEnum {
     /**
      * 心跳，发
      */
-    PING(PingMessage.class, BodyParser.NULL, (id, buf) -> new PingMessage(id)),
+    PING(ServerPingMessage.class),
     /**
      * 心跳，收
      */
-    PONG(PongMessage.class, BodyParser.NULL, (id, buf) -> new PongMessage(id, buf.readLong())),
+    PONG(ServerPongMessage.class),
     PROTOCOL_SWITCHING(ProtocolSwitchingMessage.class),
     RECONNECT(ReconnectMessage.class),
 
@@ -47,75 +41,25 @@ public enum MessageMeta implements MetaEnum {
     /**
      * 切换会话的类型
      */
-    @Deprecated
-    SESSION_SWITCHING(SessionSwitchingMessage.class, BodyParser.SESSION_META,
-            (id, buf) -> new SessionSwitchingMessage(((SessionMeta) BodyParser.SESSION_META.decode(SessionMeta.class, buf)))
-    ),
-    SESSION_UPGRADE(SessionUpgradeMessage.class, BodyParser.SESSION_META,
-            (id, buf) -> new SessionUpgradeMessage(((SessionMeta) BodyParser.SESSION_META.decode(SessionMeta.class, buf))));
-
-    private final HashV1ProtocolCodec.Codec.MessageDecoder<?> factory;
-
-    private final BodyParser bodyParser;
-
-    private final boolean act;
-
+    SESSION_UPGRADE(SessionUpgradeMessage.class);
     private static final MessageMeta[] ENUM_MAP = values();
 
-    public static int count() {
-        return ENUM_MAP.length;
-    }
+    private final Class<? extends Message<?>> messageClass;
 
     MessageMeta(Class<? extends Message<?>> messageClass) {
-        this(messageClass, BodyParser.JSON);
+        this.messageClass = messageClass;
     }
 
-    @SuppressWarnings("unchecked")
-    <M extends Message<?>> MessageMeta(Class<M> messageClass, BodyParser bodyParser) {
-        this(bodyParser, new HashV1ProtocolCodec.Codec.MessageConstructorDecoder<>(messageClass, messageConstructor -> messageConstructor.getParameterTypes()[messageConstructor.getParameterCount() - 1], bodyParser));
-    }
-
-    MessageMeta(BodyParser bodyParser, HashV1ProtocolCodec.Codec.MessageConstructorDecoder<?> factory) {
-        this.bodyParser = bodyParser;
-        act = factory.isAct();
-        this.factory = factory;
-    }
-
-    <M extends Message<?>> MessageMeta(Class<M> messageClass, BodyParser bodyParser, HashV1ProtocolCodec.Codec.MessageDecoder<? extends M> factory) {
-        this.bodyParser = bodyParser;
-        act = ActMessage.class.isAssignableFrom(messageClass);
-        this.factory = factory;
-    }
-
-    private static void error(String msg, Throwable e) {
-        LoggerFactory.getLogger(MessageMeta.class).error(msg, e);
-    }
-
-    public static MessageMeta resolve(int code) throws IllegalMessageException {
+    public static MessageMeta resolve(int messageMetaKey) throws IllegalMessageException {
         try {
-            return ENUM_MAP[code];
+            return ENUM_MAP[messageMetaKey];
         } catch (ArrayIndexOutOfBoundsException e) {
-            throw new IllegalMessageException("illegal message type '" + code + "'");
+            throw new IllegalMessageException("illegal message type '" + messageMetaKey + "'");
         }
     }
 
-    /**
-     * @param id message id
-     * @return message instance
-     */
-    @Deprecated
-    public Message<?> create(long id, ByteBuf buf) {
-        return factory.decode(id, buf);
-    }
-
-    @Deprecated
-    public boolean isActMessage() {
-        return act;
-    }
-
-    @Deprecated
-    public BodyParser bodyParser() {
-        return bodyParser;
+    public Class<? extends Message<?>> messageClass() {
+        return messageClass;
     }
 
     @Override

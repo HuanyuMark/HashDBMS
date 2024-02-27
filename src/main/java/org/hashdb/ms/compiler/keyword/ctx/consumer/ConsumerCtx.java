@@ -8,10 +8,10 @@ import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.data.DataType;
 import org.hashdb.ms.data.HValue;
-import org.hashdb.ms.data.task.UnmodifiableCollections;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.exception.IllegalJavaClassStoredException;
 import org.hashdb.ms.exception.StopComplieException;
+import org.hashdb.ms.util.UnmodifiableCollections;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;

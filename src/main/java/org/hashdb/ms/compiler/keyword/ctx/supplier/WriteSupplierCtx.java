@@ -7,8 +7,8 @@ import org.hashdb.ms.compiler.option.Options;
 import org.hashdb.ms.data.DataType;
 import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.OpsTaskPriority;
-import org.hashdb.ms.data.task.UnmodifiableCollections;
 import org.hashdb.ms.exception.UnsupportedQueryKey;
+import org.hashdb.ms.util.UnmodifiableCollections;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

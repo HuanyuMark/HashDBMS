@@ -91,11 +91,6 @@ public final class SupplierCompileStream extends DatabaseCompileStream {
         }, AsyncService.service());
     }
 
-    public byte[] runAndGetResultBytes() {
-        Object result = session.getDatabase().submitOpsTaskSync(compile().compileResult());
-        return toBytes(result);
-    }
-
     @Override
     public String runWithExecutor() {
         // 直接使用已生成的编译上下文

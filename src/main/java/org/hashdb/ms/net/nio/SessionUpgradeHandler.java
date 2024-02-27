@@ -15,7 +15,6 @@ import java.util.Map;
  * Date: 2024/2/18 11:20
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 @Slf4j
 @Sharable
@@ -36,16 +35,7 @@ public class SessionUpgradeHandler extends SimpleChannelInboundHandler<SessionUp
         }
         BaseConnectionSession newSession;
         try {
-            newSession = switch (meta) {
-                case MANAGEMENT -> new ManageConnectionSession(currentSession) {
-                    @Override
-                    public void onClose(TransientConnectionSession session) {
-                        sessionMap.remove(session.id());
-                        session.stopInactive();
-                    }
-                };
-                default -> throw new IllegalUpgradeSessionException(currentSession.getSessionMeta(), meta);
-            };
+            newSession = meta.upgradeFrom(currentSession);
         } catch (MaxConnectionException e) {
             attr.set(BusinessConnectionSession.DEFAULT);
             ctx.write(new CloseMessage(0, e));

@@ -6,10 +6,10 @@ import org.hashdb.ms.compiler.LocalCommandExecutor;
 import org.hashdb.ms.exception.DBClientException;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.net.AbstractConnectionSession;
-import org.hashdb.ms.net.client.CloseMessage;
-import org.hashdb.ms.net.client.CommandMessage;
-import org.hashdb.ms.net.msg.Message;
-import org.hashdb.ms.net.service.ErrorMessage;
+import org.hashdb.ms.net.bio.client.CloseMessage;
+import org.hashdb.ms.net.bio.client.CommandMessage;
+import org.hashdb.ms.net.bio.msg.Message;
+import org.hashdb.ms.net.bio.service.ErrorMessage;
 import org.hashdb.ms.util.JsonService;
 import org.jetbrains.annotations.Nullable;
 

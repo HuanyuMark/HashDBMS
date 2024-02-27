@@ -1,0 +1,4 @@
+org.springframework.boot.env.EnvironmentPostProcessor=\
+org.hashdb.ms.support.IntegrationConfigurationEnvironmentPostProcessor,\
+org.hashdb.ms.support.JepExpressionEnvironmentPostProcessor
+

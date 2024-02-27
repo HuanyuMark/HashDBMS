@@ -5,7 +5,7 @@ import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.keyword.ctx.consumer.Precompilable;
 import org.hashdb.ms.compiler.keyword.ctx.consumer.PrecompileResult;
 import org.hashdb.ms.data.HValue;
-import org.hashdb.ms.data.task.UnmodifiableCollections;
+import org.hashdb.ms.util.UnmodifiableCollections;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Set;

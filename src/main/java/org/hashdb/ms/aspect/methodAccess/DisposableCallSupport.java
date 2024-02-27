@@ -8,7 +8,7 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Method;
-import java.util.Set;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -20,17 +20,19 @@ import java.util.concurrent.ConcurrentHashMap;
 @Aspect
 @Component
 public class DisposableCallSupport {
-    private final Set<Method> usedFlags = ConcurrentHashMap.newKeySet();
+    private final Map<Method, Boolean> usedFlags = new ConcurrentHashMap<>();
 
     @Before("@annotation(org.hashdb.ms.aspect.methodAccess.DisposableCall) || @within(org.hashdb.ms.aspect.methodAccess.DisposableCall)")
     public void checkSetAction(JoinPoint joinPoint) {
-        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-        Method target = signature.getMethod();
+        var signature = (MethodSignature) joinPoint.getSignature();
+        var target = signature.getMethod();
         // 如果已经被调用过，则抛出异常
-        if (usedFlags.contains(target)) {
-            throw new IllegalCallerException("can`t call method '" + signature + "' more than once");
-        } else {
-            usedFlags.add(target);
+        if (usedFlags.put(target, Boolean.TRUE) != null) {
+            throwCallException(signature);
         }
+    }
+
+    private void throwCallException(MethodSignature signature) {
+        throw new IllegalCallerException("can`t call method '" + signature + "' more than once");
     }
 }

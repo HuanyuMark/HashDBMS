@@ -9,7 +9,7 @@ import org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx;
 import org.hashdb.ms.compiler.option.DestructOpCtx;
 import org.hashdb.ms.data.DataType;
 import org.hashdb.ms.data.HValue;
-import org.hashdb.ms.data.task.UnmodifiableCollections;
+import org.hashdb.ms.util.UnmodifiableCollections;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;

@@ -1,5 +1,7 @@
 package org.hashdb.ms.util;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.Objects;
 import java.util.function.Supplier;
 
@@ -67,6 +69,14 @@ public class Lazy<T> {
         return res;
     }
 
+    public @NotNull T getOrThrow(Supplier<Exception> e) throws Exception {
+        T res = get();
+        if (res == null) {
+            throw e.get();
+        }
+        return res;
+    }
+
     public boolean isResolved() {
         return value != null;
     }
@@ -88,7 +98,18 @@ public class Lazy<T> {
 
     @Override
     public int hashCode() {
-        return value != null ? value.hashCode() : 0;
+        return Objects.hashCode(value);
+    }
+
+    public boolean supplierEquals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Lazy<?> lazy)) return false;
+
+        return Objects.equals(supplier, lazy.supplier);
+    }
+
+    public int supplierHashCode() {
+        return Objects.hashCode(supplier);
     }
 
     @Override

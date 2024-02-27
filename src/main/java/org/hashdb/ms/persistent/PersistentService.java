@@ -1,7 +1,7 @@
 package org.hashdb.ms.persistent;
 
 import org.hashdb.ms.compiler.CompileStream;
-import org.hashdb.ms.config.ReplicationConfig;
+import org.hashdb.ms.config.ClusterGroupConfig;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.DatabaseInfos;
 import org.hashdb.ms.manager.SystemInfo;
@@ -21,7 +21,8 @@ public interface PersistentService {
 
     boolean persist(SystemInfo systemInfo);
 
-    boolean persist(ReplicationConfig config);
+    @Deprecated
+    boolean persist(ClusterGroupConfig config);
 
     boolean persist(CompileStream<?> stream);
 
@@ -39,5 +40,6 @@ public interface PersistentService {
     boolean deleteDatabase(String name);
 
     @NotNull
-    ReplicationConfig scanReplicationConfig();
+    @Deprecated
+    ClusterGroupConfig scanReplicationConfig();
 }

@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
  *
  * @author huanyuMake-pecdle
  */
-public interface CompileStream<R extends CompilerNode> {
+public interface CompileStream<R extends CompilerNode> extends ExecutableCompileStream {
 
     String errToken(String token);
 
@@ -78,11 +78,13 @@ public interface CompileStream<R extends CompilerNode> {
         return null;
     }
 
-    default CompletableFuture<Object> execute() {
-        return null;
+    boolean isWrite();
+
+    default void onRerun(Runnable cb) {
     }
 
-    boolean isWrite();
+    default void invokeRerunCallback() {
+    }
 
     default String rerun() {
         return run();

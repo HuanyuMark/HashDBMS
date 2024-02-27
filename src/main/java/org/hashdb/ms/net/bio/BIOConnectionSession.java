@@ -3,6 +3,7 @@ package org.hashdb.ms.net.bio;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.compiler.LocalCommandExecutor;
 import org.hashdb.ms.compiler.exception.CommandExecuteException;
 import org.hashdb.ms.data.Database;
@@ -13,17 +14,19 @@ import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.exception.WorkerInterruptedException;
 import org.hashdb.ms.net.AbstractConnectionSession;
 import org.hashdb.ms.net.ConnectionSession;
-import org.hashdb.ms.net.client.ActHeartbeatMessage;
-import org.hashdb.ms.net.client.AuthenticationMessage;
-import org.hashdb.ms.net.client.CloseMessage;
-import org.hashdb.ms.net.client.CommandMessage;
-import org.hashdb.ms.net.exception.IllegalAccessException;
-import org.hashdb.ms.net.exception.*;
-import org.hashdb.ms.net.msg.Message;
-import org.hashdb.ms.net.service.ActAuthenticationMessage;
-import org.hashdb.ms.net.service.ActCommandMessage;
-import org.hashdb.ms.net.service.ErrorMessage;
-import org.hashdb.ms.net.service.HeartbeatMessage;
+import org.hashdb.ms.net.bio.client.ActHeartbeatMessage;
+import org.hashdb.ms.net.bio.client.AuthenticationMessage;
+import org.hashdb.ms.net.bio.client.CloseMessage;
+import org.hashdb.ms.net.bio.client.CommandMessage;
+import org.hashdb.ms.net.bio.msg.Message;
+import org.hashdb.ms.net.bio.service.ActAuthenticationMessage;
+import org.hashdb.ms.net.bio.service.ActCommandMessage;
+import org.hashdb.ms.net.bio.service.ErrorMessage;
+import org.hashdb.ms.net.bio.service.HeartbeatMessage;
+import org.hashdb.ms.net.exception.AuthenticationFailedException;
+import org.hashdb.ms.net.exception.ClosedChannelWrapper;
+import org.hashdb.ms.net.exception.IllegalMessageException;
+import org.hashdb.ms.net.exception.MaxConnectionException;
 import org.hashdb.ms.util.AsyncService;
 import org.hashdb.ms.util.CacheMap;
 import org.hashdb.ms.util.JsonService;
@@ -49,6 +52,7 @@ import java.util.function.Function;
  * @author huanyuMake-pecdle
  */
 @Slf4j
+@Deprecated
 public class BIOConnectionSession extends AbstractConnectionSession implements ConnectionSession {
 
     private String user;
@@ -99,7 +103,7 @@ public class BIOConnectionSession extends AbstractConnectionSession implements C
     private volatile boolean closing = false;
 
     {
-        localCommandCache = new CacheMap<>(ConnectionSession.dbServerConfig.get().getCommandCache().getAliveDuration(), ConnectionSession.dbServerConfig.get().getCommandCache().getCacheSize());
+        localCommandCache = new CacheMap<>(HashDBMSApp.dbServerConfig.get().getCommandCache().getAliveDuration(), HashDBMSApp.dbServerConfig.get().getCommandCache().getCacheSize());
         var requestWithNoAuth = new int[]{0};
         Function<Integer, ScheduledFuture<?>> getCloseNoAuthSessionTask = timeout -> AsyncService.setTimeout(() -> {
             if (user != null) {
@@ -137,7 +141,7 @@ public class BIOConnectionSession extends AbstractConnectionSession implements C
                     closeNoAuthSessionTask[0].cancel(true);
                     closeNoAuthSessionTask[0] = getCloseNoAuthSessionTask.apply(3000);
                 }
-                var errorMessage = new ErrorMessage(new IllegalAccessException("require authenticate"));
+                var errorMessage = new ErrorMessage(new org.hashdb.ms.net.exception.IllegalAccessException("require authenticate"));
                 try {
                     send(errorMessage);
                 } catch (ClosedChannelException e) {
@@ -148,16 +152,16 @@ public class BIOConnectionSession extends AbstractConnectionSession implements C
             }
 
             // start auth
-            // if the password in passwordAuth is null
+            // if the pwd in passwordAuth is null
             // or these user is not exist
-            // or password is not equal
+            // or pwd is not equal
             if (authMsg.getPasswordAuth().password() == null) {
                 return sendAuthFailedMsg();
             }
-            Database userDb = ConnectionSession.dbSystem.get().getDatabase("user");
+            Database userDb = HashDBMSApp.dbSystem.get().getDatabase("user");
             @SuppressWarnings("unchecked")
             Map<String, String> user = (Map<String, String>) HValue.unwrapData(userDb.submitOpsTaskSync(OpsTask.of(() -> userDb.get(authMsg.getPasswordAuth().username()))));
-            if (user == null || !user.get("password").equals(authMsg.getPasswordAuth().password())) {
+            if (user == null || !user.get("pwd").equals(authMsg.getPasswordAuth().password())) {
                 return sendAuthFailedMsg();
             }
 
@@ -310,8 +314,8 @@ public class BIOConnectionSession extends AbstractConnectionSession implements C
             }
         });
 
-        if (connectionCount.getAndIncrement() > ConnectionSession.dbServerConfig.get().getMaxConnections()) {
-            connectionCount.set(ConnectionSession.dbServerConfig.get().getMaxConnections());
+        if (connectionCount.getAndIncrement() > HashDBMSApp.dbServerConfig.get().getMaxConnections()) {
+            connectionCount.set(HashDBMSApp.dbServerConfig.get().getMaxConnections());
             MaxConnectionException exception = new MaxConnectionException("out of max connection");
             try {
                 send(new ErrorMessage(exception));
@@ -373,8 +377,8 @@ public class BIOConnectionSession extends AbstractConnectionSession implements C
         if (aliveChecker != null) {
             return;
         }
-        long heartbeatInterval = ConnectionSession.dbServerConfig.get().getHeartbeatInterval();
-        int timeoutRetry = ConnectionSession.dbServerConfig.get().getTimeoutRetry();
+        long heartbeatInterval = HashDBMSApp.dbServerConfig.get().getHeartbeatInterval();
+        int timeoutRetry = HashDBMSApp.dbServerConfig.get().getTimeoutRetry();
         aliveChecker = AsyncService.setInterval(() -> {
             if (System.currentTimeMillis() - lastGetTime <= heartbeatInterval) {
                 actHeartbeat();
@@ -486,7 +490,7 @@ public class BIOConnectionSession extends AbstractConnectionSession implements C
     }
 
     protected Object sendAuthFailedMsg() {
-        var errorMessage = new ErrorMessage(new AuthenticationFailedException("Incorrect username or password"));
+        var errorMessage = new ErrorMessage(new AuthenticationFailedException("Incorrect uname or pwd"));
         try {
             send(errorMessage);
             return null;

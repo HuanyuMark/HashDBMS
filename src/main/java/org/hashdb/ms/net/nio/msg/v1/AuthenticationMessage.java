@@ -1,5 +1,6 @@
 package org.hashdb.ms.net.nio.msg.v1;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -16,12 +17,20 @@ public class AuthenticationMessage extends Message<AuthenticationMessage.Body> {
         super(body);
     }
 
+    public AuthenticationMessage(String username, String password) {
+        super(new Body(username, password));
+    }
+
     @Override
     public MessageMeta getMeta() {
         return MessageMeta.AUTHENTICATION;
     }
 
-    public record Body(String username, String password) {
+    public record Body(
+            @JsonAlias({"username", "UNAME"})
+            String uname,
+            @JsonAlias({"password", "PWD"})
+            String pwd) {
     }
 
     @Override

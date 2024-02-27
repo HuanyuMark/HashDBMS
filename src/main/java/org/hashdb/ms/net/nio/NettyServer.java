@@ -2,7 +2,7 @@ package org.hashdb.ms.net.nio;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.config.DBServerConfig;
 import org.hashdb.ms.event.ApplicationContextLoadedEvent;
 import org.hashdb.ms.manager.DBSystem;
+import org.hashdb.ms.support.Exit;
 import org.hashdb.ms.util.JsonService;
 import org.hashdb.ms.util.TimeCounter;
 import org.springframework.beans.factory.DisposableBean;
@@ -52,19 +53,19 @@ public class NettyServer implements DisposableBean, AutoCloseable {
     public void run() {
         JsonService.loadConfig();
         var startTime = TimeCounter.start();
-        var bootstrap = new ServerBootstrap();
-        ChannelFuture channelFuture = bootstrap.group(bossGroup, workerGroup)
+        var server = new ServerBootstrap();
+        var future = server.group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel.class)
+                .option(ChannelOption.SO_BACKLOG, serverConfig.getMaxConnections())
                 .childHandler(clientChannelInitializer)
                 .bind(serverConfig.getPort());
-        serverChannel = channelFuture.channel();
-        channelFuture.addListener(f -> {
+        serverChannel = future.channel();
+        future.addListener(f -> {
             if (f.isSuccess()) {
                 log.info("server is running at [tcp: {}] cost {}ms", serverConfig.getPort(), startTime.stop());
                 return;
             }
-            log.error("server start failed", f.cause());
-            System.exit(1);
+            throw Exit.error("server start failed", f.cause());
         });
     }
 

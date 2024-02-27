@@ -7,5 +7,6 @@ package org.hashdb.ms.constant;
  */
 public enum ServerIdentity {
     MASTER,
-    SLAVE;
+    SLAVE,
+    SENTINEL;
 }

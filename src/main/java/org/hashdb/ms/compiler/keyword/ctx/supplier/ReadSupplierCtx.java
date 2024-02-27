@@ -4,8 +4,8 @@ import org.hashdb.ms.compiler.exception.CommandCompileException;
 import org.hashdb.ms.compiler.exception.LikePatternSyntaxException;
 import org.hashdb.ms.compiler.keyword.KeywordModifier;
 import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
-import org.hashdb.ms.data.task.UnmodifiableCollections;
 import org.hashdb.ms.exception.UnsupportedQueryKey;
+import org.hashdb.ms.util.UnmodifiableCollections;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedList;

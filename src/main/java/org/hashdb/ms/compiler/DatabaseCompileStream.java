@@ -30,7 +30,7 @@ public abstract sealed class DatabaseCompileStream extends CommonCompileStream<C
 
     private List<Runnable> rerunCbs;
 
-    protected int costExpectant;
+//    protected int costExpectant;
 
     /**
      * 构造主流
@@ -152,11 +152,24 @@ public abstract sealed class DatabaseCompileStream extends CommonCompileStream<C
     /**
      * @param cb 在命令被重运行时的回调
      */
+    @Override
     public void onRerun(Runnable cb) {
         if (rerunCbs == null) {
             rerunCbs = new LinkedList<>();
         }
         rerunCbs.add(cb);
+    }
+
+    @Override
+    public void invokeRerunCallback() {
+        if (rerunCbs == null) {
+            return;
+        }
+        if (rerunCbs.size() > rerunCallbackParallelismExecuteThreshold) {
+            rerunCbs.parallelStream().forEach(Runnable::run);
+        } else {
+            rerunCbs.forEach(Runnable::run);
+        }
     }
 
     @Override
@@ -184,7 +197,7 @@ public abstract sealed class DatabaseCompileStream extends CommonCompileStream<C
     /**
      * @return 消耗期望值, 表示执行这个命令预期的所消耗的时间
      */
-    public int costExpectant() {
-        return costExpectant;
-    }
+//    public int costExpectant() {
+//        return costExpectant;
+//    }
 }

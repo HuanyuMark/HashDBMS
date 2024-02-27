@@ -3,10 +3,10 @@ package org.hashdb.ms.manager;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.aspect.methodAccess.DisposableCall;
-import org.hashdb.ms.config.ReplicationConfig;
+import org.hashdb.ms.config.ClusterGroupConfig;
+import org.hashdb.ms.config.DBManageConfig;
 import org.hashdb.ms.data.DataType;
 import org.hashdb.ms.data.Database;
-import org.hashdb.ms.event.ReplicationConfigLoadedEvent;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.net.exception.DatabaseClashException;
 import org.hashdb.ms.net.exception.NotFoundDatabaseException;
@@ -19,7 +19,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
@@ -42,15 +41,15 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
     private SystemInfo systemInfo;
 
     @Getter
-    private ReplicationConfig replicationConfig;
+    private ClusterGroupConfig clusterGroupConfig;
 
     private final PersistentService persistentService;
 
-    private final ApplicationEventPublisher publisher;
+    private final DBManageConfig manageConfig;
 
-    public DBSystem(PersistentService persistentService, ApplicationEventPublisher publisher) {
+    public DBSystem(PersistentService persistentService, DBManageConfig manageConfig) {
         this.persistentService = persistentService;
-        this.publisher = publisher;
+        this.manageConfig = manageConfig;
         startConsumeOpsTask();
     }
 
@@ -131,13 +130,9 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
     public Database getDatabase(Integer id) throws NotFoundDatabaseException {
         Lazy<Database> lazy = this.systemInfo.getDatabaseIdMap().get(id);
         if (lazy == null) {
-            throw NotFoundDatabaseException.of("id: '" + id + "'");
+            throw NotFoundDatabaseException.of(STR."id: '\{id}'");
         }
         return lazy.get();
-    }
-
-    public PersistentService getPersistentService() {
-        return persistentService;
     }
 
     @DisposableCall
@@ -150,46 +145,48 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
      * 初始化数据库
      */
     @Override
-    public void afterPropertiesSet() throws Exception {
+    public void afterPropertiesSet() {
         // 扫描 系统信息,
         setSystemInfo(persistentService.scanSystemInfo());
         initSystemInternalDB();
-        // 扫描 主从复制配置
-        replicationConfig = persistentService.scanReplicationConfig();
-        // 通知 主从复制配置加载完成
-        publisher.publishEvent(new ReplicationConfigLoadedEvent(replicationConfig));
     }
 
     public void initSystemInternalDB() {
         initUserDB();
     }
 
+    private static Map<String, String> newUserEntity(String username, String password) {
+        @SuppressWarnings("unchecked")
+        var userEntity = (Map<String, String>) DataType.MAP.reflect().create();
+        userEntity.put(username, password);
+        return userEntity;
+    }
+
     public void initUserDB() {
         try {
             newDatabase(1, "user", userDb -> {
-                // add default user
-                var userEntity = ((Map<String, String>) DataType.MAP.reflect().create());
-                userEntity.put("password", "hash");
-                userDb.set("hash", userEntity, null, null);
+                // add default users
+                for (var initUser : manageConfig.getInitUsers()) {
+                    userDb.set("hash", newUserEntity(initUser.username(), initUser.password()), null, null);
+                }
             });
         } catch (DatabaseClashException e) {
             // check if user db is valid
             if (e.getClashKeys().contains("id")) {
-                Database db = getDatabase(1);
+                var db = getDatabase(1);
                 if (!"user".equals(db.getInfos().getName())) {
-                    DatabaseClashException clashWithName = new DatabaseClashException();
-                    log.error("check system internal db 'user' failed. the id of 'user' db should be 1 " +
-                            "and the name of db which itself id is 1 is expect to 'user' but found '" + db.getInfos().getName() + "'");
+                    var clashWithName = new DatabaseClashException();
+                    log.error(STR."check system internal db 'user' failed. the id of 'user' db should be 1 and the name of db which itself id is 1 is expect to 'user' but found '\{db.getInfos().getName()}'");
                     clashWithName.clashWith("name");
                     throw new DBSystemException(clashWithName);
                 }
                 return;
             }
             if (e.getClashKeys().contains("name")) {
-                Database db = getDatabase("user");
+                var db = getDatabase("user");
                 if (1 != db.getInfos().getId()) {
-                    DatabaseClashException clashWithId = new DatabaseClashException();
-                    log.error("check system internal db 'user' failed. the id of 'user' db which itself name is 'user' should be 1 but found '" + db.getInfos().getId() + "'");
+                    var clashWithId = new DatabaseClashException();
+                    log.error(STR."check system internal db 'user' failed. the id of 'user' db which itself name is 'user' should be 1 but found '\{db.getInfos().getId()}'");
                     clashWithId.clashWith("id");
                     throw new DBSystemException(clashWithId);
                 }
@@ -204,7 +201,7 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
     @Override
     public void destroy() {
         log.info("start closing System ...");
-        var dbmsCostTime = TimeCounter.start();
+        var dbmsCostTimeCounter = TimeCounter.start();
         // 保存系统信息
         persistentService.persist(systemInfo);
         if (log.isTraceEnabled()) {
@@ -231,8 +228,8 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
         if (ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS)) {
             forkJoinPoolClosingMsg = "gracefully";
         } else {
-            forkJoinPoolClosingMsg = "rudely. remaining task " + ForkJoinPool.commonPool().getQueuedTaskCount();
+            forkJoinPoolClosingMsg = STR."rudely. remaining task \{ForkJoinPool.commonPool().getQueuedTaskCount()}";
         }
-        log.info("System closed {}, cost {} ms", forkJoinPoolClosingMsg, dbmsCostTime.stop());
+        log.info("System closed {}, cost {} ms", forkJoinPoolClosingMsg, dbmsCostTimeCounter.stop());
     }
 }

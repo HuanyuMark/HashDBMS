@@ -3,7 +3,6 @@ package org.hashdb.ms.net.nio;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.util.Attribute;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.net.exception.MaxConnectionException;
@@ -27,7 +26,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SessionMountedHandler extends ChannelDuplexHandler implements Closeable, NamedChannelHandler {
     private volatile boolean closed;
     private final Map<Long, BaseConnectionSession> sessionMap = new ConcurrentHashMap<>();
-
     private SessionUpgradeHandler upgradeHandler;
 
     public SessionMountedHandler() {
@@ -38,31 +36,25 @@ public class SessionMountedHandler extends ChannelDuplexHandler implements Close
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object unknownMsg, ChannelPromise promise) throws Exception {
-        if (unknownMsg instanceof Message<?> msg) {
-            msg.session(ctx.channel().attr(BaseConnectionSession.KEY).get());
-        }
-        ctx.write(unknownMsg, promise);
-    }
-
-    @Override
-    public void channelRead(ChannelHandlerContext ctx, Object m) {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
         var attr = ctx.channel().attr(BaseConnectionSession.KEY);
         var session = attr.get();
-        var msg = (Message<?>) m;
         if (session != null) {
-            msg.session(session);
-            ctx.fireChannelRead(m);
+            ctx.fireChannelRead(msg);
             return;
         }
         // 如果是重连消息, 则body就是上次连接所使用的session id
-        if (m instanceof ReconnectMessage reconnectMsg) {
+        if (msg instanceof ReconnectMessage reconnectMsg) {
             loadInactiveSession(ctx, attr, reconnectMsg);
-            return;
+        } else {
+            mountNewSession(ctx, attr, msg);
         }
+    }
+
+    private void mountNewSession(ChannelHandlerContext ctx, Attribute<BaseConnectionSession> attr, Object msg) {
         BusinessConnectionSession newSession;
         try {
-            newSession = new BusinessConnectionSession(this) {
+            newSession = new BusinessConnectionSession() {
                 @Override
                 public void onClose(TransientConnectionSession session) {
                     sessionMap.remove(session.id());
@@ -76,8 +68,8 @@ public class SessionMountedHandler extends ChannelDuplexHandler implements Close
             return;
         }
         attr.set(newSession);
-        msg.session(newSession);
-        ctx.fireChannelRead(m);
+        newSession.changeChannel(ctx.channel());
+        ctx.fireChannelRead(msg);
     }
 
     private void loadInactiveSession(ChannelHandlerContext ctx, Attribute<BaseConnectionSession> sessionAttribute, ReconnectMessage reconnectMessage) {
@@ -100,7 +92,7 @@ public class SessionMountedHandler extends ChannelDuplexHandler implements Close
         sessionAttribute.set(session);
         session.stopInactive();
         // 更换连接
-        session.onChannelChange(ctx.channel());
+        session.changeChannel(ctx.channel());
         ctx.write(ActMessage.act(reconnectMessage.id()));
         // 通知当前session状态
         ctx.write(new SessionStateMessage(session));

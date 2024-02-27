@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -20,10 +21,10 @@ import org.hashdb.ms.compiler.keyword.SystemKeyword;
 import org.hashdb.ms.config.DBRamConfig;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.exception.IllegalCompilerNodeException;
+import org.hashdb.ms.net.bio.msg.Message;
+import org.hashdb.ms.net.bio.msg.MessageType;
 import org.hashdb.ms.net.exception.IllegalMessageException;
 import org.hashdb.ms.net.exception.IllegalMessageTypeException;
-import org.hashdb.ms.net.msg.Message;
-import org.hashdb.ms.net.msg.MessageType;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
@@ -48,6 +49,34 @@ public class JsonService {
         try {
             return COMMON.writeValueAsString(obj);
         } catch (IOException e) {
+            throw new DBSystemException(e);
+        }
+    }
+
+    /**
+     * @param objs 这些对象对应的json字符串必须形似"{}", 否则将抛出{@link IllegalArgumentException 异常
+     */
+    public static String mergeObjsToString(Object... objs) throws IllegalArgumentException {
+        if (objs.length == 0) {
+            return "{}";
+        }
+        if (objs[0] == null) {
+            throw new NullPointerException();
+        }
+        var r = COMMON.valueToTree(objs[0]);
+        if (!(r instanceof ObjectNode rootNode)) {
+            throw new IllegalArgumentException("require obj");
+        }
+        for (int i = 1; i < objs.length; i++) {
+            var node = COMMON.valueToTree(objs[i]);
+            if (!(node instanceof ObjectNode other)) {
+                throw new IllegalArgumentException("require obj");
+            }
+            rootNode.setAll(other);
+        }
+        try {
+            return COMMON.writeValueAsString(rootNode);
+        } catch (JsonProcessingException e) {
             throw new DBSystemException(e);
         }
     }
@@ -255,7 +284,6 @@ public class JsonService {
             }
             return messageType.deserialize(rootNode.traverse(jp.getCodec()), rootNode, ctxt);
         }
-
     }
 
     /**

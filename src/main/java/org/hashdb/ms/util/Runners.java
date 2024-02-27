@@ -11,7 +11,8 @@ public class Runners {
     public static void everlasting(Runnable runnable) {
         Objects.requireNonNull(runnable);
         while (true) {
-           runnable.run();
+            runnable.run();
         }
     }
+
 }

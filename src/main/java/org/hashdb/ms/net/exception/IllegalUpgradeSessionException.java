@@ -7,7 +7,6 @@ import org.hashdb.ms.net.nio.SessionMeta;
  * Date: 2024/2/18 13:01
  *
  * @author huanyuMake-pecdle
- * @version 0.0.1
  */
 public class IllegalUpgradeSessionException extends DBClientException {
     public IllegalUpgradeSessionException(SessionMeta origin, SessionMeta target) {

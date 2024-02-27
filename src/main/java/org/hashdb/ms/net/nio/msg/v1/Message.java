@@ -1,6 +1,6 @@
 package org.hashdb.ms.net.nio.msg.v1;
 
-import org.hashdb.ms.net.nio.TransientConnectionSession;
+import org.hashdb.ms.net.nio.protocol.HashV1MessageCodec;
 import org.hashdb.ms.util.JsonService;
 import org.hashdb.ms.util.LongIdentityGenerator;
 import org.jetbrains.annotations.Nullable;
@@ -15,24 +15,11 @@ public abstract class Message<B> {
 
     protected final long id;
 
-    private TransientConnectionSession session;
 
     public abstract MessageMeta getMeta();
 
-    public TransientConnectionSession session() {
-        return session;
-    }
-
-    public void session(TransientConnectionSession session) {
-        if (this.session != null) {
-            throw new IllegalArgumentException("session can not be set again: " + this);
-        }
-        this.session = session;
-    }
-
-
     /**
-     * @param id   由协议层{@link org.hashdb.ms.net.nio.protocol.CodecDispatcher}调用,实例化Message
+     * @param id   由协议层,例如{@link HashV1MessageCodec}调用,实例化Message
      * @param body 消息体
      */
     public Message(long id, @Nullable B body) {
@@ -61,10 +48,6 @@ public abstract class Message<B> {
 
     @Override
     public String toString() {
-        return JsonService.toString(this);
-    }
-
-    public long sessionId() {
-        return session == null ? -1 : session.id();
+        return STR."\{getMeta()}: \{JsonService.toString(this)}";
     }
 }

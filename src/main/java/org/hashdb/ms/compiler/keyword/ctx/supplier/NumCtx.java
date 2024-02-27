@@ -7,11 +7,11 @@ import org.hashdb.ms.compiler.option.LExpireOpCtx;
 import org.hashdb.ms.data.DataType;
 import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.OpsTaskPriority;
-import org.hashdb.ms.data.task.UnmodifiableCollections;
 import org.hashdb.ms.exception.IllegalJavaClassStoredException;
 import org.hashdb.ms.exception.IncreaseUnsupportedException;
 import org.hashdb.ms.exception.StopComplieException;
 import org.hashdb.ms.exception.UnsupportedQueryKey;
+import org.hashdb.ms.util.UnmodifiableCollections;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

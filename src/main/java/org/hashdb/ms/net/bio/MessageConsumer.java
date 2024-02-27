@@ -1,6 +1,6 @@
 package org.hashdb.ms.net.bio;
 
-import org.hashdb.ms.net.msg.Message;
+import org.hashdb.ms.net.bio.msg.Message;
 
 import java.util.function.BiFunction;
 
@@ -9,5 +9,6 @@ import java.util.function.BiFunction;
  *
  * @author huanyuMake-pecdle
  */
+@Deprecated
 public interface MessageConsumer extends BiFunction<Message, MessageConsumerChain, Object> {
 }

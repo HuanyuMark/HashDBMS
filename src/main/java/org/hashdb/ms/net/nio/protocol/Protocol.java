@@ -1,7 +1,12 @@
 package org.hashdb.ms.net.nio.protocol;
 
+import io.netty.buffer.ByteBuf;
 import org.hashdb.ms.net.exception.UnsupportedProtocolException;
 import org.hashdb.ms.net.nio.MetaEnum;
+import org.hashdb.ms.net.nio.msg.v1.Message;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Date: 2024/1/17 12:10
@@ -9,13 +14,19 @@ import org.hashdb.ms.net.nio.MetaEnum;
  * @author huanyuMake-pecdle
  */
 public enum Protocol implements MetaEnum {
-    HASH_V1(new HashV1ProtocolCodec()),
+    HASH_V1(new HashV1MessageCodec()),
     ;
 
-    private static final Protocol[] ENUM_MAP = values();
-    private final ProtocolCodec codec;
+    /**
+     * 享元模式, 用于缓存实例不多的Message的ByteBuf.
+     * 如果消息的实例过多可能会发生内存泄漏
+     */
+    private final Map<Message<?>, ByteBuf> sharedMessageByteBufMap = new ConcurrentHashMap<>();
 
-    Protocol(ProtocolCodec codec) {
+    private static final Protocol[] ENUM_MAP = values();
+    private final MessageCodec codec;
+
+    Protocol(MessageCodec codec) {
         this.codec = codec;
     }
 
@@ -27,8 +38,12 @@ public enum Protocol implements MetaEnum {
         }
     }
 
-    public ProtocolCodec codec() {
+    public MessageCodec codec() {
         return codec;
+    }
+
+    public Map<Message<?>, ByteBuf> sharedMessageByteBufMap() {
+        return sharedMessageByteBufMap;
     }
 
     @Override

@@ -17,8 +17,6 @@ public interface TransientConnectionSession extends ChannelHook, AutoCloseable {
 
     Protocol protocol();
 
-    Channel channel();
-
     void startInactive();
 
     void stopInactive();
@@ -26,6 +24,8 @@ public interface TransientConnectionSession extends ChannelHook, AutoCloseable {
     void close(CloseMessage closeMessage);
 
     String username();
+
+    Channel channel();
 
     boolean isActive();
 

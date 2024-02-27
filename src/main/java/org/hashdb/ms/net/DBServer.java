@@ -5,6 +5,7 @@ import org.hashdb.ms.config.DBServerConfig;
 import org.hashdb.ms.event.ApplicationContextLoadedEvent;
 import org.hashdb.ms.event.CloseServerEvent;
 import org.hashdb.ms.manager.DBSystem;
+import org.hashdb.ms.support.Exit;
 import org.hashdb.ms.util.JsonService;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.context.event.EventListener;
@@ -20,6 +21,7 @@ import java.nio.channels.ServerSocketChannel;
  * @author huanyuMake-pecdle
  */
 @Slf4j
+@Deprecated
 public abstract class DBServer implements DisposableBean, AutoCloseable {
 
     protected final DBServerConfig serverConfig;
@@ -42,8 +44,7 @@ public abstract class DBServer implements DisposableBean, AutoCloseable {
                 serverChanel.bind(new InetSocketAddress(serverConfig.getPort()));
             } catch (BindException e) {
                 log.error("port {} is in use", serverConfig.getPort());
-                System.exit(1);
-                throw e;
+                throw Exit.exception();
             }
             log.info("server is running at port: {}", serverConfig.getPort());
             doStart(serverChanel);

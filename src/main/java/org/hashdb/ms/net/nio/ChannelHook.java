@@ -10,7 +10,4 @@ import io.netty.channel.Channel;
 public interface ChannelHook {
     default void onChannelChange(Channel channel) {
     }
-
-    default void onReleaseChannel() {
-    }
 }

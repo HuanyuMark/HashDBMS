@@ -1,6 +1,12 @@
 package org.hashdb.ms.net.nio.msg.v1;
 
 import org.hashdb.ms.exception.DBClientException;
+import org.hashdb.ms.exception.DBSystemException;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Date: 2024/1/17 14:05
@@ -8,6 +14,7 @@ import org.hashdb.ms.exception.DBClientException;
  * @author huanyuMake-pecdle
  */
 public class ErrorMessage extends ActMessage<ErrorMessage.Body> {
+    private static final Map<String, Constructor<? extends Exception>> EXCEPTION_CONSTRUCTOR = new HashMap<>();
 
     public ErrorMessage(long actId, Body body) {
         super(actId, body);
@@ -18,11 +25,11 @@ public class ErrorMessage extends ActMessage<ErrorMessage.Body> {
     }
 
     public ErrorMessage(long actId, DBClientException e) {
-        super(actId, new Body(e.getClass().getSimpleName(), e.getCause().getMessage()));
+        super(actId, new Body(e.getClass().getName(), e.getCause().getMessage()));
     }
 
     public ErrorMessage(long actId, String cause) {
-        super(actId, new Body("Exception", cause));
+        super(actId, new Body(Exception.class.getName(), cause));
     }
 
     public ErrorMessage(Message<?> request, String cause) {
@@ -40,4 +47,34 @@ public class ErrorMessage extends ActMessage<ErrorMessage.Body> {
     ) {
     }
 
+    @SuppressWarnings("unchecked")
+    public Exception toException() {
+        if (body == null) {
+            throw new NullPointerException("can not convert null body to exception");
+        }
+        var constructor = EXCEPTION_CONSTRUCTOR.get(body.exception);
+        if (constructor != null) {
+            try {
+                return constructor.newInstance(body.cause);
+            } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+                throw new DBSystemException(e);
+            }
+        }
+        try {
+            var exceptionClazz = (Class<? extends Exception>) Class.forName(body.exception);
+            try {
+                var exceptionConstructor = exceptionClazz.getConstructor(String.class);
+                exceptionConstructor.setAccessible(true);
+                var res = exceptionConstructor.newInstance(body.cause);
+                EXCEPTION_CONSTRUCTOR.put(body.exception, exceptionConstructor);
+                return res;
+            } catch (NoSuchMethodException e) {
+                throw new DBSystemException("can not find constructor with parameter type '" + String.class + "' of class '" + exceptionClazz + "'");
+            } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
+                throw new DBSystemException(e);
+            }
+        } catch (ClassNotFoundException e) {
+            throw new DBSystemException("can not convert body to exception: can not load class by class name '" + body.exception + "'");
+        }
+    }
 }

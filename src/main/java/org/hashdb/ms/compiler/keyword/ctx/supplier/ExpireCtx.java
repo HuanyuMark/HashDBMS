@@ -8,9 +8,9 @@ import org.hashdb.ms.compiler.keyword.ctx.CompileCtx;
 import org.hashdb.ms.compiler.option.*;
 import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.OpsTaskPriority;
-import org.hashdb.ms.data.task.UnmodifiableCollections;
 import org.hashdb.ms.exception.StopComplieException;
 import org.hashdb.ms.exception.UnsupportedQueryKey;
+import org.hashdb.ms.util.UnmodifiableCollections;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedList;

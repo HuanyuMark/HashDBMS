@@ -2,10 +2,7 @@ package org.hashdb.ms.config;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.aspect.methodAccess.ConfigLoadOnly;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.Configuration;
 
 /**
  * Date: 2023/11/21 12:26
@@ -14,9 +11,7 @@ import org.springframework.context.annotation.Configuration;
  */
 @Slf4j
 @Getter
-@Configuration
 @ConfigurationProperties("db.file")
-@EnableConfigurationProperties
 public class HdbConfig extends PersistentConfig {
     private final String systemInfoFileName = "sys.info";
     private final String replicationConfigFileName = "replication.yml";
@@ -27,18 +22,14 @@ public class HdbConfig extends PersistentConfig {
      * false:
      * 在启动数据库服务器时, 就将说有的数据从磁盘读入内存
      */
-    private boolean lazyLoad = true;
+    private final boolean lazyLoad;
 
-    private String replicationConfigPath = System.getProperty("user.dir");
+    @Deprecated
+    private final String replicationConfigPath;
 
-
-    @ConfigLoadOnly
-    public void setLazyLoad(boolean lazyLoad) {
-        this.lazyLoad = lazyLoad;
-    }
-
-    @ConfigLoadOnly
-    public void setReplicationConfigPath(String replicationConfigPath) {
-        this.replicationConfigPath = replicationConfigPath;
+    public HdbConfig(String path, Long chunkSize, Long saveInterval, Boolean lazyLoad, String replicationConfigPath) {
+        super(path, chunkSize, saveInterval);
+        this.lazyLoad = lazyLoad == null || lazyLoad;
+        this.replicationConfigPath = replicationConfigPath == null ? System.getProperty("user.dir") : replicationConfigPath;
     }
 }

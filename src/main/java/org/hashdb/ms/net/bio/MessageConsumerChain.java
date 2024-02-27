@@ -1,6 +1,6 @@
 package org.hashdb.ms.net.bio;
 
-import org.hashdb.ms.net.msg.Message;
+import org.hashdb.ms.net.bio.msg.Message;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -11,6 +11,7 @@ import java.util.ListIterator;
  *
  * @author huanyuMake-pecdle
  */
+@Deprecated
 public class MessageConsumerChain {
 
     private final List<MessageConsumer> consumers = new LinkedList<>();

@@ -10,7 +10,7 @@ import org.hashdb.ms.compiler.option.LDeleteOpCtx;
 import org.hashdb.ms.compiler.option.OptionCtx;
 import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.OpsTaskPriority;
-import org.hashdb.ms.data.task.UnmodifiableCollections;
+import org.hashdb.ms.util.UnmodifiableCollections;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;

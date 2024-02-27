@@ -1,10 +1,8 @@
 package org.hashdb.ms.net.nio;
 
-import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.*;
 import lombok.extern.slf4j.Slf4j;
+import org.hashdb.ms.exception.DBSystemException;
 
 /**
  * Date: 2024/1/31 0:50
@@ -20,6 +18,18 @@ public class UncaughtExceptionLogger extends ChannelDuplexHandler implements Nam
 
     public static UncaughtExceptionLogger instance() {
         return INSTANCE;
+    }
+
+    public static Incorporator extract(ChannelPipeline pipeline) {
+        var lastHandler = pipeline.removeLast();
+        if (!(lastHandler instanceof UncaughtExceptionLogger)) {
+            throw new DBSystemException("the last handler should be '" + UncaughtExceptionLogger.class + "'");
+        }
+        return () -> pipeline.addLast(HANDLER_NAME, INSTANCE);
+    }
+
+    public interface Incorporator {
+        void incorporate();
     }
 
     @Override

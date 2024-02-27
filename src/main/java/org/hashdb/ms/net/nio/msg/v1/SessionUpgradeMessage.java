@@ -25,6 +25,10 @@ public class SessionUpgradeMessage extends Message<SessionMeta> {
         return MessageMeta.SESSION_UPGRADE;
     }
 
+    /**
+     * target session
+     * 要升级到该 {@link SessionMeta}的meta
+     */
     @Override
     public @NotNull SessionMeta body() {
         return super.body();

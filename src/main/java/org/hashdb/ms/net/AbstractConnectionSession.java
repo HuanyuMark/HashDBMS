@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import org.hashdb.ms.compiler.CompileStream;
 import org.hashdb.ms.data.Database;
-import org.hashdb.ms.net.client.CloseMessage;
+import org.hashdb.ms.net.bio.client.CloseMessage;
 import org.hashdb.ms.util.CacheMap;
 import org.jetbrains.annotations.Nullable;
 

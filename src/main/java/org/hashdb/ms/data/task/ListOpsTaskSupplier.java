@@ -4,6 +4,7 @@ import org.hashdb.ms.data.OpsTask;
 import org.hashdb.ms.data.SimplePair;
 import org.hashdb.ms.data.result.PopPushResult;
 import org.hashdb.ms.exception.DBClientException;
+import org.hashdb.ms.util.UnmodifiableCollections;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 

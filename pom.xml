@@ -63,6 +63,14 @@
         </dependency>
 
         <dependency>
+            <groupId>com.singularsys</groupId>
+            <artifactId>jep</artifactId>
+            <version>3.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/src/main/resources/lib/jep-3.0.0-trial.jar</systemPath>
+        </dependency>
+
+        <dependency>
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations</artifactId>
             <version>24.0.1</version>
@@ -76,11 +84,12 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <compilerArgs>--enable-preview</compilerArgs>
-                    <compilerArgs>-parameters</compilerArgs>
+                    <enablePreview>true</enablePreview>
+                    <parameters>true</parameters>
                     <release>${java.version}</release>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
+                    <source>21</source>
+                    <target>21</target>
+                    <compilerArgs>--enable-preview</compilerArgs>
                 </configuration>
             </plugin>
             <plugin>

@@ -4,7 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.config.DBServerConfig;
 import org.hashdb.ms.manager.DBSystem;
 import org.hashdb.ms.net.DBServer;
-import org.hashdb.ms.net.client.CloseMessage;
+import org.hashdb.ms.net.bio.client.CloseMessage;
 import org.hashdb.ms.net.exception.ClosedChannelWrapper;
 import org.hashdb.ms.util.AsyncService;
 import org.hashdb.ms.util.JsonService;

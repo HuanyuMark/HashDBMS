@@ -1,7 +1,7 @@
 package org.hashdb.ms.persistent;
 
 import org.hashdb.ms.compiler.CompileStream;
-import org.hashdb.ms.config.ReplicationConfig;
+import org.hashdb.ms.config.ClusterGroupConfig;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.DatabaseInfos;
 import org.hashdb.ms.manager.SystemInfo;
@@ -28,7 +28,7 @@ public class JsonPersistentService implements PersistentService {
     }
 
     @Override
-    public boolean persist(ReplicationConfig config) {
+    public boolean persist(ClusterGroupConfig config) {
         return false;
     }
 
@@ -68,7 +68,7 @@ public class JsonPersistentService implements PersistentService {
     }
 
     @Override
-    public @NotNull ReplicationConfig scanReplicationConfig() {
+    public @NotNull ClusterGroupConfig scanReplicationConfig() {
         return null;
     }
 }

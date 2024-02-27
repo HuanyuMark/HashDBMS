@@ -1,13 +1,9 @@
 package org.hashdb.ms.net;
 
-import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.compiler.CompileStream;
-import org.hashdb.ms.config.DBServerConfig;
 import org.hashdb.ms.data.Database;
-import org.hashdb.ms.manager.DBSystem;
-import org.hashdb.ms.net.client.CloseMessage;
+import org.hashdb.ms.net.bio.client.CloseMessage;
 import org.hashdb.ms.util.CacheMap;
-import org.hashdb.ms.util.Lazy;
 
 import java.io.Closeable;
 
@@ -17,8 +13,6 @@ import java.io.Closeable;
  * @author huanyuMake-pecdle
  */
 public interface ConnectionSession extends Closeable {
-    Lazy<DBServerConfig> dbServerConfig = Lazy.of(() -> HashDBMSApp.ctx().getBean(DBServerConfig.class));
-    Lazy<DBSystem> dbSystem = Lazy.of(() -> HashDBMSApp.ctx().getBean(DBSystem.class));
     /**
      * 与参数无关的命令缓存在这里
      */

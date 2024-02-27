@@ -2,10 +2,8 @@ package org.hashdb.ms.config;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.aspect.methodAccess.ConfigLoadOnly;
+import org.hashdb.ms.support.Exit;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.Configuration;
 
 /**
  * Date: 2023/12/5 16:56
@@ -16,19 +14,17 @@ import org.springframework.context.annotation.Configuration;
  */
 @Slf4j
 @Getter
-@Configuration
-@EnableConfigurationProperties
-@ConfigurationProperties("db.aof")
+@ConfigurationProperties(value = "db.aof", ignoreInvalidFields = true)
 public class AofConfig extends PersistentConfig {
     /**
      * 是否开启aof持久化
      */
-    private boolean enabled = false;
+    private final boolean enabled;
 
     /**
      * 当aof文件的行数超过该值时，会触发rewrite操作
      */
-    private int rewriteSize = 1500;
+    private final int rewriteSize;
 
     /**
      * 触发重写时, 会将此时数据库的状态以一系列写命令的
@@ -37,13 +33,16 @@ public class AofConfig extends PersistentConfig {
      */
     protected final String aofBaseFileName = "base.aof";
 
-    @ConfigLoadOnly
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
-    }
-
-    @ConfigLoadOnly
-    public void setRewriteSize(int rewriteSize) {
-        this.rewriteSize = rewriteSize;
+    public AofConfig(String path, Long chunkSize, Long saveInterval, Boolean enabled, Integer rewriteSize) {
+        super(path, chunkSize, saveInterval);
+        this.enabled = enabled != null && enabled;
+        if (rewriteSize == null) {
+            this.rewriteSize = 1500;
+        } else if (rewriteSize < 0) {
+            log.error("rewriteSize must be greater than 0");
+            throw Exit.exception();
+        } else {
+            this.rewriteSize = rewriteSize;
+        }
     }
 }
