@@ -5,10 +5,10 @@ import org.hashdb.ms.net.nio.TransientConnectionSession;
 /**
  * Date: 2024/1/27 17:10
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class SessionStateMessage extends Message<SessionStateMessage.State> {
-    public SessionStateMessage(long id, State body) {
+    public SessionStateMessage(int id, State body) {
         super(id, body);
     }
 

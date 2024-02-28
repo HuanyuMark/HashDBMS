@@ -11,7 +11,7 @@ import java.util.stream.Stream;
 /**
  * Date: 2023/11/29 9:57
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class RPopLPush extends PopPushCtx {
     protected RPopLPush(CompileCtx<?> fatherCompileCtx) {

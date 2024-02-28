@@ -9,7 +9,6 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.Promise;
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.config.DefaultConfig;
 import org.hashdb.ms.net.exception.AuthenticationFailedException;
 import org.hashdb.ms.net.nio.msg.v1.ActAuthenticationMessage;
@@ -19,6 +18,7 @@ import org.hashdb.ms.net.nio.protocol.Protocol;
 import org.hashdb.ms.net.nio.protocol.ProtocolCodec;
 import org.hashdb.ms.support.Checker;
 import org.hashdb.ms.support.Exit;
+import org.hashdb.ms.support.StaticAutowired;
 import org.hashdb.ms.util.AsyncService;
 import org.springframework.boot.context.properties.bind.ConstructorBinding;
 
@@ -33,11 +33,14 @@ import java.util.function.Consumer;
 /**
  * Date: 2023/12/5 13:47
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 public class ServerNode {
     private static final EventLoopGroup serverNodeEventLoopGroup = new NioEventLoopGroup();
+
+    @StaticAutowired
+    private static DefaultConfig defaultConfig;
     /**
      * 主机给从结点分配了id后, 会广播已分配的最大分布式ID, 所有从节点都要同步.
      * 从节点同步后, 都必须要响应这个消息, 以表示已同步完成(确保所有从机在切换为主机后,都能继续正确地分配分布式ID).
@@ -113,10 +116,10 @@ public class ServerNode {
             String pwd
     ) {
         if (port == null) {
-            throw Exit.error(STR."invalid server node. {host:\{host}, port:null}", "port is required");
+            throw Exit.error(log, STR."invalid server node. {host:\{host}, port:null}", "port is required");
         }
         if (port > 65535 || port < 0) {
-            throw Exit.error(STR."invalid server node. {host:\{host}, port:\{port}", "port is out of range [0,65535]");
+            throw Exit.error(log, STR."invalid server node. {host:\{host}, port:\{port}", "port is out of range [0,65535]");
         }
         this.host = Checker.require("illegal host", "host/ip", host, ip);
         AsyncService.start(() -> {
@@ -193,10 +196,8 @@ public class ServerNode {
     }
 
     private void doAuth(Channel channel, CompletableFuture<Channel> future) {
-        var actMessageHandler = ActMessageHandler.get(channel);
         String username;
         String password;
-        var defaultConfig = HashDBMSApp.ctx().getBean(DefaultConfig.class);
         var remoteConfig = defaultConfig.getAuth();
         if (this.username == null) {
             if (remoteConfig.username() == null) {
@@ -238,11 +239,11 @@ public class ServerNode {
     }
 
     protected long recoverCheckInterval() {
-        return HashDBMSApp.ctx().getBean(DefaultConfig.class).getRecoverCheckInterval();
+        return defaultConfig.getRecoverCheckInterval();
     }
 
     protected int channelConnectTimeout() {
-        return HashDBMSApp.ctx().getBean(DefaultConfig.class).getConnectTimeoutMillis();
+        return defaultConfig.getConnectTimeoutMillis();
     }
 
     /**
@@ -253,24 +254,20 @@ public class ServerNode {
             throw new IllegalStateException("this server node is active");
         }
         var promise = new DefaultPromise<Channel>(serverNodeEventLoopGroup.next());
-        var poller = AsyncService.setInterval(() -> {
-            InetAddress address;
-            if (this.address != null) {
-                address = this.address;
-            } else {
-                try {
-                    AsyncService.waitTimeout(() -> {
-                        try {
-                            this.address = InetAddress.getByName(host);
-                        } catch (UnknownHostException e) {
-                            throw Exit.error(STR."unresolvable host '\{host}'", e);
-                        }
-                    }, ((long) Math.max(recoverCheckInterval() * 0.3, 1)));
-                    address = this.address;
-                } catch (TimeoutException e) {
-                    throw Exit.error(STR."unresolvable host '\{host}'", e);
-                }
+        if (this.address == null) {
+            try {
+                AsyncService.blockingRun(() -> {
+                    try {
+                        this.address = InetAddress.getByName(host);
+                    } catch (UnknownHostException e) {
+                        throw Exit.error(STR."unresolvable host '\{host}'", e);
+                    }
+                }, 5_000);
+            } catch (TimeoutException e) {
+                throw Exit.error(STR."unresolvable host '\{host}'", e);
             }
+        }
+        var poller = AsyncService.setInterval(() -> {
             try {
                 if (!address.isReachable(1_000)) {
                     return;
@@ -289,7 +286,7 @@ public class ServerNode {
         }, recoverCheckInterval());
         promise.addListener(res -> {
             // 这个promise只允许成功
-            poller.cancel(false);
+            poller.cancel(true);
         });
         return promise;
     }

@@ -3,7 +3,7 @@ package org.hashdb.ms.compiler.option;
 /**
  * Date: 2023/11/29 9:52
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class LDeleteOpCtx extends BooleanOpCtx {
     public LDeleteOpCtx(Boolean defaultValue) {

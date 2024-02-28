@@ -8,7 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * Date: 2024/2/27 11:37
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Getter
 @ConfigurationProperties(value = "default", ignoreInvalidFields = true)

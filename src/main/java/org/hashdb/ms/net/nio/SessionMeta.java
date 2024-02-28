@@ -8,7 +8,7 @@ import java.util.function.BiFunction;
 /**
  * Date: 2024/2/1 17:38
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public enum SessionMeta implements MetaEnum {
     /**

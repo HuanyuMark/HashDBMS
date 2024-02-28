@@ -7,7 +7,7 @@ import java.util.function.Consumer;
 /**
  * Date: 2024/1/13 21:19
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class Parameter {
     /**

@@ -7,7 +7,7 @@ package org.hashdb.ms.compiler.option;
  * 1. 对于一个字段, 可能需要在多个地方使用, 但是在使用时, 可能需要对其进行修改, 但是不希望对其他地方的使用造成影响
  * 2. 如果这条命令的返回值是 Immutable , 则可以将其转为新的 mutable 对象, 然后对这个 mutable 对象进行修改
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class CopyOpCtx extends BooleanOpCtx {
     public CopyOpCtx(Boolean defaultValue) {

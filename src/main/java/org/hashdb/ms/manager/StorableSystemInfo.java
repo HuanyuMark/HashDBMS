@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 /**
  * Date: 2023/11/27 23:34
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 public record StorableSystemInfo(

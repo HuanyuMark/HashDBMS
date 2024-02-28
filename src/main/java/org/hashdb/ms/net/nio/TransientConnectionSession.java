@@ -7,11 +7,11 @@ import org.hashdb.ms.net.nio.protocol.Protocol;
 /**
  * Date: 2024/2/1 17:28
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public interface TransientConnectionSession extends ChannelHook, AutoCloseable {
 
-    long id();
+    int id();
 
     void protocol(Protocol protocol);
 

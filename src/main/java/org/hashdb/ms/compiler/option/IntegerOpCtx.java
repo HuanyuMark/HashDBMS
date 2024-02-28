@@ -6,7 +6,7 @@ import org.hashdb.ms.exception.DBClientException;
 /**
  * Date: 2023/11/25 18:22
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public abstract class IntegerOpCtx extends ParseableOpCtx<Integer> {
     public IntegerOpCtx(Integer defaultValue) {

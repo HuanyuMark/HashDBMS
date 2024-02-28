@@ -6,7 +6,7 @@ import org.hashdb.ms.exception.DBClientException;
 /**
  * Date: 2023/11/30 17:11
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @StandardException
 public class DatabaseInUseException extends DBClientException {

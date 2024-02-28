@@ -3,8 +3,10 @@ package org.hashdb.ms.net.nio;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.Attribute;
 import lombok.extern.slf4j.Slf4j;
+import org.hashdb.ms.net.exception.IllegalUpgradeSessionException;
 import org.hashdb.ms.net.exception.MaxConnectionException;
 import org.hashdb.ms.net.exception.ReconnectErrorException;
 import org.hashdb.ms.net.nio.msg.v1.*;
@@ -19,20 +21,20 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Date: 2024/1/17 12:22
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 @ChannelHandler.Sharable
 public class SessionMountedHandler extends ChannelDuplexHandler implements Closeable, NamedChannelHandler {
     private volatile boolean closed;
-    private final Map<Long, BaseConnectionSession> sessionMap = new ConcurrentHashMap<>();
+    private final Map<Integer, BaseConnectionSession> sessionMap = new ConcurrentHashMap<>();
     private SessionUpgradeHandler upgradeHandler;
 
     public SessionMountedHandler() {
     }
 
     public SessionUpgradeHandler upgradeHandler() {
-        return upgradeHandler == null ? (upgradeHandler = new SessionUpgradeHandler(sessionMap)) : upgradeHandler;
+        return upgradeHandler == null ? (upgradeHandler = new SessionUpgradeHandler()) : upgradeHandler;
     }
 
     @Override
@@ -62,7 +64,7 @@ public class SessionMountedHandler extends ChannelDuplexHandler implements Close
                 }
             };
         } catch (MaxConnectionException e) {
-            attr.set(BusinessConnectionSession.DEFAULT);
+            attr.set(BusinessConnectionSession.getDefaultSession());
             ctx.write(new CloseMessage(0, e));
             ctx.close();
             return;
@@ -133,5 +135,36 @@ public class SessionMountedHandler extends ChannelDuplexHandler implements Close
         }
         sessionMap.values().stream().map(s -> AsyncService.start(() -> s.close())).forEach(CompletableFuture::join);
         closed = true;
+    }
+
+    public class SessionUpgradeHandler extends SimpleChannelInboundHandler<SessionUpgradeMessage> implements NamedChannelHandler {
+
+        private SessionUpgradeHandler() {
+        }
+
+        @Override
+        protected void channelRead0(ChannelHandlerContext ctx, SessionUpgradeMessage msg) {
+            var attr = ctx.channel().attr(BaseConnectionSession.KEY);
+            var currentSession = attr.get();
+            var meta = msg.body();
+            if (meta.sessionClass() == currentSession.getClass()) {
+                return;
+            }
+            BaseConnectionSession newSession;
+            try {
+                newSession = meta.upgradeFrom(currentSession);
+            } catch (MaxConnectionException e) {
+                attr.set(BusinessConnectionSession.getDefaultSession());
+                ctx.write(new CloseMessage(0, e));
+                ctx.close();
+                return;
+            } catch (IllegalUpgradeSessionException e) {
+                ctx.write(e.msg(msg.id()));
+                return;
+            }
+            log.info("upgrade to session {}", newSession);
+            sessionMap.put(newSession.id(), newSession);
+            attr.set(newSession);
+        }
     }
 }

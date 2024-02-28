@@ -2,15 +2,18 @@ package org.hashdb.ms.support;
 
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.HashDBMSApp;
+import org.slf4j.Logger;
 
 /**
  * Date: 2024/2/22 13:11
  * 专门用来退出程序的异常
  * 一般这样用:
  * <br/>
- * {@code throw ExitPlaceholder.exception();}
+ * {@code throw Exit.exception();}
+ * <br/>
+ * {@code throw Exit.error(log,"some exception",causeException)}
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 public class Exit extends RuntimeException {
@@ -26,17 +29,18 @@ public class Exit extends RuntimeException {
     }
 
     public static Exit error(String msg, Throwable e) {
-        return error(msg, e.getMessage());
+        return error(log, msg, e.getMessage());
     }
 
     /**
      * 打印完错误信息后,直接退出应用
      *
+     * @param log   Logger
      * @param msg   错误信息
      * @param cause 原因
      * @return 退出对象
      */
-    public static Exit error(String msg, String cause) {
+    public static Exit error(Logger log, String msg, String cause) {
         log.error(STR."\{msg}. cause: \{cause}");
         return exception();
     }

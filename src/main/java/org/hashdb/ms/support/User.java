@@ -7,7 +7,7 @@ import org.springframework.boot.context.properties.bind.ConstructorBinding;
 /**
  * Date: 2024/2/27 11:39
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @ToString
 @EqualsAndHashCode
@@ -17,8 +17,8 @@ public final class User {
 
     @ConstructorBinding
     public User(String username, String password, String uname, String pwd) {
-        this.username = Checker.require("username/uname", username, uname);
-        this.password = Checker.require("password", password, pwd);
+        this.username = Checker.require("123123", "username/uname", username, uname);
+        this.password = Checker.require("123123", "password", password, pwd);
     }
 
     public User(String username, String password) {

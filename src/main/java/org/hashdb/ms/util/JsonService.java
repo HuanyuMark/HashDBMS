@@ -13,7 +13,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufOutputStream;
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.compiler.keyword.CompilerNode;
 import org.hashdb.ms.compiler.keyword.ConsumerKeyword;
 import org.hashdb.ms.compiler.keyword.SupplierKeyword;
@@ -25,6 +24,7 @@ import org.hashdb.ms.net.bio.msg.Message;
 import org.hashdb.ms.net.bio.msg.MessageType;
 import org.hashdb.ms.net.exception.IllegalMessageException;
 import org.hashdb.ms.net.exception.IllegalMessageTypeException;
+import org.hashdb.ms.support.StaticAutowired;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
@@ -38,7 +38,7 @@ import java.util.Map;
 /**
  * Date: 2023/11/24 23:13
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 public class JsonService {
@@ -144,9 +144,9 @@ public class JsonService {
         return parse(json, Object.class);
     }
 
-    public static void loadConfig() {
+    @StaticAutowired
+    public static void loadStatic(DBRamConfig dbRamConfig) {
         SimpleModule dataTypeModule = new SimpleModule("hashdb", JACKSON_SERIALIZER_VERSION);
-        DBRamConfig dbRamConfig = HashDBMSApp.ctx().getBean(DBRamConfig.class);
         // jackson 默认使用 LikedHashMap 来存储 Object 型 Json, 其顺序与Json串中规定的顺序一致
         // 如果不需要保持一致,则可以使用这个自定义的反序列化器, 将 Object 型映射的java对象改为 HashMap
         if (!dbRamConfig.isStoreLikeJsonSequence()) {

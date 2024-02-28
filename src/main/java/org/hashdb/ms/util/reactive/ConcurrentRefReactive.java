@@ -11,7 +11,7 @@ import java.util.function.BiConsumer;
 /**
  * Date: 2024/2/21 19:15
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class ConcurrentRefReactive<O> extends RefReactive.AbstractRefReactive<O> {
     public ConcurrentRefReactive() {

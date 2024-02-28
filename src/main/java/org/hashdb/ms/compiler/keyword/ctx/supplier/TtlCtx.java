@@ -9,7 +9,7 @@ import org.hashdb.ms.compiler.keyword.SupplierKeyword;
  * 还有多少毫秒过期
  * TTL $KEY ... $KEY
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class TtlCtx extends ReadSupplierCtx {
     @Override

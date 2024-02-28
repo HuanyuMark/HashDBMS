@@ -9,7 +9,7 @@ import java.util.function.Function;
 /**
  * Date: 2024/1/10 17:13
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public interface DbOpsTask<T> extends OpsTask<T> {
     @Override

@@ -6,7 +6,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Date: 2023/11/25 3:13
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public interface Keyword<E extends Enum<E>> {
     String name();

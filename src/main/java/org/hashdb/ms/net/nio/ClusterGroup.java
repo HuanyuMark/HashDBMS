@@ -1,13 +1,12 @@
-package org.hashdb.ms.config;
+package org.hashdb.ms.net.nio;
 
 import jakarta.annotation.Resource;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.HashDBMSApp;
+import org.hashdb.ms.config.DefaultConfig;
 import org.hashdb.ms.constant.ServerIdentity;
-import org.hashdb.ms.net.nio.ServerNode;
-import org.hashdb.ms.net.nio.ServerNodeSet;
 import org.hashdb.ms.support.Checker;
+import org.hashdb.ms.support.ConfigSource;
 import org.hashdb.ms.support.ConfigSource.Block;
 import org.hashdb.ms.support.ConfigSource.Mark;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -19,12 +18,12 @@ import java.util.Objects;
 /**
  * Date: 2023/12/5 15:43
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 @Block(Mark.CLUSTER)
 @ConfigurationProperties(value = "cluster", ignoreInvalidFields = true)
-public class ClusterGroupConfig {
+public class ClusterGroup {
     @Getter
     private ServerIdentity identity = ServerIdentity.MASTER;
 
@@ -56,7 +55,10 @@ public class ClusterGroupConfig {
     @Resource
     private DefaultConfig defaultConfig;
 
-    public ClusterGroupConfig(List<ServerNode> slaves, List<ServerNode> siblings, Long recoverCheckInterval) {
+    @Resource
+    private ConfigSource configSource;
+
+    public ClusterGroup(List<ServerNode> slaves, List<ServerNode> siblings, Long recoverCheckInterval) {
         if (slaves != null) {
             this.slaves = new ServerNodeSet() {
                 @Override
@@ -133,7 +135,7 @@ public class ClusterGroupConfig {
     }
 
     private void updateConfig() {
-        HashDBMSApp.getConfigSource().updateAnnotated(this);
+        configSource.updateAnnotated(this);
     }
 
     public long getRecoverCheckInterval() {

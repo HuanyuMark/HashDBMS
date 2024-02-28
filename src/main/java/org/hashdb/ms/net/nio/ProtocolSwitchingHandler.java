@@ -13,7 +13,7 @@ import java.util.Objects;
 /**
  * Date: 2024/2/3 21:43
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @RequiredArgsConstructor
 class ProtocolSwitchingHandler extends SimpleChannelInboundHandler<ProtocolSwitchingMessage> implements NamedChannelHandler {

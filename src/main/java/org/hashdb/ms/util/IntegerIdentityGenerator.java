@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Date: 2024/2/17 14:58
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class IntegerIdentityGenerator {
     private final int start;

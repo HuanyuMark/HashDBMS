@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
  * Date: 2023/11/27 15:04
  * DBMS 系统信息
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 @Getter

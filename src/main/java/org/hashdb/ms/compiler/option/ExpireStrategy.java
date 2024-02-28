@@ -12,7 +12,7 @@ import org.hashdb.ms.data.OpsTaskPriority;
  * GT -- Set expiry only when the new expiry is greater than current one
  * LT -- Set expiry only when the new expiry is less than current one
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public enum ExpireStrategy {
     DEFAULT((db, value, expireTime, priority) -> {

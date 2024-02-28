@@ -1,6 +1,7 @@
 package org.hashdb.ms.net.bio;
 
 import org.hashdb.ms.net.bio.msg.Message;
+import org.hashdb.ms.support.StaticScanIgnore;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -9,9 +10,10 @@ import java.util.ListIterator;
 /**
  * Date: 2023/12/2 17:36
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Deprecated
+@StaticScanIgnore
 public class MessageConsumerChain {
 
     private final List<MessageConsumer> consumers = new LinkedList<>();

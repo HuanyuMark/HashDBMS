@@ -8,6 +8,7 @@ import org.hashdb.ms.net.bio.client.AuthenticationMessage;
 import org.hashdb.ms.net.bio.client.CloseMessage;
 import org.hashdb.ms.net.bio.client.CommandMessage;
 import org.hashdb.ms.net.bio.service.*;
+import org.hashdb.ms.support.StaticScanIgnore;
 import org.hashdb.ms.util.JsonService;
 import org.hashdb.ms.util.ReflectCache;
 
@@ -18,9 +19,10 @@ import java.util.Map;
 /**
  * Date: 2023/12/1 2:10
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Deprecated
+@StaticScanIgnore
 public enum MessageType {
     HEARTBEAT(HeartbeatMessage.class),
     ACT_HEARTBEAT(ActHeartbeatMessage.class),

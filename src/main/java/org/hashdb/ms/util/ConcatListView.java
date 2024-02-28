@@ -7,7 +7,7 @@ import java.util.*;
 /**
  * Date: 2023/11/29 20:23
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class ConcatListView<T> implements List<T> {
     private final LinkedList<List<T>> lists = new LinkedList<>();

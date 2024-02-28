@@ -6,10 +6,10 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Date: 2024/2/19 22:18
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class ServerNodeStateMessage extends Message<ServerNode> {
-    public ServerNodeStateMessage(long id, @Nullable ServerNode body) {
+    public ServerNodeStateMessage(int id, @Nullable ServerNode body) {
         super(id, body);
     }
 

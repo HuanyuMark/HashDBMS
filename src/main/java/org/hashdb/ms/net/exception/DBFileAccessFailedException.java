@@ -6,7 +6,7 @@ import org.hashdb.ms.exception.DBClientException;
 /**
  * Date: 2023/11/21 12:46
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @StandardException
 public class DBFileAccessFailedException extends DBClientException {

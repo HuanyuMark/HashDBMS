@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 /**
  * Date: 2023/11/22 13:38
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public enum DataType {
     STRING(String.class, List.of("STR", "STRING"), String.class),
@@ -148,7 +148,7 @@ public enum DataType {
     }
 
     public static @NotNull DataType typeofHValue(@Nullable HValue<?> value) throws IllegalJavaClassStoredException {
-        return typeOfRawValue(Objects.requireNonNullElse(value, HValue.EMPTY).data());
+        return typeOfRawValue(Objects.requireNonNullElse(value, HValue.empty()).data());
     }
 
     public static @NotNull DataType typeOfRawValue(@Nullable Object instance) throws IllegalJavaClassStoredException {

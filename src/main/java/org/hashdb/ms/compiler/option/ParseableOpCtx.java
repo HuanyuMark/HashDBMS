@@ -3,7 +3,7 @@ package org.hashdb.ms.compiler.option;
 /**
  * Date: 2023/11/24 17:49
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public abstract class ParseableOpCtx<V> implements OptionCtx<V> {
     protected V value;

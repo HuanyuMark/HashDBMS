@@ -17,7 +17,7 @@ import java.util.regex.PatternSyntaxException;
 /**
  * Date: 2023/11/28 20:01
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 // TODO: 2024/1/14 要支持读取R(string)原始字符串, 以及like操作
 public abstract class ReadSupplierCtx extends SupplierCtx {

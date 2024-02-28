@@ -9,10 +9,10 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.config.DBServerConfig;
 import org.hashdb.ms.net.nio.protocol.Protocol;
 import org.hashdb.ms.net.nio.protocol.ProtocolCodec;
+import org.hashdb.ms.support.StaticAutowired;
 
 import java.io.Closeable;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Date: 2024/1/16 21:11
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 @ChannelHandler.Sharable
@@ -53,7 +53,12 @@ public class ClientChannelInitializer extends ChannelInitializer<NioSocketChanne
     static class ConnectionCountLimiter extends ChannelInboundHandlerAdapter implements NamedChannelHandler {
         private static final AtomicInteger CONNECTION_COUNT_COUNTER = new AtomicInteger();
 
-        private static final int MAX_CONNECTION_COUNT = HashDBMSApp.ctx().getBean(DBServerConfig.class).getMaxConnections();
+        private static int MAX_CONNECTION_COUNT;
+
+        @StaticAutowired
+        private static void inject(DBServerConfig config) {
+            MAX_CONNECTION_COUNT = config.getMaxConnections();
+        }
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) {

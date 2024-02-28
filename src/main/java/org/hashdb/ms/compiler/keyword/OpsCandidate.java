@@ -3,7 +3,7 @@ package org.hashdb.ms.compiler.keyword;
 /**
  * Date: 2023/11/25 2:34
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public interface OpsCandidate {
     /**

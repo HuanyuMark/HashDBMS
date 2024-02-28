@@ -10,7 +10,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * {@link #saveInterval} 如果为-1, 则每次执行完写命令后,会将写命令直接追加入AOF中持久化
  * 大于0, 则每隔多少ms,会将缓冲区的的写命令追加入AOF中持久化
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 @Getter

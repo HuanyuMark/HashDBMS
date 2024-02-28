@@ -6,7 +6,7 @@ import java.util.function.BiConsumer;
 /**
  * Date: 2024/2/21 19:07
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  * @version 0.0.1
  */
 public interface RefReactive<O> extends Reactive {

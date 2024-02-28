@@ -6,7 +6,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Date: 2024/1/31 1:03
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public interface NamedChannelHandler {
     static String handlerName(Class<? extends ChannelHandler> handlerClass) {

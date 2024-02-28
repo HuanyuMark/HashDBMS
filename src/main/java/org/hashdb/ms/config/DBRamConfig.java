@@ -2,24 +2,18 @@ package org.hashdb.ms.config;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.data.OpsTaskPriority;
-import org.hashdb.ms.util.Lazy;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * Date: 2023/11/22 14:21
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 @Getter
 @ConfigurationProperties("db.ram")
 public class DBRamConfig {
-    public static final Lazy<OpsTaskPriority> DEFAULT_EXPIRED_KEY_DELETE_PRIORITY = Lazy.of(() -> {
-        var dbRamConfig = HashDBMSApp.ctx().getBean(DBRamConfig.class);
-        return dbRamConfig.getExpiredKeyDeletePriority();
-    });
 
     private final OpsTaskPriority expiredKeyDeletePriority;
 

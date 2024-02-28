@@ -21,12 +21,17 @@ public class TimeCounter {
      * @return 几毫秒
      */
     public long stop() {
-        return new Date().getTime() - startTime.getTime();
+        return System.currentTimeMillis() - startTime.getTime();
     }
 
     public static long costTime(Runnable task) {
         long start = System.currentTimeMillis();
         task.run();
         return System.currentTimeMillis() - start;
+    }
+
+    @Override
+    public String toString() {
+        return String.valueOf(stop());
     }
 }

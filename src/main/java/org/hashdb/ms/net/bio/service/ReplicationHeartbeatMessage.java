@@ -10,7 +10,7 @@ import org.hashdb.ms.net.bio.msg.ServiceMessage;
  * 主从之间 Heartbeat 的消息, 互相间确认 offset, 看看是否所有的写
  * 命令已经传播完成
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

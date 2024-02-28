@@ -7,13 +7,13 @@ import java.util.Map;
 /**
  * Date: 2024/2/19 20:31
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
-public class ServerNodeSet {
+public class ServerNodeSet<N extends ServerNode> {
     /**
      * {@link  ServerNode#host()}:{@link ServerNode#port()} -> {@link  ServerNode}
      */
-    private final Map<String, ServerNode> keyMap = new HashMap<>();
+    private final Map<String, N> keyMap = new HashMap<>();
 
 //    private final Map<Integer, ServerNode> idMap = new HashMap<>();
 
@@ -21,11 +21,11 @@ public class ServerNodeSet {
     public ServerNodeSet() {
     }
 
-    public ServerNodeSet(Iterable<ServerNode> nodes) {
+    public ServerNodeSet(Iterable<N> nodes) {
         add(nodes);
     }
 
-    public void add(ServerNode node) {
+    public void add(N node) {
 //        node.setDistributionIdChangeCallback(n -> idMap.put(n.getDistributionId(), n));
         var old = keyMap.put(node.key(), node);
         if (old == null || !old.key().equals(node.key())) {
@@ -33,8 +33,9 @@ public class ServerNodeSet {
         }
     }
 
-    public void add(ServerNode... nodes) {
-        for (ServerNode node : nodes) {
+    @SafeVarargs
+    public final void add(N... nodes) {
+        for (var node : nodes) {
             add(node);
         }
     }
@@ -46,26 +47,26 @@ public class ServerNodeSet {
         }
     }
 
-    public void remove(ServerNode node) {
+    public void remove(N node) {
         var old = keyMap.remove(node.key());
         if (old != null) {
             onChange();
         }
     }
 
-    public ServerNode get(String host, int port) {
+    public N get(String host, int port) {
         return keyMap.get(STR."\{host}:\{port}");
     }
 
-    public ServerNode get(String key) {
+    public N get(String key) {
         return keyMap.get(key);
     }
 
-//    public ServerNode get(int distributionId) {
+//    public N get(int distributionId) {
 //        return idMap.get(distributionId);
 //    }
 
-    public Collection<ServerNode> all() {
+    public Collection<N> all() {
         return keyMap.values();
     }
 
@@ -77,7 +78,7 @@ public class ServerNodeSet {
         }
     }
 
-    public void add(Iterable<ServerNode> nodes) {
+    public void add(Iterable<N> nodes) {
         nodes.forEach(this::add);
     }
 

@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * Date: 2023/11/27 16:22
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @StandardException
 public class DatabaseClashException extends DBClientException {

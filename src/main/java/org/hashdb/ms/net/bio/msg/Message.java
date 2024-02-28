@@ -3,6 +3,7 @@ package org.hashdb.ms.net.bio.msg;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
+import org.hashdb.ms.support.StaticScanIgnore;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -11,12 +12,13 @@ import java.util.UUID;
 /**
  * Date: 2023/11/20 20:55
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Getter
 @Setter
 @Deprecated
 @EqualsAndHashCode
+@StaticScanIgnore
 public abstract class Message implements Serializable, Cloneable {
     @Serial
     private static final long serialVersionUID = 31895374964L;

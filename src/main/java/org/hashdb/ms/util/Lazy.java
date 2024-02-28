@@ -13,7 +13,7 @@ import java.util.function.Supplier;
  * 依旧会尝试运行 supplier 来产生值, 进行缓存
  * 如果只需要运行supplier一次, 可以使用其子类 {@link OneTimeLazy}
  */
-public class Lazy<T> {
+public class Lazy<T> implements Supplier<T> {
     protected volatile T value;
 
     protected final Supplier<T> supplier;
@@ -59,6 +59,7 @@ public class Lazy<T> {
      * 线程不安全, {@link #supplier} 可能会被多次调用,
      * 可以选用 {@link AtomLazy<T>} 来确保线程安全
      */
+    @Override
     public T get() {
         T res = value;
         if (res == null) {
@@ -114,6 +115,6 @@ public class Lazy<T> {
 
     @Override
     public String toString() {
-        return value == null ? "[Lazy: Unresolved]" : "[Lazy: " + value + "]";
+        return value == null ? "[Lazy: Unresolved]" : STR."[Lazy: \{value}]";
     }
 }

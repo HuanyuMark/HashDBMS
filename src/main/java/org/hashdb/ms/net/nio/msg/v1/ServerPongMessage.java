@@ -3,21 +3,21 @@ package org.hashdb.ms.net.nio.msg.v1;
 /**
  * Date: 2024/2/1 18:45
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class ServerPongMessage extends ActMessage<String> implements FlyweightMessage {
 
-    public static final ServerPongMessage DEFAULT = new ServerPongMessage(0L, 0L);
+    public static final ServerPongMessage DEFAULT = new ServerPongMessage(0, 0);
 
-    public ServerPongMessage(long id, long actId) {
+    public ServerPongMessage(int id, int actId) {
         super(id, actId, "PONG");
     }
 
-    public ServerPongMessage(long id, Message<?> request) {
+    public ServerPongMessage(int id, Message<?> request) {
         super(id, request, "PONG");
     }
 
-    public ServerPongMessage(long actId) {
+    public ServerPongMessage(int actId) {
         super(actId, "PONG");
     }
 

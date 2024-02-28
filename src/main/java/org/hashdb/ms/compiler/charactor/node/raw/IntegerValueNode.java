@@ -7,7 +7,7 @@ import org.hashdb.ms.compiler.charactor.node.CompileNode;
 /**
  * Date: 2023/12/10 18:54
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class IntegerValueNode extends CompileNode {
     public IntegerValueNode(CharacterCompileStream stream) {

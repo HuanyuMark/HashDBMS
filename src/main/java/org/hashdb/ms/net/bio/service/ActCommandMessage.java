@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Date: 2023/12/1 20:02
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

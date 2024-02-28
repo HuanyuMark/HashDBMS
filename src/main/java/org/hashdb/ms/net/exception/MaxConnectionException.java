@@ -6,7 +6,7 @@ import org.hashdb.ms.exception.DBClientException;
 /**
  * Date: 2023/12/3 2:07
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @StandardException
 public class MaxConnectionException extends DBClientException {

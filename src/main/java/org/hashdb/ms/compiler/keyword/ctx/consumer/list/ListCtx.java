@@ -16,7 +16,7 @@ import java.util.function.Function;
 /**
  * Date: 2023/11/29 20:41
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 public abstract class ListCtx extends ConsumerCtx<List<Object>> {

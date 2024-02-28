@@ -21,7 +21,7 @@ import java.util.function.Supplier;
 /**
  * Date: 2023/11/24 16:37
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public abstract class SupplierCtx extends CompileCtx<SupplierCompileStream> {
 

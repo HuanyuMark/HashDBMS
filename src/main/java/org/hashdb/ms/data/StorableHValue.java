@@ -10,7 +10,7 @@ import java.util.Date;
  * Date: 2023/11/27 12:59
  * 这个 HValue 是用来存入硬盘的持久化类
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 public record StorableHValue<T>(

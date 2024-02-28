@@ -8,7 +8,7 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Date: 2023/11/28 19:26
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public interface TaskConsumer {
     CompletableFuture<Boolean> startConsumeOpsTask();

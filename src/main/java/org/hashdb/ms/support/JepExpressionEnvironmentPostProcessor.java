@@ -10,7 +10,7 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesBindin
  * 在功能上拓展了 {@link ConfigurationPropertiesBindingPostProcessor}
  * 允许用户在配置文件中使用数学表达式
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  * @see ConfigurationPropertiesBindingPostProcessor
  */
 public class JepExpressionEnvironmentPostProcessor extends ExpressionEnvironmentPostProcessor {

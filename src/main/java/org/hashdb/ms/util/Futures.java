@@ -10,7 +10,7 @@ import java.util.concurrent.Future;
 /**
  * Date: 2023/11/22 12:10
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class Futures {
     public static <T> T unwrap(Future<T> future) {

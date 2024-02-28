@@ -18,7 +18,7 @@ import java.util.concurrent.CompletableFuture;
  * Date: 2023/11/24 15:58
  * 编译流, 流式编译一整条命令
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 public final class SupplierCompileStream extends DatabaseCompileStream {

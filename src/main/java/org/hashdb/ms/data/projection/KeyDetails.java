@@ -1,12 +1,15 @@
 package org.hashdb.ms.data.projection;
 
+import org.hashdb.ms.support.StaticScanIgnore;
+
 import java.util.Date;
 
 /**
  * Date: 2023/11/21 11:46
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
+@StaticScanIgnore
 public class KeyDetails {
     private final String name;
     private final Date createTime;

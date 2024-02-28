@@ -1,11 +1,10 @@
 package org.hashdb.ms.persistent;
 
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.config.AofConfig;
 import org.hashdb.ms.exception.DBSystemException;
+import org.hashdb.ms.support.StaticAutowired;
 import org.hashdb.ms.util.AsyncService;
-import org.hashdb.ms.util.Lazy;
 
 import java.io.File;
 import java.util.Arrays;
@@ -18,16 +17,17 @@ import java.util.regex.Pattern;
 /**
  * Date: 2024/1/5 20:32
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 public class AppendOnlyFileFactory {
-    public static final Lazy<AofConfig> aofConfig = Lazy.of(() -> HashDBMSApp.ctx().getBean(AofConfig.class));
+    @StaticAutowired
+    public static AofConfig aofConfig;
     private static final Pattern numberPattern = Pattern.compile("[0-9]+");
-    public static final Map<String, AppendOnlyFile> databaseAofNewFiles = new HashMap<>();
+    public static final Map<String, AofFile.FileSystemAofFile> databaseAofNewFiles = new HashMap<>();
 
-    protected static AppendOnlyFile loadAofNewFiles(String databaseName) {
-        var aofFiles = Objects.requireNonNullElse(new File(aofConfig.get().getRootDir(), databaseName)
+    protected static AofFile.FileSystemAofFile loadAofNewFiles(String databaseName) {
+        var aofFiles = Objects.requireNonNullElse(new File(aofConfig.getRootDir(), databaseName)
                 .listFiles(file -> !file.isDirectory() && file.getName().matches("\\d+\\.new\\.aof")), new File[0]);
         return Arrays.stream(aofFiles)
                 .max((file1, file2) -> {
@@ -37,30 +37,29 @@ public class AppendOnlyFileFactory {
                     matcher2.find();
                     return Integer.parseInt(matcher1.group()) - Integer.parseInt(matcher2.group());
                 })
-                .map(content -> new AppendOnlyFile(content, aofFiles.length - 1))
+                .map(content -> AofFile.create(content, aofFiles.length - 1))
                 .orElseGet(() -> {
-                    AofConfig config = aofConfig.get();
-                    File aofFileDir = FileUtils.prepareDir(new File(config.getRootDir(), databaseName),
-                            () -> new DBSystemException("Create aof file directory failed! may be it is existed but it isn`t a directory. root path: '" + config.getRootDir() + "'"));
-                    return new AppendOnlyFile(new File(aofFileDir, 0 + ".new.aof"), 0);
+                    File aofFileDir = FileUtils.prepareDir(new File(aofConfig.getRootDir(), databaseName),
+                            () -> new DBSystemException(STR."Create aof file directory failed! may be it is existed but it isn`t a directory. root path: '\{aofConfig.getRootDir()}'"));
+                    return AofFile.create(new File(aofFileDir, 0 + ".new.aof"), 0);
                 });
     }
 
     public static File newBaseFile(String databaseName) {
-        var config = aofConfig.get();
+        var config = aofConfig;
         var aofFileDir = FileUtils.prepareDir(new File(config.getRootDir(), databaseName),
-                () -> new DBSystemException("Create aof file directory failed! may be it is existed but it isn`t a directory. root path: '" + config.getRootDir() + "'"));
+                () -> new DBSystemException(STR."Create aof file directory failed! may be it is existed but it isn`t a directory. root path: '\{config.getRootDir()}'"));
         return new File(aofFileDir, config.getAofBaseFileName());
     }
 
-    public static AppendOnlyFile getAofNewFile(String databaseName) {
+    public static AofFile getAofNewFile(String databaseName) {
         var aofNewFile = databaseAofNewFiles.computeIfAbsent(databaseName, AppendOnlyFileFactory::loadAofNewFiles);
-        if (aofNewFile.file().length() < aofConfig.get().getChunkSize()) {
+        if (aofNewFile.file().length() < aofConfig.getChunkSize()) {
             return aofNewFile;
         }
-        AsyncService.start(aofNewFile::store);
+        AsyncService.start(aofNewFile::flush);
         int newOrder = aofNewFile.order() + 1;
-        var emptyAofNewFile = new AppendOnlyFile(new File(aofNewFile.file().getParentFile(), newOrder + ".new.aof"), newOrder);
+        var emptyAofNewFile = AofFile.create(new File(aofNewFile.file().getParentFile(), STR."\{newOrder}.new.aof"), newOrder);
         databaseAofNewFiles.put(databaseName, emptyAofNewFile);
         return emptyAofNewFile;
     }

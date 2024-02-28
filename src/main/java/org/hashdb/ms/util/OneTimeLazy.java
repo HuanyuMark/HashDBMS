@@ -7,7 +7,7 @@ import java.util.function.Supplier;
  * Date: 2023/11/26 23:45
  * 与 Lazy 不同的是, 这个类的 supplier 只会运行一次, 无论 supplier 是否有返回值
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class OneTimeLazy<T> extends Lazy<T> {
     public static <T> OneTimeLazy<T> of(Supplier<T> supplier) {

@@ -19,7 +19,7 @@ import java.util.function.Supplier;
 /**
  * Date: 2023/11/28 19:53
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public abstract class WriteSupplierCtx extends SupplierCtx {
     @Override

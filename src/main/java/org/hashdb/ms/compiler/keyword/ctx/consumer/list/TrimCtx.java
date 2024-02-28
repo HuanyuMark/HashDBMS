@@ -20,7 +20,7 @@ import java.util.List;
 /**
  * Date: 2023/11/29 9:57
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class TrimCtx extends MutableListCtx {
     @Override

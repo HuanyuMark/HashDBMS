@@ -10,11 +10,12 @@ import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Date: 2023/11/25 12:55
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 public final class ConsumerCompileStream extends DatabaseCompileStream {
@@ -44,5 +45,11 @@ public final class ConsumerCompileStream extends DatabaseCompileStream {
         cmdCtx.compileWithStream(this);
         compileResult.computedWith(cmdCtx);
         return cmdCtx;
+    }
+
+    @Override
+    public CompletableFuture<Object> execute() {
+        //todo 实现
+        return null;
     }
 }

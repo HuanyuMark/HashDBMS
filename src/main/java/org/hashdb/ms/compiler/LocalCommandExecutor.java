@@ -13,7 +13,7 @@ import java.util.concurrent.ExecutionException;
  * Date: 2023/11/30 14:10
  * 每一个会话都需要有一个 SystemCompileStreamFactory 来生产 编译流
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class LocalCommandExecutor implements CommandExecutor {
     private final ConnectionSession session;

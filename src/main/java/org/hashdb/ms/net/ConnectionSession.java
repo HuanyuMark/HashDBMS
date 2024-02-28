@@ -10,7 +10,7 @@ import java.io.Closeable;
 /**
  * Date: 2024/1/3 11:11
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public interface ConnectionSession extends Closeable {
     /**

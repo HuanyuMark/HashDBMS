@@ -8,7 +8,7 @@ import java.util.Arrays;
 /**
  * Date: 2023/11/28 21:24
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public abstract class EnumOpCtx<E extends Enum<E>> extends ParseableOpCtx<E> implements FlyweightOpCtx {
 

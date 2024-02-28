@@ -7,7 +7,7 @@ import java.util.List;
 /**
  * Date: 2023/11/23 11:38
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @StandardException
 public class RequiredConfigException extends DBClientException {

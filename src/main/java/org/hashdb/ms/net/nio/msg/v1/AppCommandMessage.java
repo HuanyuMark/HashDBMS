@@ -3,10 +3,10 @@ package org.hashdb.ms.net.nio.msg.v1;
 /**
  * Date: 2024/1/18 21:21
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class AppCommandMessage extends Message<String> {
-    public AppCommandMessage(long id, String body) {
+    public AppCommandMessage(int id, String body) {
         super(id, body);
     }
 

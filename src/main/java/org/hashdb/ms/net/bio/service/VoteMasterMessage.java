@@ -9,7 +9,7 @@ import org.hashdb.ms.net.bio.msg.ServiceMessage;
  * 则该结点升格为候选结点 然后给其它所有从节点发送 CandidateMessage
  * 比对谁最新票数达标, 最先的达标的结点就升格为主结点
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class VoteMasterMessage extends ServiceMessage {
     @Override

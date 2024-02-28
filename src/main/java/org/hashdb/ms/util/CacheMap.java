@@ -13,7 +13,7 @@ import java.util.function.Function;
  * Date: 2024/1/10 23:33
  * 使用 LRU 算法以及 对数增长时间淘汰算法 淘汰值
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class CacheMap<K, V> {
 

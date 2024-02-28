@@ -7,7 +7,7 @@ import org.hashdb.ms.net.nio.MetaEnum;
 /**
  * Date: 2024/1/16 21:35
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 public enum MessageMeta implements MetaEnum {

@@ -10,7 +10,7 @@ import java.util.function.BiConsumer;
 /**
  * Date: 2024/2/21 20:21
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class SimpleRefReactive<O> extends RefReactive.AbstractRefReactive<O> {
 

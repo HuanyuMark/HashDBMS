@@ -17,7 +17,7 @@ import java.util.function.Function;
 /**
  * Date: 2023/11/30 1:14
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 public abstract class CommonCompileStream<R extends CompilerNode> implements CompileStream<R> {

@@ -2,26 +2,26 @@ package org.hashdb.ms.net.nio;
 
 import io.netty.channel.Channel;
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.compiler.CompileStream;
-import org.hashdb.ms.config.ClusterGroupConfig;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.net.Parameter;
 import org.hashdb.ms.net.nio.msg.v1.CloseMessage;
 import org.hashdb.ms.net.nio.protocol.Protocol;
+import org.hashdb.ms.support.StaticAutowired;
 import org.hashdb.ms.util.CacheMap;
 import org.hashdb.ms.util.JsonService;
 
 /**
  * Date: 2024/2/3 21:15
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 public class ReplicationConnectionSession implements BaseConnectionSession {
 
-    private static final ClusterGroupConfig group = HashDBMSApp.ctx().getBean(ClusterGroupConfig.class);
+    @StaticAutowired
+    private static ClusterGroup group;
     private final BaseConnectionSession base;
 
     private ServerNode client;
@@ -57,7 +57,7 @@ public class ReplicationConnectionSession implements BaseConnectionSession {
     }
 
     @Override
-    public long id() {
+    public int id() {
         return base.id();
     }
 

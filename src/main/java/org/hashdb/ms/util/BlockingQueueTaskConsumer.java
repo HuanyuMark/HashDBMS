@@ -13,7 +13,7 @@ import java.util.function.Supplier;
 /**
  * Date: 2023/11/27 14:51
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class BlockingQueueTaskConsumer implements TaskConsumer {
 
@@ -33,7 +33,7 @@ public class BlockingQueueTaskConsumer implements TaskConsumer {
             receiveNewTask.set(true);
             future.complete(true);
             while (true) {
-                if (opsTaskDeque.size() == 0 && !receiveNewTask.get()) {
+                if (opsTaskDeque.isEmpty() && !receiveNewTask.get()) {
                     opsTaskConsumeLoop = null;
                     break;
                 }

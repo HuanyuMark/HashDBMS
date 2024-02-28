@@ -26,7 +26,7 @@ import java.util.stream.Stream;
 /**
  * Date: 2024/2/20 23:40
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 public abstract class ConfigSource implements AutoCloseable {
@@ -89,7 +89,7 @@ public abstract class ConfigSource implements AutoCloseable {
     public void updateAnnotated(@NotNull Object content) {
         var position = AnnotationUtils.findAnnotation(content.getClass(), Block.class);
         if (position == null) {
-            throw new DBSystemException(STR."class '\{content.getClass()}' should be annotated with Annotation '\{Block.class}'");
+            throw new DBSystemException(STR."class '\{content.getClass()}' should be annotated with '\{Block.class}'");
         }
         update(position.value(), content);
     }
@@ -104,20 +104,25 @@ public abstract class ConfigSource implements AutoCloseable {
             }
             buffer.append(body);
         } else {
-            // 匹配到. 接下来匹配与startLine配对的endLine
-            int headerIndex;
+            // 成功匹配. 接下来匹配与startLine配对的endLine
             int startReplaceIndex;
-            if ((headerIndex = startIndex - mark.comment().length()) > 0 && !mark.comment().equals(buffer.substring(headerIndex, startIndex))) {
+            int lastLineIndex = buffer.lastIndexOf(lineSeparator, startIndex);
+            int commentIndex = lastLineIndex - mark.rawComment().length();
+            var commentLikeLine = buffer.substring(commentIndex, lastLineIndex).trim();
+
+            if (!commentLikeLine.startsWith("#")) {
                 buffer.insert(startIndex, mark.comment());
                 startReplaceIndex = startIndex + mark.comment().length();
+            } else if (!mark.rawComment().equals(commentLikeLine)) {
+                buffer.replace(commentIndex, lastLineIndex, mark.rawComment());
+                startReplaceIndex = startIndex + (lastLineIndex - commentIndex - mark.rawComment().length());
             } else {
                 startReplaceIndex = startIndex;
             }
             int endIndex = buffer.indexOf(mark.endMark(), startIndex);
             if (endIndex < 0) {
-                log.error(STR."can not automatically update config '\{mark}'. cause: config mark '\{mark}' is invalid. " +
+                throw Exit.error(log, STR."can not automatically update config '\{mark}'", STR." config mark '\{mark}' is invalid. " +
                         STR."require line '\{mark.endMark()}' to close the mark. please add end line '\{mark.endMark()}' to mark the end of config '\{mark}'");
-                throw Exit.exception();
             }
             buffer.replace(startReplaceIndex, endIndex + mark.endMark().length() + 1 + lineSeparator.length(), body);
         }
@@ -166,9 +171,11 @@ public abstract class ConfigSource implements AutoCloseable {
         }
     }
 
-    private void flush() {
+    protected void flush() {
         try (var writer = newWriter()) {
-            writer.write(buffer.toString());
+            if (writer instanceof BufferedWriter bufferedWriter) {
+                writer.write(buffer.toString());
+            }
         } catch (IOException e) {
             throw Exit.error("can not automatically update config file", e);
         }
@@ -193,6 +200,8 @@ public abstract class ConfigSource implements AutoCloseable {
         REPLICATION,
         ;
         private final String comment;
+
+        private final String rawComment;
         private final String startMark;
 
         private final String endMarkKey;
@@ -209,7 +218,8 @@ public abstract class ConfigSource implements AutoCloseable {
          * @param comment 在start前要注明的文字, 一般就是yaml的注释
          */
         Mark(@Nullable String comment) {
-            this.comment = comment == null ? "" : STR."\{lineSeparator}\{lineSeparator}#\{comment}\{lineSeparator}";
+            this.rawComment = STR."#\{comment}";
+            this.comment = comment == null ? "" : STR."\{lineSeparator}\{lineSeparator}\{rawComment}\{lineSeparator}";
             this.startMark = name().toLowerCase();
             this.endMarkKey = STR."\{startMark}-end";
             var generator = new HashMap<>();
@@ -262,6 +272,10 @@ public abstract class ConfigSource implements AutoCloseable {
 
         public String comment() {
             return comment;
+        }
+
+        public String rawComment() {
+            return rawComment;
         }
 
         public String startMark() {
@@ -385,7 +399,7 @@ public abstract class ConfigSource implements AutoCloseable {
         }
 
         @Override
-        protected Writer newWriter() throws IOException {
+        protected Writer newWriter() {
             return writerProvider.apply(url);
         }
 

@@ -9,7 +9,7 @@ import org.hashdb.ms.net.bio.msg.ServiceMessage;
 /**
  * Date: 2023/12/7 16:23
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

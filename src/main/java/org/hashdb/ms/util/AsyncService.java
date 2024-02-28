@@ -70,21 +70,21 @@ public class AsyncService {
         return scheduledExecutorService.get().schedule(callable, milliseconds, TimeUnit.MILLISECONDS);
     }
 
-    public static <T> T waitTimeout(Supplier<T> task, long milliseconds) throws TimeoutException {
+    public static <T> T blockingRun(Supplier<T> task, long milliseconds) throws TimeoutException {
         try {
             return CompletableFuture.supplyAsync(task, service()).get(milliseconds, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            throw new TimeoutException();
         } catch (ExecutionException e) {
             throw ((RuntimeException) e.getCause());
         }
     }
 
-    public static void waitTimeout(Runnable task, long milliseconds) throws TimeoutException {
+    public static void blockingRun(Runnable task, long milliseconds) throws TimeoutException {
         try {
             CompletableFuture.runAsync(task, service()).get(milliseconds, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            throw new TimeoutException();
         } catch (ExecutionException e) {
             throw ((RuntimeException) e.getCause());
         }

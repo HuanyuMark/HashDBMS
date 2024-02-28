@@ -8,19 +8,18 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.config.DBServerConfig;
-import org.hashdb.ms.event.ApplicationContextLoadedEvent;
 import org.hashdb.ms.manager.DBSystem;
 import org.hashdb.ms.support.Exit;
-import org.hashdb.ms.util.JsonService;
 import org.hashdb.ms.util.TimeCounter;
 import org.springframework.beans.factory.DisposableBean;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 /**
  * Date: 2024/1/16 19:17
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 @Component
@@ -38,8 +37,9 @@ public class NettyServer implements DisposableBean, AutoCloseable {
     private volatile boolean closed;
 
     {
-        int acceptor = Runtime.getRuntime().availableProcessors() - 1 >> 1;
-        bossGroup = new NioEventLoopGroup(acceptor <= 0 ? acceptor : 1);
+        // acceptor
+        bossGroup = new NioEventLoopGroup(Math.max(Runtime.getRuntime().availableProcessors() - 1 >> 1, 1));
+        // worker
         workerGroup = new NioEventLoopGroup();
     }
 
@@ -49,9 +49,9 @@ public class NettyServer implements DisposableBean, AutoCloseable {
         this.clientChannelInitializer = clientChannelInitializer;
     }
 
-    @EventListener(ApplicationContextLoadedEvent.class)
+    @EventListener(ApplicationContext.class)
     public void run() {
-        JsonService.loadConfig();
+        // 先正常启动
         var startTime = TimeCounter.start();
         var server = new ServerBootstrap();
         var future = server.group(bossGroup, workerGroup)
@@ -60,41 +60,43 @@ public class NettyServer implements DisposableBean, AutoCloseable {
                 .childHandler(clientChannelInitializer)
                 .bind(serverConfig.getPort());
         serverChannel = future.channel();
-        future.addListener(f -> {
-            if (f.isSuccess()) {
-                log.info("server is running at [tcp: {}] cost {}ms", serverConfig.getPort(), startTime.stop());
+        future.addListener(res -> {
+            if (res.isSuccess()) {
+                log.info("server is running at [tcp: {}] cost {}ms", serverConfig.getPort(), startTime);
                 return;
             }
-            throw Exit.error("server start failed", f.cause());
+            throw Exit.error("server start failed", res.cause());
         });
+        // 启动后, 如果其次启动属于故障恢复, 则等待其它结点的服务发现机制(poll ping)
+        // 这个结点被ping通并身份验证后, 执行其它结点给的指令, 执行故障恢复启动的逻辑
     }
 
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         if (closed) {
             return;
         }
         log.info("server closing");
-        var costTime = TimeCounter.costTime(() -> {
-            try {
-                clientChannelInitializer.close();
-                serverChannel.close().sync();
-                var bossFuture = bossGroup.shutdownGracefully();
-                var workerFuture = workerGroup.shutdownGracefully();
-                bossFuture.sync();
-                workerFuture.sync();
-            } catch (InterruptedException e) {
-                log.warn("interrupted", e);
-            }
-        });
-        closed = true;
-        log.info("server closed. cost {}ms", costTime);
+        var timeCounter = TimeCounter.start();
+        clientChannelInitializer.close();
+        var channelFuture = serverChannel.close();
+        var bossFuture = bossGroup.shutdownGracefully();
+        var workerFuture = workerGroup.shutdownGracefully();
+        try {
+            channelFuture.sync();
+            bossFuture.sync();
+            workerFuture.sync();
+            closed = true;
+            log.info("server closed. cost {}ms", timeCounter);
+        } catch (InterruptedException e) {
+            log.error("server closing process is interrupted", e);
+        }
     }
 
     @Override
     // 关闭服务器
-    public void destroy() throws Exception {
+    public void destroy() {
         close();
     }
 }

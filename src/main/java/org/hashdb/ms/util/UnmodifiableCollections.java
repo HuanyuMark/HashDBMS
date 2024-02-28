@@ -8,7 +8,7 @@ import java.util.Objects;
 /**
  * Date: 2023/11/24 14:51
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class UnmodifiableCollections {
     public static final Class<?> unmodifiableCollection;

@@ -8,7 +8,7 @@ import java.util.*;
 /**
  * Date: 2023/11/29 11:11
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class LGetGtx extends RandomAccessCtx {
     public LGetGtx(CompileCtx<?> fatherCompileCtx) {

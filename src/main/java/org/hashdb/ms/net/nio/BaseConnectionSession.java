@@ -8,7 +8,7 @@ import org.hashdb.ms.net.bio.client.CloseMessage;
 /**
  * Date: 2024/2/17 15:13
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public interface BaseConnectionSession extends TransientConnectionSession, ConnectionSession {
 

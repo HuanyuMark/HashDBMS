@@ -3,9 +3,16 @@ package org.hashdb.ms.net.nio;
 /**
  * Date: 2024/2/26 14:15
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class ReplicationServerNode extends ServerNode {
+
+    /**
+     * 写偏移量
+     */
+    private long offset;
+
+
     public ReplicationServerNode(String host, String ip, Integer port, String username, String password, String uname, String pwd) {
         super(host, ip, port, username, password, uname, pwd);
     }

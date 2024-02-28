@@ -12,10 +12,12 @@ import com.fasterxml.jackson.databind.introspect.AnnotatedMember;
 import com.fasterxml.jackson.databind.introspect.AnnotatedMethod;
 import com.fasterxml.jackson.databind.introspect.BeanPropertyDefinition;
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.*;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
+import org.hashdb.ms.net.nio.ServerNodeSet;
 import org.hashdb.ms.support.DefaultYamlCommentGenerator;
 import org.hashdb.ms.support.Exit;
 import org.hashdb.ms.support.YamlComment;
@@ -34,7 +36,7 @@ import java.util.*;
 /**
  * Date: 2024/2/23 1:23
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  * @version 0.0.1
  */
 public class YamlService {
@@ -53,9 +55,9 @@ public class YamlService {
 //        if (!(factory instanceof BeanSerializerFactory)) {
 //            throw new RuntimeException(STR."default serializer factory is not \{BeanSerializerFactory.class}");
 //        }
-//        var yamlModule = new SimpleModule("hashdb-yaml");
-//        yamlModule.addSerializer(Object.class, new CommentSerializer());
-//        COMMON.registerModule(yamlModule);
+        var yamlModule = new SimpleModule("hashdb-yaml");
+        yamlModule.addSerializer(ServerNodeSet.class, new ServerNodeSetSerializer());
+        COMMON.registerModule(yamlModule);
     }
 
     public static @NotNull ByteArrayOutputStream toByteArrayOutputStream(Charset charset, Object content) throws IOException {
@@ -76,6 +78,33 @@ public class YamlService {
 
     public static <T> T parse(File file, Class<T> type) throws IOException {
         return COMMON.readValue(new FileReader(file, StandardCharsets.UTF_8), type);
+    }
+
+    private static class ServerNodeSetSerializer extends StdSerializer<ServerNodeSet> {
+        public ServerNodeSetSerializer() {
+            super(ServerNodeSet.class);
+        }
+
+        @Override
+        public void serialize(ServerNodeSet value, JsonGenerator gen, SerializerProvider provider) throws IOException {
+            gen.writeObject(value.all());
+        }
+
+        public ServerNodeSetSerializer(Class<ServerNodeSet> t) {
+            super(t);
+        }
+
+        public ServerNodeSetSerializer(JavaType type) {
+            super(type);
+        }
+
+        public ServerNodeSetSerializer(Class<?> t, boolean dummy) {
+            super(t, dummy);
+        }
+
+        public ServerNodeSetSerializer(StdSerializer<?> src) {
+            super(src);
+        }
     }
 
     private static class CommentSerializer extends StdSerializer<Object> {

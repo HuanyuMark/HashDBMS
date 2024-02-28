@@ -6,7 +6,7 @@ import org.jetbrains.annotations.NotNull;
  * Date: 2024/1/15 18:07
  * 表示一个执行过程时间复杂度
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class TimeComplexity implements Comparable<TimeComplexity> {
     private static final int linerUnit = 100;

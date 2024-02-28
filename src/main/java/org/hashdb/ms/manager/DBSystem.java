@@ -1,15 +1,16 @@
 package org.hashdb.ms.manager;
 
+import jakarta.annotation.PreDestroy;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.aspect.methodAccess.DisposableCall;
-import org.hashdb.ms.config.ClusterGroupConfig;
 import org.hashdb.ms.config.DBManageConfig;
 import org.hashdb.ms.data.DataType;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.net.exception.DatabaseClashException;
 import org.hashdb.ms.net.exception.NotFoundDatabaseException;
+import org.hashdb.ms.net.nio.ClusterGroup;
 import org.hashdb.ms.persistent.PersistentService;
 import org.hashdb.ms.util.AsyncService;
 import org.hashdb.ms.util.BlockingQueueTaskConsumer;
@@ -17,8 +18,8 @@ import org.hashdb.ms.util.Lazy;
 import org.hashdb.ms.util.TimeCounter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.springframework.beans.factory.DisposableBean;
-import org.springframework.beans.factory.InitializingBean;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
@@ -32,16 +33,16 @@ import java.util.function.Consumer;
 /**
  * Date: 2023/11/21 1:46
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 @Component
-public class DBSystem extends BlockingQueueTaskConsumer implements InitializingBean, DisposableBean {
+public class DBSystem extends BlockingQueueTaskConsumer {
     @Getter
     private SystemInfo systemInfo;
 
     @Getter
-    private ClusterGroupConfig clusterGroupConfig;
+    private ClusterGroup clusterGroup;
 
     private final PersistentService persistentService;
 
@@ -144,8 +145,8 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
     /**
      * 初始化数据库
      */
-    @Override
-    public void afterPropertiesSet() {
+    @EventListener(ApplicationContext.class)
+    public void init() {
         // 扫描 系统信息,
         setSystemInfo(persistentService.scanSystemInfo());
         initSystemInternalDB();
@@ -197,11 +198,15 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
 
     /**
      * 保存系统信息, 数据库信息, 数据库数据
+     * {@link PreDestroy} 执行的比 {@link org.springframework.beans.factory.DisposableBean}
+     * 早, 且不在 {@link Runtime#addShutdownHook} 中的线程中运行, 所以 {@link ForkJoinPool#commonPool()}
+     * 不会提前关闭, 这样可以让所有的虚拟线程得以执行完毕
      */
-    @Override
+    @PreDestroy
     public void destroy() {
         log.info("start closing System ...");
         var dbmsCostTimeCounter = TimeCounter.start();
+        stopConsumeOpsTask();
         // 保存系统信息
         persistentService.persist(systemInfo);
         if (log.isTraceEnabled()) {
@@ -230,6 +235,6 @@ public class DBSystem extends BlockingQueueTaskConsumer implements InitializingB
         } else {
             forkJoinPoolClosingMsg = STR."rudely. remaining task \{ForkJoinPool.commonPool().getQueuedTaskCount()}";
         }
-        log.info("System closed {}, cost {} ms", forkJoinPoolClosingMsg, dbmsCostTimeCounter.stop());
+        log.info("System closed {}, cost {} ms", forkJoinPoolClosingMsg, dbmsCostTimeCounter);
     }
 }

@@ -3,13 +3,13 @@ package org.hashdb.ms.net.nio.msg.v1;
 /**
  * Date: 2024/2/1 18:42
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class ServerPingMessage extends Message<String> implements FlyweightMessage {
 
-    public static final ServerPingMessage DEFAULT = new ServerPingMessage(0L);
+    public static final ServerPingMessage DEFAULT = new ServerPingMessage(0);
 
-    public ServerPingMessage(long id) {
+    public ServerPingMessage(int id) {
         super(id, "PING");
     }
 

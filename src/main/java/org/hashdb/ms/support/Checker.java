@@ -1,5 +1,6 @@
 package org.hashdb.ms.support;
 
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.NoSuchElementException;
@@ -9,13 +10,14 @@ import java.util.function.Supplier;
 /**
  * Date: 2024/2/27 11:58
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
+@Slf4j
 public class Checker {
     public static <N extends Number> int notNegative(N val, N defaultVal, String msg) {
         if (val == null) {
             if (defaultVal == null) {
-                throw Exit.error(msg, "value is required");
+                throw Exit.error(log, msg, "value is required");
             }
             val = defaultVal;
         }
@@ -24,7 +26,7 @@ public class Checker {
 
     public static int notNegative(int val, String msg) {
         if (val < 0) {
-            throw Exit.error(msg, "value is negative");
+            throw Exit.error(log, msg, "value is negative");
         }
         return val;
     }
@@ -34,7 +36,7 @@ public class Checker {
             return null;
         }
         if (val.intValue() <= 0) {
-            throw Exit.error(msg, "value should be > 0");
+            throw Exit.error(log, msg, "value should be > 0");
         }
         return val;
     }
@@ -42,26 +44,26 @@ public class Checker {
     public static <N extends Number> N notNegativeOrZero(N val, N defaultVal, String msg) {
         if (val == null) {
             if (defaultVal == null) {
-                throw Exit.error(msg, "value is required");
+                throw Exit.error(log, msg, "value is required");
             }
             val = defaultVal;
         }
         if (val.intValue() <= 0) {
-            throw Exit.error(msg, "value should be > 0");
+            throw Exit.error(log, msg, "value should be > 0");
         }
         return val;
     }
 
     public static int notNegativeOrZero(int val, String msg) {
         if (val <= 0) {
-            throw Exit.error(msg, "value should be > 0");
+            throw Exit.error(log, msg, "value should be > 0");
         }
         return val;
     }
 
     public static long notNegativeOrZero(long val, String msg) {
         if (val <= 0) {
-            throw Exit.error(msg, "value should be > 0");
+            throw Exit.error(log, msg, "value should be > 0");
         }
         return val;
     }
@@ -102,7 +104,7 @@ public class Checker {
                 return value;
             }
         }
-        throw Exit.error(msg, STR."\{valueName} is required");
+        throw Exit.error(log, msg, STR."\{valueName} is required");
     }
 
     @SafeVarargs
@@ -113,6 +115,6 @@ public class Checker {
                 return v;
             }
         }
-        throw Exit.error(msg, STR."\{valueName} is required");
+        throw Exit.error(log, msg, STR."\{valueName} is required");
     }
 }

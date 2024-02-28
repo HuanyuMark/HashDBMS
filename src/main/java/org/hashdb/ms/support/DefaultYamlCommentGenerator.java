@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * Date: 2024/2/23 17:18
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  * @version 0.0.1
  */
 public class DefaultYamlCommentGenerator implements YamlCommentGenerator {

@@ -14,7 +14,7 @@ import java.util.function.Supplier;
  * Date: 2023/11/24 16:20
  * TYPE $KEY … $KEY
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class TypeCtx extends SupplierCtx {
     private final List<Object> keyOrSupplier = new LinkedList<>();

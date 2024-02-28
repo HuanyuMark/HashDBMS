@@ -3,14 +3,14 @@ package org.hashdb.ms.net.nio.msg.v1;
 /**
  * Date: 2024/1/17 13:56
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
-public class ReconnectMessage extends Message<Long> {
-    public ReconnectMessage(long id, Long body) {
+public class ReconnectMessage extends Message<Integer> {
+    public ReconnectMessage(int id, Integer body) {
         super(id, body);
     }
 
-    public ReconnectMessage(Long body) {
+    public ReconnectMessage(Integer body) {
         super(body);
     }
 

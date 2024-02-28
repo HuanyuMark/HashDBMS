@@ -3,7 +3,7 @@ package org.hashdb.ms.data;
 /**
  * Date: 2023/11/22 22:24
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Deprecated
 public interface Numeric<T extends Number> {

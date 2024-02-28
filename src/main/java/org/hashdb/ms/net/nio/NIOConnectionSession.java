@@ -10,6 +10,7 @@ import org.hashdb.ms.net.bio.client.CloseMessage;
 import org.hashdb.ms.net.bio.client.CommandMessage;
 import org.hashdb.ms.net.bio.msg.Message;
 import org.hashdb.ms.net.bio.service.ErrorMessage;
+import org.hashdb.ms.support.StaticScanIgnore;
 import org.hashdb.ms.util.JsonService;
 import org.jetbrains.annotations.Nullable;
 
@@ -25,10 +26,11 @@ import java.util.concurrent.ExecutionException;
 /**
  * Date: 2024/1/15 23:24
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 @Deprecated
+@StaticScanIgnore
 public class NIOConnectionSession extends AbstractConnectionSession {
     private final SocketChannel channel;
 

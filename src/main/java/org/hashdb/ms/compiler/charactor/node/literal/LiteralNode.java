@@ -9,7 +9,7 @@ import java.util.function.Supplier;
 /**
  * Date: 2023/12/10 18:55
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public abstract class LiteralNode<T> extends CompileNode implements Supplier<T> {
     public LiteralNode(CharacterCompileStream stream) {

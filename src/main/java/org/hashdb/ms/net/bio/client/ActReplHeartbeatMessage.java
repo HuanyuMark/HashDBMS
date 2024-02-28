@@ -8,7 +8,7 @@ import org.hashdb.ms.net.bio.service.ReplicationHeartbeatMessage;
 /**
  * Date: 2023/12/7 16:18
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Getter
 @Setter

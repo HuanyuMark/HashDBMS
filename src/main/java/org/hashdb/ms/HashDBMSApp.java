@@ -1,20 +1,17 @@
 package org.hashdb.ms;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.config.DBServerConfig;
-import org.hashdb.ms.event.ApplicationContextLoadedEvent;
-import org.hashdb.ms.manager.DBSystem;
 import org.hashdb.ms.support.ConfigSource;
 import org.hashdb.ms.support.Exit;
-import org.hashdb.ms.support.YamlComment;
+import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationListener;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
+import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 
@@ -31,73 +28,44 @@ import java.util.regex.Pattern;
 /**
  * Date: ${DATE} ${TIME}
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 @SpringBootApplication
 @ConfigurationPropertiesScan
 @EnableAspectJAutoProxy(exposeProxy = true) // 因为要自定义设置所以配了, 暴露代理是为了, 可以在本类拿到代理对象,从而在本类或跨类调用代理对象
-public class HashDBMSApp {
+public class HashDBMSApp implements ApplicationListener<ContextRefreshedEvent> {
+    private static ApplicationContext context;
 
-    @Getter
-    private static DBServerConfig dbServerConfig;
-    @Getter
-    private static DBSystem dbSystem;
     private static boolean asynchronousClose = false;
-    private static ConfigurableApplicationContext context;
-
-    /**
-     * 只有在用户指定了配置文件后, 才会有写的需求, 才需要获取这个对象
-     */
-    @Getter
-    private static ConfigSource configSource;
-
-    @Data
-    @Setter
-    public static class MyObj {
-        @JsonProperty
-        private String okk = "ok";
-
-        private String nook = "nook";
-
-        @YamlComment("getNook comment")
-        public String getNook() {
-            return nook;
-        }
-
-        @YamlComment("getOkk comment")
-        public String getOkk() {
-            return okk;
-        }
-    }
 
     /**
      * @param args 命令行参数
      *             现在支持: --config=[URL or file path], URL支持file://, http://, https://, ftp://协议
      */
-    public static void main(String[] args) throws IOException, InterruptedException {
-        // 发布一个事件, 让其他模块可以感知到spring容器已经准备好了, context 已经有值了
-//        context.publishEvent(new ApplicationContextLoadedEvent(SpringApplication.run(HashDBMSApp.class, prepareArgs(args))));
-        File file = new File("source.yaml");
-        ConfigSource source = ConfigSource.open(file);
-        MyObj obj = new MyObj();
-        source.update(ConfigSource.Mark.REPLICATION, obj);
-        Thread.sleep(2000);
+    public static void main(String[] args) {
+        SpringApplication.run(HashDBMSApp.class, prepareArgs(args));
     }
 
-    @Order(1)
-    @EventListener(ApplicationContextLoadedEvent.class)
-    public void loadStatic(ApplicationContextLoadedEvent event) {
-        context = event.ctx();
+    @Order(10)
+    @EventListener(ApplicationContext.class)
+    public void doAsynchronousClose() {
         if (asynchronousClose) {
-            context.close();
-            return;
+            if (context instanceof ConfigurableApplicationContext c) {
+                c.close();
+            }
+            throw Exit.normal();
         }
-        dbServerConfig = context.getBean(DBServerConfig.class);
     }
 
-    public static ConfigurableApplicationContext ctx() {
-        return context;
+    /**
+     * 只有在用户指定了配置文件后, 才会有写的需求, 才需要获取这个对象
+     */
+    private static ConfigSource configSource;
+
+    @Bean
+    public ConfigSource configSource() {
+        return configSource;
     }
 
     private static String[] prepareArgs(String[] args) {
@@ -191,16 +159,15 @@ public class HashDBMSApp {
                 return fullFileName.substring(0, dotIndex);
             }
         }
-        log.error("illegal config file name '{}'. suffix must be yml/yaml/properties", fullName);
-        throw Exit.exception();
+        throw Exit.error(log, STR."illegal config file name '\{fullName}'. suffix must be yml/yaml/properties", "illegal suffix");
     }
 
     public static void exit(int status) {
         if (context == null) {
             log.warn("app context is not loaded");
             asynchronousClose = true;
-        } else {
-            context.close();
+        } else if (context instanceof ConfigurableApplicationContext c) {
+            c.close();
         }
         System.exit(status);
     }
@@ -212,5 +179,12 @@ public class HashDBMSApp {
             log.error("can not create remote temp file. cause: {}", e.getMessage());
             throw Exit.exception();
         }
+    }
+
+    @Override
+    public void onApplicationEvent(ContextRefreshedEvent event) {
+        context = event.getApplicationContext();
+        // 发布一个事件, 让其他模块可以感知到spring容器已经准备好了, context 已经有值了
+        context.publishEvent(context);
     }
 }

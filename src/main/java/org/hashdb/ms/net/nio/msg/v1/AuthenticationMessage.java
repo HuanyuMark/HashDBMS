@@ -6,10 +6,10 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Date: 2024/1/17 16:15
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class AuthenticationMessage extends Message<AuthenticationMessage.Body> {
-    public AuthenticationMessage(long id, Body body) {
+    public AuthenticationMessage(int id, Body body) {
         super(id, body);
     }
 

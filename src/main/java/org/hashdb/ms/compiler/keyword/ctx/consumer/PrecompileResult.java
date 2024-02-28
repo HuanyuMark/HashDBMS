@@ -9,7 +9,7 @@ import java.util.List;
 /**
  * Date: 2023/11/29 14:59
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class PrecompileResult<T> {
     /**

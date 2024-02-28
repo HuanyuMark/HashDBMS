@@ -8,7 +8,7 @@ import java.util.concurrent.ScheduledFuture;
 /**
  * Date: 2024/2/21 20:19
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  * @version 0.0.1
  */
 public class LongReactive extends Number implements Reactive {

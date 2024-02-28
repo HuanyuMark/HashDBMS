@@ -12,7 +12,7 @@ import java.util.function.Supplier;
 /**
  * Date: 2023/11/21 15:11
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class FileUtils {
     public static @NotNull File prepareDir(String absPath, Function<File, RuntimeException> supplier) {

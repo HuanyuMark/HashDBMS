@@ -6,13 +6,13 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Date: 2024/2/16 19:56
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class SessionUpgradeMessage extends Message<SessionMeta> {
 
     public static final SessionUpgradeMessage DEFAULT = new SessionUpgradeMessage(0, SessionMeta.BUSINESS.key());
 
-    public SessionUpgradeMessage(long id, int sessionMetaCode) {
+    public SessionUpgradeMessage(int id, int sessionMetaCode) {
         super(id, SessionMeta.resolve(sessionMetaCode));
     }
 

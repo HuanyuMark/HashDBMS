@@ -14,7 +14,7 @@ import java.util.Objects;
 /**
  * Date: 2023/12/8 16:36
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class CharacterCompileStream {
     protected final char[] tokens;

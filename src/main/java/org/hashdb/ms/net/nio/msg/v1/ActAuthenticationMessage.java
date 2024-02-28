@@ -5,19 +5,19 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Date: 2024/1/17 16:18
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class ActAuthenticationMessage extends ActMessage<ActAuthenticationMessage.Body> {
 
-    public ActAuthenticationMessage(long actId, Body body) {
+    public ActAuthenticationMessage(int actId, Body body) {
         super(actId, body);
     }
 
-    public ActAuthenticationMessage(long id, long actId, Body body) {
+    public ActAuthenticationMessage(int id, int actId, Body body) {
         super(id, actId, body);
     }
 
-    public ActAuthenticationMessage(long actId, boolean success, String msg, String username) {
+    public ActAuthenticationMessage(int actId, boolean success, String msg, String username) {
         super(actId, new Body(msg, success, username));
     }
 
@@ -29,7 +29,7 @@ public class ActAuthenticationMessage extends ActMessage<ActAuthenticationMessag
     public record Body(String msg, boolean success, String username) {
     }
 
-    private ActMessage<Body> actId(long actId) {
+    private ActMessage<Body> actId(int actId) {
         throw new UnsupportedOperationException();
     }
 

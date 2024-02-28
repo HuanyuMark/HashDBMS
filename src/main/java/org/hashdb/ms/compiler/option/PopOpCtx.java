@@ -6,7 +6,7 @@ import org.hashdb.ms.compiler.exception.IllegalValueException;
 /**
  * Date: 2023/11/24 16:46
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class PopOpCtx extends IntegerOpCtx {
     public PopOpCtx() {

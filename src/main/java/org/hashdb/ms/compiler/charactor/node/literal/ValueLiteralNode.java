@@ -5,7 +5,7 @@ import org.hashdb.ms.compiler.charactor.CharacterCompileStream;
 /**
  * Date: 2023/12/10 19:04
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class ValueLiteralNode extends LiteralNode<Object> {
     public ValueLiteralNode(CharacterCompileStream stream) {

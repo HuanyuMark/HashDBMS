@@ -8,7 +8,7 @@ import java.util.function.Supplier;
 /**
  * Date: 2023/12/8 16:48
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class GetNode extends SupplierKeywordNode {
     public GetNode(CharacterCompileStream stream) {

@@ -6,6 +6,7 @@ import org.hashdb.ms.manager.DBSystem;
 import org.hashdb.ms.net.DBServer;
 import org.hashdb.ms.net.bio.client.CloseMessage;
 import org.hashdb.ms.net.exception.ClosedChannelWrapper;
+import org.hashdb.ms.support.StaticScanIgnore;
 import org.hashdb.ms.util.AsyncService;
 import org.hashdb.ms.util.JsonService;
 
@@ -19,10 +20,11 @@ import java.nio.channels.SocketChannel;
  * Date: 2024/1/15 14:55
  * 使用了NIO实现
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 @Deprecated
+@StaticScanIgnore
 public class NIOServer extends DBServer {
 
     private volatile boolean epoll = true;

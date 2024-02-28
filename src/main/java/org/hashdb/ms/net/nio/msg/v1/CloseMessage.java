@@ -5,11 +5,11 @@ import org.hashdb.ms.exception.DBClientException;
 /**
  * Date: 2024/1/17 16:21
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class CloseMessage extends ErrorMessage {
 
-    public CloseMessage(long id, String body) {
+    public CloseMessage(int id, String body) {
         super(id, body);
     }
 
@@ -17,7 +17,7 @@ public class CloseMessage extends ErrorMessage {
         super(request, cause);
     }
 
-    public CloseMessage(long actId, Body body) {
+    public CloseMessage(int actId, Body body) {
         super(actId, body);
     }
 
@@ -25,7 +25,7 @@ public class CloseMessage extends ErrorMessage {
         super(request, e);
     }
 
-    public CloseMessage(long actId, DBClientException e) {
+    public CloseMessage(int actId, DBClientException e) {
         super(actId, e);
     }
 

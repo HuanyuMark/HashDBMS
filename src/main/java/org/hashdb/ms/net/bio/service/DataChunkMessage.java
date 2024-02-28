@@ -12,7 +12,7 @@ import java.util.UUID;
 /**
  * Date: 2023/12/1 13:15
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

@@ -6,6 +6,7 @@ import org.hashdb.ms.manager.DBSystem;
 import org.hashdb.ms.net.ConnectionSession;
 import org.hashdb.ms.net.DBServer;
 import org.hashdb.ms.net.bio.client.CloseMessage;
+import org.hashdb.ms.support.StaticScanIgnore;
 import org.hashdb.ms.util.AsyncService;
 import org.hashdb.ms.util.JsonService;
 import org.hashdb.ms.util.Runners;
@@ -25,11 +26,12 @@ import java.util.concurrent.CompletableFuture;
  * Date: 2024/1/15 14:52
  * 使用传统的BIO网络模型的服务器
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 //@Component
 @Deprecated
+@StaticScanIgnore
 public class BIOServer extends DBServer {
     protected final List<ConnectionSession> connectionSessionList = new LinkedList<>();
     private ServerSocketChannel serverChannel;

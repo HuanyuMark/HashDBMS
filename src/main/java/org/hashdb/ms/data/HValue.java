@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.config.DBRamConfig;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.exception.ServiceStoppedException;
+import org.hashdb.ms.support.StaticAutowired;
 import org.hashdb.ms.util.AsyncService;
 import org.hashdb.ms.util.JsonService;
 import org.jetbrains.annotations.NotNull;
@@ -20,11 +21,23 @@ import java.util.concurrent.ScheduledFuture;
  * Date: 2023/11/21 2:37
  * 在{@link Database} 中存储 K - V 的pair
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 public class HValue<T> implements Cloneable {
-    public final static HValue<?> EMPTY = new HValue<>();
+    private static HValue<?> EMPTY;
+
+    private static OpsTaskPriority DEFAULT_EXPIRED_KEY_DELETE_PRIORITY;
+
+    public static HValue<?> empty() {
+        return EMPTY;
+    }
+
+    @StaticAutowired
+    private void loadStatic(DBRamConfig dbRamConfig) {
+        EMPTY = new HValue<>();
+        DEFAULT_EXPIRED_KEY_DELETE_PRIORITY = dbRamConfig.getExpiredKeyDeletePriority();
+    }
 
     public static <T> T unwrapData(@Nullable HValue<T> hValue) {
         return hValue == null ? null : hValue.data;
@@ -55,7 +68,7 @@ public class HValue<T> implements Cloneable {
      * 如果为高,则触发删除任务时, 将删除任务插入任务队列头部, 优先执行
      */
     @Getter
-    private OpsTaskPriority deletePriority = DBRamConfig.DEFAULT_EXPIRED_KEY_DELETE_PRIORITY.get();
+    private OpsTaskPriority deletePriority = DEFAULT_EXPIRED_KEY_DELETE_PRIORITY;
     /**
      * 是否取消， 当该key过期时， 清除该key
      */
@@ -111,7 +124,7 @@ public class HValue<T> implements Cloneable {
 
     private ScheduledFuture<?> startExpiredTask(Database database, Long expireMilliseconds, @Nullable OpsTaskPriority priority) {
         cancelClear();
-        deletePriority = Objects.requireNonNullElse(priority, DBRamConfig.DEFAULT_EXPIRED_KEY_DELETE_PRIORITY.get());
+        deletePriority = Objects.requireNonNullElse(priority, DEFAULT_EXPIRED_KEY_DELETE_PRIORITY);
         return AsyncService.setTimeout(() -> {
             var deleteTask = OpsTask.of(() -> database.del(key));
             if (deletePriority == OpsTaskPriority.HIGH) {

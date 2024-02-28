@@ -24,7 +24,7 @@ import java.util.function.Function;
  * Date: 2023/11/25 0:49
  * 可管道化关键字, 需要入参才能执行
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public enum ConsumerKeyword implements Keyword<ConsumerKeyword> {
     PIPE(PipeCtx.class),

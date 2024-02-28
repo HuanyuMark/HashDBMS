@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Date: 2024/1/17 12:10
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public enum Protocol implements MetaEnum {
     HASH_V1(new HashV1MessageCodec()),

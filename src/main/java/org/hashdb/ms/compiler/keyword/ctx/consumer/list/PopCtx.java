@@ -19,7 +19,7 @@ import java.util.function.Function;
 /**
  * Date: 2023/11/29 10:05
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public abstract class PopCtx extends MutableListCtx {
 

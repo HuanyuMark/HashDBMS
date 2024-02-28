@@ -7,7 +7,7 @@ import java.util.function.BiFunction;
 /**
  * Date: 2023/12/2 17:36
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Deprecated
 public interface MessageConsumer extends BiFunction<Message, MessageConsumerChain, Object> {

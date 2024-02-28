@@ -12,7 +12,7 @@ import java.util.function.Supplier;
 /**
  * Date: 2023/11/22 11:40
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public interface OpsTask<T> extends Supplier<T> {
     T result();
@@ -31,8 +31,7 @@ public interface OpsTask<T> extends Supplier<T> {
         private final boolean read;
 
         public OpsTaskImpl(Supplier<T> supplier) {
-            this.supplier = supplier;
-            this.read = true;
+            this(true, supplier);
         }
 
         public OpsTaskImpl(boolean read, Supplier<T> supplier) {

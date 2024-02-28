@@ -6,7 +6,7 @@ import org.hashdb.ms.data.DataType;
 /**
  * Date: 2023/11/22 20:55
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @StandardException
 public class IncreaseUnsupportedException extends DBClientException {

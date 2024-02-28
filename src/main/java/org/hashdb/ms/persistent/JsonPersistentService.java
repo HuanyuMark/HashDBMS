@@ -1,11 +1,11 @@
 package org.hashdb.ms.persistent;
 
 import org.hashdb.ms.compiler.CompileStream;
-import org.hashdb.ms.config.ClusterGroupConfig;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.DatabaseInfos;
 import org.hashdb.ms.manager.SystemInfo;
 import org.hashdb.ms.net.exception.NotFoundDatabaseException;
+import org.hashdb.ms.net.nio.ClusterGroup;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * Date: 2023/11/21 3:13
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class JsonPersistentService implements PersistentService {
     @Override
@@ -28,7 +28,7 @@ public class JsonPersistentService implements PersistentService {
     }
 
     @Override
-    public boolean persist(ClusterGroupConfig config) {
+    public boolean persist(ClusterGroup config) {
         return false;
     }
 
@@ -68,7 +68,7 @@ public class JsonPersistentService implements PersistentService {
     }
 
     @Override
-    public @NotNull ClusterGroupConfig scanReplicationConfig() {
+    public @NotNull ClusterGroup scanReplicationConfig() {
         return null;
     }
 }

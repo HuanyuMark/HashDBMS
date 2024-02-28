@@ -11,12 +11,12 @@ import java.util.Map;
 /**
  * Date: 2024/1/17 14:05
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class ErrorMessage extends ActMessage<ErrorMessage.Body> {
     private static final Map<String, Constructor<? extends Exception>> EXCEPTION_CONSTRUCTOR = new HashMap<>();
 
-    public ErrorMessage(long actId, Body body) {
+    public ErrorMessage(int actId, Body body) {
         super(actId, body);
     }
 
@@ -24,11 +24,11 @@ public class ErrorMessage extends ActMessage<ErrorMessage.Body> {
         this(request.id, e);
     }
 
-    public ErrorMessage(long actId, DBClientException e) {
+    public ErrorMessage(int actId, DBClientException e) {
         super(actId, new Body(e.getClass().getName(), e.getCause().getMessage()));
     }
 
-    public ErrorMessage(long actId, String cause) {
+    public ErrorMessage(int actId, String cause) {
         super(actId, new Body(Exception.class.getName(), cause));
     }
 
@@ -69,12 +69,12 @@ public class ErrorMessage extends ActMessage<ErrorMessage.Body> {
                 EXCEPTION_CONSTRUCTOR.put(body.exception, exceptionConstructor);
                 return res;
             } catch (NoSuchMethodException e) {
-                throw new DBSystemException("can not find constructor with parameter type '" + String.class + "' of class '" + exceptionClazz + "'");
+                throw new DBSystemException(STR."can not find constructor with parameter type '\{String.class}' of class '\{exceptionClazz}'");
             } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
                 throw new DBSystemException(e);
             }
         } catch (ClassNotFoundException e) {
-            throw new DBSystemException("can not convert body to exception: can not load class by class name '" + body.exception + "'");
+            throw new DBSystemException(STR."can not convert body to exception: can not load class by class name '\{body.exception}'");
         }
     }
 }

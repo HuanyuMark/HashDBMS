@@ -21,7 +21,7 @@ import java.util.NoSuchElementException;
 /**
  * Date: 2024/2/19 12:00
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 public class ProtocolCodec extends MessageToMessageCodec<ByteBuf, Message<?>> implements NamedChannelHandler {

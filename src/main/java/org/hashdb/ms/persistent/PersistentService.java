@@ -1,11 +1,11 @@
 package org.hashdb.ms.persistent;
 
 import org.hashdb.ms.compiler.CompileStream;
-import org.hashdb.ms.config.ClusterGroupConfig;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.DatabaseInfos;
 import org.hashdb.ms.manager.SystemInfo;
 import org.hashdb.ms.net.exception.NotFoundDatabaseException;
+import org.hashdb.ms.net.nio.ClusterGroup;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -14,7 +14,7 @@ import java.util.List;
  * Date: 2023/11/21 3:01
  * 持久化服务, 保存数据库，或者恢复数据库
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public interface PersistentService {
     boolean persist(Database database);
@@ -22,7 +22,7 @@ public interface PersistentService {
     boolean persist(SystemInfo systemInfo);
 
     @Deprecated
-    boolean persist(ClusterGroupConfig config);
+    boolean persist(ClusterGroup config);
 
     boolean persist(CompileStream<?> stream);
 
@@ -41,5 +41,5 @@ public interface PersistentService {
 
     @NotNull
     @Deprecated
-    ClusterGroupConfig scanReplicationConfig();
+    ClusterGroup scanReplicationConfig();
 }

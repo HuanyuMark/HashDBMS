@@ -10,7 +10,7 @@ import org.hashdb.ms.net.ConnectionSession;
 /**
  * Date: 2024/1/3 10:53
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class DBCurrentCtx extends SystemCompileCtx<DatabaseInfos> {
 

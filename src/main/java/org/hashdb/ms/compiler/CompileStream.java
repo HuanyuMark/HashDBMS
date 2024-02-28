@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 /**
  * Date: 2023/11/25 2:51
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public interface CompileStream<R extends CompilerNode> extends ExecutableCompileStream {
 

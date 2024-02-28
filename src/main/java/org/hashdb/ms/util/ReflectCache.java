@@ -8,7 +8,7 @@ import java.util.function.Function;
 /**
  * Date: 2023/11/24 20:01
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class ReflectCache<T> {
     protected final Class<? extends T> clazz;

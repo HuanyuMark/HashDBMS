@@ -6,7 +6,7 @@ import org.hashdb.ms.exception.DBSystemException;
 /**
  * Date: 2023/11/27 15:11
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @StandardException
 public class NotFoundSystemInfoException extends DBSystemException {

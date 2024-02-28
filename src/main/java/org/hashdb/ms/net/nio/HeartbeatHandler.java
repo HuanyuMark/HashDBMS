@@ -5,7 +5,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.HashDBMSApp;
+import org.hashdb.ms.config.DBServerConfig;
 import org.hashdb.ms.net.nio.msg.v1.Message;
 import org.hashdb.ms.net.nio.msg.v1.ServerPingMessage;
 import org.hashdb.ms.util.AsyncService;
@@ -15,7 +15,7 @@ import java.util.concurrent.ScheduledFuture;
 /**
  * Date: 2024/2/3 21:41
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 class HeartbeatHandler extends ChannelInboundHandlerAdapter implements NamedChannelHandler {
@@ -28,6 +28,8 @@ class HeartbeatHandler extends ChannelInboundHandlerAdapter implements NamedChan
 
     @Setter
     private Message<?> pingMessage;
+
+    private static DBServerConfig dbServerConfig;
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
@@ -68,12 +70,12 @@ class HeartbeatHandler extends ChannelInboundHandlerAdapter implements NamedChan
     private void startHeartbeat() {
         checkHeartbeatTask = AsyncService.setTimeout(() -> {
             channel.writeAndFlush(pingMessage == null || pingMessage instanceof ServerPingMessage ? (pingMessage = new ServerPingMessage()) : pingMessage);
-            if (++missedHeartbeatCount < HashDBMSApp.dbServerConfig.get().getTimeoutRetry()) {
+            if (++missedHeartbeatCount < dbServerConfig.getTimeoutRetry()) {
                 return;
             }
             log.info("heartbeat timeout {}", channel);
             closeChannel(channel);
-        }, HashDBMSApp.dbServerConfig.get().getHeartbeatInterval());
+        }, dbServerConfig.getHeartbeatInterval());
     }
 
     protected void closeChannel(Channel channel) {

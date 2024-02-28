@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 /**
  * Date: 2023/11/25 3:00
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 public abstract sealed class DatabaseCompileStream extends CommonCompileStream<CompileCtx<?>> permits ConsumerCompileStream, SupplierCompileStream {

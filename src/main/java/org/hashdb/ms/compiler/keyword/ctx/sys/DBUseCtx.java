@@ -12,7 +12,7 @@ import org.hashdb.ms.net.exception.NotFoundDatabaseException;
 /**
  * Date: 2023/11/30 0:48
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class DBUseCtx extends SystemCompileCtx<Boolean> {
     protected Integer dbId;

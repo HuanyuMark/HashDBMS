@@ -1,11 +1,11 @@
-package org.hashdb.ms.config;
+package org.hashdb.ms.net.nio;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.annotation.Resource;
 import lombok.Getter;
-import lombok.Setter;
-import org.hashdb.ms.net.nio.ServerNode;
-import org.hashdb.ms.net.nio.ServerNodeSet;
+import org.hashdb.ms.config.DefaultConfig;
 import org.hashdb.ms.support.Checker;
+import org.hashdb.ms.support.ConfigSource;
 import org.hashdb.ms.support.ConfigSource.Block;
 import org.hashdb.ms.support.ConfigSource.Mark;
 import org.jetbrains.annotations.NotNull;
@@ -17,28 +17,30 @@ import java.util.Objects;
 /**
  * Date: 2024/2/21 18:57
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  * @version 0.0.1
  */
-@Getter
 @Block(Mark.SENTINEL)
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @ConfigurationProperties(value = "sentinel", ignoreInvalidFields = true)
-public class SentinelGroupConfig {
+public class SentinelGroup {
     /**
      * sentinel集群的其它结点
      */
-    private final ServerNodeSet sentinels;
+    @Getter
+    private final ServerNodeSet<?> sentinels;
 
     /**
      * 监控的主结点
      */
-    @Setter
+    @Getter
     private ServerNode master;
 
     /**
      * 监控的从节点
      */
-    private final ServerNodeSet slaves;
+    @Getter
+    private final ServerNodeSet<ReplicationServerNode> slaves;
 
     private final Long recoverCheckInterval;
     /**
@@ -47,6 +49,7 @@ public class SentinelGroupConfig {
      * 信息是否变动,如果变动, 则从offset最高的sentinel
      * 中获取最新拓扑图, 更新该sentinel的集群信息
      */
+    @Getter
     private int offset;
 
     private boolean init = true;
@@ -54,14 +57,17 @@ public class SentinelGroupConfig {
     @Resource
     private DefaultConfig defaultConfig;
 
-    public SentinelGroupConfig(
+    @Resource
+    private ConfigSource configSource;
+
+    public SentinelGroup(
             List<ServerNode> sentinels,
             ServerNode master,
-            List<ServerNode> slaves,
+            List<ReplicationServerNode> slaves,
             Long recoverCheckInterval,
             int offset
     ) {
-        Checker.notNegativeOrZero(recoverCheckInterval, 0, STR."illegal value \{recoverCheckInterval} of option 'sentinel.recover-check-interval'");
+        Checker.notNegativeOrZero(recoverCheckInterval, 5_000, STR."illegal value \{recoverCheckInterval} of option 'sentinel.recover-check-interval'");
         this.sentinels = newSet(sentinels);
         this.master = master;
         this.slaves = newSet(slaves);
@@ -74,16 +80,27 @@ public class SentinelGroupConfig {
         return Objects.requireNonNullElseGet(recoverCheckInterval, () -> defaultConfig.getRecoverCheckInterval());
     }
 
+    public void setMaster(ServerNode master) {
+        this.master = master;
+        ++offset;
+        updateConfig();
+    }
+
     @NotNull
-    private ServerNodeSet newSet(List<ServerNode> sentinels) {
-        return new ServerNodeSet(sentinels) {
+    private <N extends ServerNode> ServerNodeSet<N> newSet(List<N> sentinels) {
+        return new ServerNodeSet<>(sentinels) {
             @Override
             protected void onChange() {
                 if (init) {
                     return;
                 }
-                ++SentinelGroupConfig.this.offset;
+                ++SentinelGroup.this.offset;
+                updateConfig();
             }
         };
+    }
+
+    protected void updateConfig() {
+        configSource.updateAnnotated(this);
     }
 }

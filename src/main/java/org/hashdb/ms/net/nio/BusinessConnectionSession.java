@@ -5,15 +5,16 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.SimpleChannelInboundHandler;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.compiler.CompileStream;
 import org.hashdb.ms.compiler.LocalCommandExecutor;
-import org.hashdb.ms.config.ClusterGroupConfig;
+import org.hashdb.ms.config.DBServerConfig;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.OpsTask;
 import org.hashdb.ms.exception.DBClientException;
+import org.hashdb.ms.manager.DBSystem;
 import org.hashdb.ms.net.AbstractConnectionSession;
 import org.hashdb.ms.net.Parameter;
 import org.hashdb.ms.net.exception.IllegalAccessException;
@@ -21,6 +22,7 @@ import org.hashdb.ms.net.exception.ServerClosedException;
 import org.hashdb.ms.net.nio.msg.v1.*;
 import org.hashdb.ms.net.nio.protocol.Protocol;
 import org.hashdb.ms.net.nio.protocol.ProtocolCodec;
+import org.hashdb.ms.support.StaticAutowired;
 import org.hashdb.ms.util.*;
 import org.jetbrains.annotations.Nullable;
 
@@ -33,15 +35,25 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Date: 2024/1/16 21:15
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 public class BusinessConnectionSession extends AbstractConnectionSession implements BaseConnectionSession {
-    static final LongIdentityGenerator idGenerator = new LongIdentityGenerator(0, Long.MAX_VALUE);
+    static final IntegerIdentityGenerator idGenerator = new IntegerIdentityGenerator(0, Integer.MAX_VALUE);
 
-    static final Lazy<ClusterGroupConfig> replicationGroup = Lazy.of(() -> HashDBMSApp.ctx().getBean(ClusterGroupConfig.class));
+    @StaticAutowired
+    private static ClusterGroup clusterGroup;
+
+    @Getter
+    @StaticAutowired
+    private static DBServerConfig dbServerConfig;
+
+    @Getter
+    @StaticAutowired
+    private static DBSystem dbSystem;
+
     @JsonProperty
-    private final long id;
+    private final int id;
     @JsonProperty
     private String username;
     @JsonProperty
@@ -54,7 +66,18 @@ public class BusinessConnectionSession extends AbstractConnectionSession impleme
 
     final Lazy<ProtocolSwitchingHandler> protocolSwitchingHandlerLazy = Lazy.of(() -> new ProtocolSwitchingHandler(this));
 
-    final static Lazy<SessionUpgradeHandler> sessionUpgradeHandlerLazy = Lazy.of(() -> HashDBMSApp.ctx().getBean(SessionMountedHandler.class).upgradeHandler());
+    protected static SessionMountedHandler.SessionUpgradeHandler sessionUpgradeHandler;
+    @Getter
+    private static BusinessConnectionSession defaultSession;
+
+    @StaticAutowired
+    private static void inject(ClusterGroup clusterGroup, DBServerConfig dbServerConfig, DBSystem dbSystem, SessionMountedHandler mountedHandler) {
+        sessionUpgradeHandler = mountedHandler.upgradeHandler();
+        BusinessConnectionSession.clusterGroup = clusterGroup;
+        BusinessConnectionSession.dbSystem = dbSystem;
+        BusinessConnectionSession.dbServerConfig = dbServerConfig;
+        defaultSession = new DefaultBusinessConnectionSession();
+    }
 
     ScheduledFuture<?> inactiveTimeoutTask;
 
@@ -62,13 +85,13 @@ public class BusinessConnectionSession extends AbstractConnectionSession impleme
         this(idGenerator.nextId());
     }
 
-    protected BusinessConnectionSession(long id) {
+    protected BusinessConnectionSession(int id) {
         this.id = id;
-        var commandCacheConfig = HashDBMSApp.dbServerConfig.get().getCommandCache();
+        var commandCacheConfig = dbServerConfig.getCommandCache();
         localCommandCache = new CacheMap<>(commandCacheConfig.getAliveDuration(), commandCacheConfig.getCacheSize());
     }
 
-    public long id() {
+    public int id() {
         return id;
     }
 
@@ -104,7 +127,7 @@ public class BusinessConnectionSession extends AbstractConnectionSession impleme
         inactiveTimeoutTask = AsyncService.setTimeout(() -> {
             log.info("session inactive timeout {}", this);
             close(new CloseMessage(0, "session inactive timeout"));
-        }, HashDBMSApp.dbServerConfig.get().getInactiveTimeout());
+        }, dbServerConfig.getInactiveTimeout());
     }
 
     @Override
@@ -190,7 +213,7 @@ public class BusinessConnectionSession extends AbstractConnectionSession impleme
                 closeNoAuthSessionTask.cancel(true);
                 closeNoAuthSessionTask = getCloseNoAuthSessionTask(3000);
             }
-            long actId = msg instanceof Message<?> m_ ? m_.id() : 0;
+            var actId = msg instanceof Message<?> m_ ? m_.id() : 0;
             var errorMessage = new ErrorMessage(actId, new IllegalAccessException("require authenticate"));
             ctx.write(errorMessage);
         }
@@ -206,7 +229,7 @@ public class BusinessConnectionSession extends AbstractConnectionSession impleme
         }
 
         private void doAuth(ChannelHandlerContext ctx, AuthenticationMessage authMsg) {
-            Database userDb = HashDBMSApp.dbSystem.get().getDatabase("user");
+            Database userDb = dbSystem.getDatabase("user");
             Runnable restart = pauseCloseNoAuthSessionTask();
             userDb.submitOpsTask(OpsTask.of(() -> userDb.get(authMsg.body().uname())))
                     .thenAcceptAsync(hValue -> {
@@ -247,36 +270,36 @@ public class BusinessConnectionSession extends AbstractConnectionSession impleme
         private DBClientException serverClosedException;
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, AppCommandMessage msg) {
+        protected void channelRead0(ChannelHandlerContext ctx, AppCommandMessage request) {
             if (closeLocker != null) {
-                ctx.write((serverClosedException == null ? (serverClosedException = new ServerClosedException("db server is closing")) : serverClosedException).msg(msg.id()));
+                ctx.write((serverClosedException == null ? (serverClosedException = new ServerClosedException("db server is closing")) : serverClosedException).msg(request.id()));
                 return;
             }
             // 处理用户手动的心跳指令
-            if ("PING".equalsIgnoreCase(msg.body())) {
-                ctx.write(new ActAppCommandMessage(msg, "PONG"));
+            if ("PING".equalsIgnoreCase(request.body())) {
+                ctx.write(new ActAppCommandMessage(request, "PONG"));
                 return;
             }
 
             CompileStream<?> compileResult;
             try {
-                compileResult = commandExecutor.compile(msg.body());
+                compileResult = commandExecutor.compile(request.body());
             } catch (DBClientException e) {
                 // 捕获编译期异常
-                ctx.write(new ErrorMessage(msg, e));
+                ctx.write(new ErrorMessage(request, e));
                 return;
             } catch (Exception e) {
                 log.error("uncaught command compile error", e);
-                ctx.write(new ErrorMessage(msg, "db internal error"));
+                ctx.write(new ErrorMessage(request, "db internal error"));
                 return;
             }
             executingCount.incrementAndGet();
-            if (replicationGroup.get().isMaster() || replicationGroup.get().isSlave() && !compileResult.isWrite()) {
+            if (clusterGroup.isMaster() || clusterGroup.isSlave() && !compileResult.isWrite()) {
                 compileResult.execute().handleAsync((result, e) -> {
                     Object ret;
                     if (e == null) {
                         ret = result;
-                        var channelFuture = ctx.writeAndFlush(new ActAppCommandMessage(msg, result));
+                        var channelFuture = ctx.writeAndFlush(new ActAppCommandMessage(request, result));
                         channelFuture.addListener(r -> {
                             if (r.isSuccess()) {
                                 return;
@@ -288,10 +311,10 @@ public class BusinessConnectionSession extends AbstractConnectionSession impleme
                         ErrorMessage errorMessage;
                         // 处理执行线程扔出来的异常
                         if (e instanceof DBClientException dbClientException) {
-                            errorMessage = new ErrorMessage(msg, dbClientException);
+                            errorMessage = new ErrorMessage(request, dbClientException);
                         } else {
                             log.error("execute command execution error", e);
-                            errorMessage = new ErrorMessage(msg, "db internal error");
+                            errorMessage = new ErrorMessage(request, "db internal error");
                         }
                         // write and notify nio thread to send
                         ctx.writeAndFlush(errorMessage);
@@ -334,7 +357,6 @@ public class BusinessConnectionSession extends AbstractConnectionSession impleme
         var authenticationHandler = authenticationHandlerLazy.get();
         var commandExecuteHandler = commandExecuteHandlerLazy.get();
         var protocolSwitchingHandler = protocolSwitchingHandlerLazy.get();
-        var sessionUpgradeHandler = sessionUpgradeHandlerLazy.get();
         var pipeline = channel.pipeline();
         var incorporator = UncaughtExceptionLogger.extract(pipeline);
         pipeline
@@ -363,7 +385,8 @@ public class BusinessConnectionSession extends AbstractConnectionSession impleme
         return STR."Session[\{getMeta()}] \{JsonService.toString(this)}";
     }
 
-    public static final BusinessConnectionSession DEFAULT = new BusinessConnectionSession() {
+
+    private static class DefaultBusinessConnectionSession extends BusinessConnectionSession {
         @Override
         public CacheMap<String, CompileStream<?>> getLocalCommandCache() {
             throw new UnsupportedOperationException();
@@ -408,5 +431,5 @@ public class BusinessConnectionSession extends AbstractConnectionSession impleme
         @Override
         public void onChannelChange(Channel channel) {
         }
-    };
+    }
 }

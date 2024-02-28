@@ -5,7 +5,7 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Date: 2024/1/19 0:06
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public interface CommandExecutor {
     CompletableFuture<Object> execute(String command);

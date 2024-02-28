@@ -9,7 +9,7 @@ import java.nio.channels.ClosedChannelException;
 /**
  * Date: 2023/12/3 14:39
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Getter
 public class ClosedChannelWrapper extends RuntimeException {

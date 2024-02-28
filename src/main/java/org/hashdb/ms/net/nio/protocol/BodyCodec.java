@@ -16,7 +16,7 @@ import java.io.IOException;
 /**
  * Date: 2024/1/17 12:09
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 public enum BodyCodec implements MetaEnum {

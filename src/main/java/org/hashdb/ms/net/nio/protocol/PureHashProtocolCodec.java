@@ -12,7 +12,7 @@ import java.util.List;
  * Date: 2024/1/16 21:19
  * magic version
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 public class PureHashProtocolCodec extends ByteToMessageCodec<Message<?>> {

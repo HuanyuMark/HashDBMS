@@ -4,13 +4,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.manager.DBSystem;
 import org.hashdb.ms.net.bio.BIOConnectionSession;
 import org.hashdb.ms.support.CommandCacheConfig;
+import org.hashdb.ms.support.StaticAutowired;
 import org.hashdb.ms.util.CacheMap;
-import org.hashdb.ms.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -18,12 +17,13 @@ import org.jetbrains.annotations.NotNull;
  * 用来做网络传输的 ConnectionSession, 比如, 要告诉主机
  * 执行写命令的数据库是哪个
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class TransportableConnectionSession extends AbstractConnectionSession implements ConnectionSession {
-    private static final Lazy<DBSystem> SYSTEM = Lazy.of(() -> HashDBMSApp.ctx().getBean(DBSystem.class));
+    @StaticAutowired
+    private static DBSystem SYSTEM;
 
     //    private static final
     @JsonProperty
@@ -58,7 +58,7 @@ public class TransportableConnectionSession extends AbstractConnectionSession im
         if (super.getDatabase() != null) {
             return super.getDatabase();
         }
-        Database db = SYSTEM.get().getDatabase(dbId);
+        Database db = SYSTEM.getDatabase(dbId);
         setDatabase(db);
         return db;
     }

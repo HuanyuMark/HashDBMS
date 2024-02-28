@@ -17,7 +17,7 @@ import java.util.Set;
 /**
  * Date: 2024/2/23 17:21
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  * @version 0.0.1
  */
 public class YamlCommonSerializer extends BeanSerializer {

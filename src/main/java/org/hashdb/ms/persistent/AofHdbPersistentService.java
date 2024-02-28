@@ -3,7 +3,6 @@ package org.hashdb.ms.persistent;
 import lombok.RequiredArgsConstructor;
 import org.hashdb.ms.compiler.CompileStream;
 import org.hashdb.ms.config.AofConfig;
-import org.hashdb.ms.config.ClusterGroupConfig;
 import org.hashdb.ms.config.HdbConfig;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.DatabaseInfos;
@@ -11,6 +10,7 @@ import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.StorableHValue;
 import org.hashdb.ms.manager.SystemInfo;
 import org.hashdb.ms.net.exception.NotFoundDatabaseException;
+import org.hashdb.ms.net.nio.ClusterGroup;
 import org.hashdb.ms.util.AsyncService;
 import org.jetbrains.annotations.NotNull;
 import org.openjdk.jol.info.ClassLayout;
@@ -24,7 +24,7 @@ import java.util.Map;
 /**
  * Date: 2024/1/5 19:58
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @RequiredArgsConstructor
 public class AofHdbPersistentService implements PersistentService {
@@ -81,7 +81,7 @@ public class AofHdbPersistentService implements PersistentService {
     }
 
     @Override
-    public boolean persist(ClusterGroupConfig config) {
+    public boolean persist(ClusterGroup config) {
         return false;
     }
 
@@ -121,7 +121,7 @@ public class AofHdbPersistentService implements PersistentService {
     }
 
     @Override
-    public @NotNull ClusterGroupConfig scanReplicationConfig() {
+    public @NotNull ClusterGroup scanReplicationConfig() {
         return null;
     }
 }

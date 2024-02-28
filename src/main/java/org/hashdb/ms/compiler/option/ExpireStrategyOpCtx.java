@@ -3,7 +3,7 @@ package org.hashdb.ms.compiler.option;
 /**
  * Date: 2023/11/28 22:05
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class ExpireStrategyOpCtx extends EnumOpCtx<ExpireStrategy> {
 

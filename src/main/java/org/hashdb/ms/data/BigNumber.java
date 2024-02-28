@@ -8,7 +8,7 @@ import java.math.BigInteger;
 /**
  * Date: 2023/11/23 22:00
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class BigNumber extends Number implements Comparable<BigNumber> {
     private Number value;

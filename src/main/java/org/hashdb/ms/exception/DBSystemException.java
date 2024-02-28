@@ -6,7 +6,7 @@ import lombok.experimental.StandardException;
  * Date: 2023/11/22 14:05
  * DB 内部的报错，专门针对 DB 编码时，由 DB 内部的错误引起的错误
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @StandardException
 public class DBSystemException extends RuntimeException {

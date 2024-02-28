@@ -3,10 +3,8 @@ package org.hashdb.ms.net.nio;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.util.AttributeKey;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.net.nio.msg.v1.ActMessage;
-import org.hashdb.ms.net.nio.msg.v1.ErrorMessage;
 import org.hashdb.ms.net.nio.msg.v1.Message;
 import org.hashdb.ms.util.AsyncService;
 
@@ -19,63 +17,46 @@ import java.util.concurrent.TimeoutException;
 /**
  * Date: 2024/2/20 14:45
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  * @version 0.0.1
  */
 @Slf4j
 public class ActMessageHandler extends SimpleChannelInboundHandler<ActMessage<?>> implements NamedChannelHandler {
-    private static final AttributeKey<ActMessageHandler> KEY = AttributeKey.newInstance(NamedChannelHandler.handlerName(ActMessageHandler.class));
-
-    public static ActMessageHandler get(Channel channel) {
-        return channel.attr(KEY).get();
-    }
-
     private Channel channel;
 
-    private final LinkedHashMap<Long, RequestContext> responseMap = new LinkedHashMap<>();
-
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) {
         channel = ctx.channel();
-        channel.attr(KEY).set(this);
     }
 
     @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+    public void handlerRemoved(ChannelHandlerContext ctx) {
         clear();
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) {
         clear();
         ctx.fireChannelInactive();
     }
 
+    private final LinkedHashMap<Integer, RequestContext> responseMap = new LinkedHashMap<>();
+
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, ActMessage<?> msg) {
         var reqCtx = responseMap.remove(msg.actId());
-        if (reqCtx != null) {
-            reqCtx.responseFuture.complete(msg);
-            if (!reqCtx.intercept()) {
-                ctx.fireChannelRead(msg);
-            }
-            return;
-        }
-        if (!(msg instanceof ErrorMessage)) {
+        if (reqCtx == null) {
             log.warn("can not found matched request of response '{}'", msg);
             ctx.fireChannelRead(msg);
             return;
         }
-        var firstRequest = responseMap.firstEntry();
-        if (firstRequest == null) {
+        reqCtx.responseFuture.complete(msg);
+        if (!reqCtx.intercept()) {
             ctx.fireChannelRead(msg);
-            return;
         }
-        firstRequest.getValue().responseFuture.complete(msg);
     }
 
     private void clear() {
-        channel.attr(KEY).set(null);
         channel = null;
         responseMap.clear();
     }

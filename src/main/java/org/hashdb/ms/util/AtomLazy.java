@@ -7,7 +7,7 @@ import java.util.function.Supplier;
  * 线程安全懒加载. 但是要注意, 如果 {@link #supplier} 的执行耗时过长
  * 会阻塞其它线程获取缓存值
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class AtomLazy<T> extends Lazy<T> {
     public static <T> AtomLazy<T> of(Supplier<T> supplier) {

@@ -14,7 +14,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Date: 2024/1/18 18:36
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public interface MessageCodec {
 
@@ -38,13 +38,15 @@ public interface MessageCodec {
         });
     }
 
-    @Nullable Message<?> decode(ChannelHandlerContext ctx, ByteBuf in);
+    @Nullable
+    Message<?> decode(ChannelHandlerContext ctx, ByteBuf in);
 
     default @NotNull ByteBuf encode(ChannelHandlerContext ctx, Message<?> msg) {
         return encode(ctx.alloc().buffer(), msg);
     }
 
-    @NotNull ByteBuf encode(ByteBuf buf, Message<?> msg);
+    @NotNull
+    ByteBuf encode(ByteBuf buf, Message<?> msg);
 
     LengthFieldBasedFrameDecoder frameDecoder();
 

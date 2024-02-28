@@ -3,15 +3,16 @@ package org.hashdb.ms.net.bio;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.compiler.LocalCommandExecutor;
 import org.hashdb.ms.compiler.exception.CommandExecuteException;
+import org.hashdb.ms.config.DBServerConfig;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.OpsTask;
 import org.hashdb.ms.exception.DBClientException;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.exception.WorkerInterruptedException;
+import org.hashdb.ms.manager.DBSystem;
 import org.hashdb.ms.net.AbstractConnectionSession;
 import org.hashdb.ms.net.ConnectionSession;
 import org.hashdb.ms.net.bio.client.ActHeartbeatMessage;
@@ -27,6 +28,8 @@ import org.hashdb.ms.net.exception.AuthenticationFailedException;
 import org.hashdb.ms.net.exception.ClosedChannelWrapper;
 import org.hashdb.ms.net.exception.IllegalMessageException;
 import org.hashdb.ms.net.exception.MaxConnectionException;
+import org.hashdb.ms.support.StaticAutowired;
+import org.hashdb.ms.support.StaticScanIgnore;
 import org.hashdb.ms.util.AsyncService;
 import org.hashdb.ms.util.CacheMap;
 import org.hashdb.ms.util.JsonService;
@@ -49,10 +52,11 @@ import java.util.function.Function;
 /**
  * Date: 2023/11/24 16:01
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 @Deprecated
+@StaticScanIgnore
 public class BIOConnectionSession extends AbstractConnectionSession implements ConnectionSession {
 
     private String user;
@@ -71,6 +75,12 @@ public class BIOConnectionSession extends AbstractConnectionSession implements C
     private final BlockingQueue<Message> writeQueue = new LinkedBlockingQueue<>();
 
     private final MessageConsumerChain chain = new MessageConsumerChain();
+
+    @StaticAutowired
+    private static DBServerConfig dbServerConfig;
+
+    @StaticAutowired
+    private static DBSystem dbSystem;
 
     private record ResultWrapper(Object result) {
     }
@@ -103,7 +113,7 @@ public class BIOConnectionSession extends AbstractConnectionSession implements C
     private volatile boolean closing = false;
 
     {
-        localCommandCache = new CacheMap<>(HashDBMSApp.dbServerConfig.get().getCommandCache().getAliveDuration(), HashDBMSApp.dbServerConfig.get().getCommandCache().getCacheSize());
+        localCommandCache = new CacheMap<>(dbServerConfig.getCommandCache().getAliveDuration(), dbServerConfig.getCommandCache().getCacheSize());
         var requestWithNoAuth = new int[]{0};
         Function<Integer, ScheduledFuture<?>> getCloseNoAuthSessionTask = timeout -> AsyncService.setTimeout(() -> {
             if (user != null) {
@@ -158,7 +168,7 @@ public class BIOConnectionSession extends AbstractConnectionSession implements C
             if (authMsg.getPasswordAuth().password() == null) {
                 return sendAuthFailedMsg();
             }
-            Database userDb = HashDBMSApp.dbSystem.get().getDatabase("user");
+            Database userDb = dbSystem.getDatabase("user");
             @SuppressWarnings("unchecked")
             Map<String, String> user = (Map<String, String>) HValue.unwrapData(userDb.submitOpsTaskSync(OpsTask.of(() -> userDb.get(authMsg.getPasswordAuth().username()))));
             if (user == null || !user.get("pwd").equals(authMsg.getPasswordAuth().password())) {
@@ -314,8 +324,8 @@ public class BIOConnectionSession extends AbstractConnectionSession implements C
             }
         });
 
-        if (connectionCount.getAndIncrement() > HashDBMSApp.dbServerConfig.get().getMaxConnections()) {
-            connectionCount.set(HashDBMSApp.dbServerConfig.get().getMaxConnections());
+        if (connectionCount.getAndIncrement() > dbServerConfig.getMaxConnections()) {
+            connectionCount.set(dbServerConfig.getMaxConnections());
             MaxConnectionException exception = new MaxConnectionException("out of max connection");
             try {
                 send(new ErrorMessage(exception));
@@ -377,8 +387,8 @@ public class BIOConnectionSession extends AbstractConnectionSession implements C
         if (aliveChecker != null) {
             return;
         }
-        long heartbeatInterval = HashDBMSApp.dbServerConfig.get().getHeartbeatInterval();
-        int timeoutRetry = HashDBMSApp.dbServerConfig.get().getTimeoutRetry();
+        long heartbeatInterval = dbServerConfig.getHeartbeatInterval();
+        int timeoutRetry = dbServerConfig.getTimeoutRetry();
         aliveChecker = AsyncService.setInterval(() -> {
             if (System.currentTimeMillis() - lastGetTime <= heartbeatInterval) {
                 actHeartbeat();

@@ -14,7 +14,7 @@ import java.util.Map;
  * 提供者关键字的特点就是, 构造的任务没有入参
  * 所以, 一般就用来当作命令的开头关键字
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public enum SupplierKeyword implements Keyword<SupplierKeyword> {
     GET(GetCtx.class),

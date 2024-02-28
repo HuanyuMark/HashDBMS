@@ -8,7 +8,7 @@ import java.util.concurrent.ScheduledFuture;
 /**
  * Date: 2024/2/21 20:20
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class ByteReactive extends Number implements Reactive {
     private byte value;

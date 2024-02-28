@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
  * Date: 2023/11/28 19:21
  * 数据库视图, 根据给定的模式串, 筛选一遍key, 再将操作代理给原数据库
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class DatabaseView implements IDatabase, TaskConsumer {
     protected final Pattern pattern;

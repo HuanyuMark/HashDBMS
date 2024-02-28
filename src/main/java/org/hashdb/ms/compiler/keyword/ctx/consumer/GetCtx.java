@@ -12,7 +12,7 @@ import java.util.List;
  * 在编译时, 确认使用哪个数据结构的 Get 关键字, 在编译时能确认是哪个关键字, 运行时就运行哪个关键字
  * 否则运行时编译, 效率低, 其它在这个包下的关键字, 基本都有这个问题, 职责也与这个类相似
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class GetCtx extends InterpretCtx {
     protected GetCtx(CompileCtx<?> fatherCompileCtx) {

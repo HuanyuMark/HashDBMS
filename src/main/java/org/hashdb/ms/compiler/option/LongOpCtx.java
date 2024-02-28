@@ -6,7 +6,7 @@ import org.hashdb.ms.compiler.exception.CommandCompileException;
 /**
  * Date: 2023/11/25 18:18
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public abstract class LongOpCtx extends ParseableOpCtx<Long> {
     public LongOpCtx(Long defaultValue) {

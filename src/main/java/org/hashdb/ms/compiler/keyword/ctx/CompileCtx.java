@@ -37,7 +37,7 @@ import java.util.function.Function;
 /**
  * Date: 2023/11/25 0:34
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 public abstract class CompileCtx<S extends DatabaseCompileStream> implements CompilerNode {

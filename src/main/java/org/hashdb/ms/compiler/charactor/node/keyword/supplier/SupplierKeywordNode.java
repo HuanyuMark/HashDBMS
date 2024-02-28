@@ -10,7 +10,7 @@ import java.util.function.Supplier;
 /**
  * Date: 2023/12/8 16:51
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public abstract class SupplierKeywordNode extends KeywordNode {
 

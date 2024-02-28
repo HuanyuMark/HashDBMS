@@ -15,7 +15,7 @@ import java.util.function.Supplier;
  * 克隆一遍json对象，否则命令重新运行时，会读写重复的对象(引用相同)
  * 导致读写的含义混乱(可读可写对象不能有多处引用)
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class JsonValueCtx extends SupplierCtx {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)

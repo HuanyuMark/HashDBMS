@@ -3,6 +3,7 @@ package org.hashdb.ms.net.nio.protocol;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.net.exception.UnsupportedBodyTypeException;
 import org.hashdb.ms.net.nio.SessionMeta;
@@ -20,7 +21,7 @@ import java.util.function.Predicate;
 /**
  * Date: 2024/1/18 18:35
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 public class HashV1MessageCodec implements MessageCodec {
@@ -63,6 +64,7 @@ public class HashV1MessageCodec implements MessageCodec {
 
         private final BodyCodec bodyCodec;
 
+        @Getter
         private final boolean act;
 
         private static final CodecContext[] ENUM_MAP = values();
@@ -96,12 +98,8 @@ public class HashV1MessageCodec implements MessageCodec {
             return bodyCodec.encode(body);
         }
 
-        public boolean isAct() {
-            return act;
-        }
-
         public interface MessageDecoder<M extends Message<?>> {
-            M decode(long id, BodyCodec bodyCodec, ByteBuf buf);
+            M decode(int id, BodyCodec bodyCodec, ByteBuf buf);
         }
 
         public static class MessageConstructorDecoder<M extends Message<?>> implements MessageDecoder<M> {
@@ -128,8 +126,8 @@ public class HashV1MessageCodec implements MessageCodec {
                             return false;
                         }
                         Class<?>[] parameterTypes = c.getParameterTypes();
-                        return (parameterTypes[0] == long.class || parameterTypes[0] == Long.class) &&
-                                (parameterTypes[1] == long.class || parameterTypes[1] == Long.class);
+                        return (parameterTypes[0] == int.class || parameterTypes[0] == Integer.class) &&
+                                (parameterTypes[1] == int.class || parameterTypes[1] == Integer.class);
                     };
                 } else {
                     filter = c -> {
@@ -137,17 +135,19 @@ public class HashV1MessageCodec implements MessageCodec {
                             return false;
                         }
                         Class<?>[] parameterTypes = c.getParameterTypes();
-                        return parameterTypes[0] == long.class || parameterTypes[0] == Long.class;
+                        return parameterTypes[0] == int.class || parameterTypes[0] == Integer.class;
                     };
                 }
                 try {
                     Constructor<M> messageConstructor = Arrays.stream(constructors).filter(filter).findFirst().orElseThrow(() -> {
                         if (isAct) {
-                            return new NoSuchMethodException("class '" + messageClass + "' definition is illegal. it should contain a constructor with parameters " +
-                                    "'[" + long.class + "," + long.class + "," + Object.class + "]'");
+                            return new NoSuchMethodException(
+                                    STR."class '\{messageClass}' definition is illegal. it should contain a constructor with parameters '[\{long.class},\{long.class},\{Object.class}]'"
+                            );
                         }
-                        return new NoSuchMethodException("class '" + messageClass + "' definition is illegal. it should contain a constructor with parameters " +
-                                "'[" + long.class + "," + Object.class + "]'");
+                        return new NoSuchMethodException(
+                                STR."class '\{messageClass}' definition is illegal. it should contain a constructor with parameters '[\{long.class},\{Object.class}]'"
+                        );
                     });
                     messageConstructor.setAccessible(true);
                     return messageConstructor;
@@ -162,10 +162,10 @@ public class HashV1MessageCodec implements MessageCodec {
             }
 
             @Override
-            public M decode(long id, BodyCodec bodyCodec, ByteBuf buf) {
+            public M decode(int id, BodyCodec bodyCodec, ByteBuf buf) {
                 try {
                     if (isAct) {
-                        var actId = buf.readLong();
+                        var actId = buf.readInt();
                         var body = bodyCodec.decode(messageBodyClass, buf);
                         return messageConstructor.newInstance(id, actId, body);
                     }
@@ -178,7 +178,7 @@ public class HashV1MessageCodec implements MessageCodec {
             }
         }
 
-        public Message<?> decode(long id, ByteBuf buf) {
+        public Message<?> decode(int id, ByteBuf buf) {
             return decoder.decode(id, bodyCodec, buf);
         }
     }
@@ -199,13 +199,13 @@ public class HashV1MessageCodec implements MessageCodec {
         var out = ctx.alloc().buffer();
         // [1] message meta(message type info)
         out.writeByte(msg.getMeta().key());
-        // [8] message id
-        out.writeLong(msg.id());
+        // [4] message id
+        out.writeInt(msg.id());
         if (codec.isAct()) {
             // [4] body length. expand body length for actId
             out.writeInt(body.readableBytes() + 1 + 8);
             // [4] act message id
-            out.writeLong(((ActMessage<?>) msg).actId());
+            out.writeInt(((ActMessage<?>) msg).actId());
         } else {
             // [4] body length
             out.writeInt(body.readableBytes() + 1);
@@ -218,7 +218,7 @@ public class HashV1MessageCodec implements MessageCodec {
     @Override
     public @Nullable Message<?> decode(ChannelHandlerContext ctx, ByteBuf in) {
         // check message
-        if (in.readableBytes() < 13) {
+        if (in.readableBytes() < 9) {
             var bytes = new byte[Math.min(in.readableBytes(), 90)];
             in.readBytes(bytes);
             log.warn("illegal message. buf: {} content: '{}'", in, new String(bytes));
@@ -228,7 +228,7 @@ public class HashV1MessageCodec implements MessageCodec {
         if (messageMeta == null) {
             return null;
         }
-        var id = in.readLong();
+        var id = in.readInt();
         // 略过body长度, 这个body长度是在LengthFieldBasedFrameDecoder被用到的字段
         in.readerIndex(in.readerIndex() + 4);
         // parse body

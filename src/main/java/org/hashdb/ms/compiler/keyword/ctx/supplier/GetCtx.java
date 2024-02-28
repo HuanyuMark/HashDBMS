@@ -14,7 +14,7 @@ import java.util.regex.Pattern;
  * GET $KEY … $KEY
  * GET LIKE $PATTERN1 [,$LIMIT]
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 @Slf4j
 public class GetCtx extends ReadSupplierCtx {

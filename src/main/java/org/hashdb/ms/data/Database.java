@@ -1,12 +1,12 @@
 package org.hashdb.ms.data;
 
-import org.hashdb.ms.HashDBMSApp;
 import org.hashdb.ms.compiler.exception.LikePatternSyntaxException;
 import org.hashdb.ms.config.HdbConfig;
 import org.hashdb.ms.exception.IllegalJavaClassStoredException;
 import org.hashdb.ms.exception.IncreaseUnsupportedException;
 import org.hashdb.ms.exception.ServiceStoppedException;
 import org.hashdb.ms.persistent.PersistentService;
+import org.hashdb.ms.support.StaticAutowired;
 import org.hashdb.ms.util.AsyncService;
 import org.hashdb.ms.util.AtomLazy;
 import org.hashdb.ms.util.BlockingQueueTaskConsumer;
@@ -28,7 +28,7 @@ import java.util.stream.Stream;
  * ThreeSet 有序集合， 可比较
  * BitSet 位集 => BitMap
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class Database extends BlockingQueueTaskConsumer implements Iterable<HValue<?>>, IDatabase, AutoCloseable {
 
@@ -47,6 +47,12 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
     private final AtomicInteger usingCount = new AtomicInteger(0);
     // TODO: 2024/1/15  给用户提供一个选项, 设置读操作多线程化阈值(负数为不使用)与设置读操作时的并行度
     private final List<OpsTask<?>> readTaskBatch = new ArrayList<>();
+
+    @StaticAutowired
+    private static HdbConfig hdbConfig;
+
+    @StaticAutowired
+    private static PersistentService persistentService;
 
     @Override
     protected void exeTask(BlockingDeque<OpsTask<?>> taskDeque) throws InterruptedException {
@@ -115,16 +121,14 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
     public Database(DatabaseInfos databaseInfos) {
         this.info = databaseInfos;
         saveTask = AtomLazy.of(() -> {
-            HdbConfig HDBConfig = HashDBMSApp.ctx().getBean(HdbConfig.class);
-            PersistentService persistentService = HashDBMSApp.ctx().getBean(PersistentService.class);
-            final long nextSaveTime = HDBConfig.getSaveInterval() + info.getLastSaveTime().getTime();
+            final long nextSaveTime = hdbConfig.getSaveInterval() + info.getLastSaveTime().getTime();
             long initDelay = nextSaveTime - System.currentTimeMillis();
             if (initDelay < 0) {
-                initDelay += HDBConfig.getSaveInterval();
+                initDelay += hdbConfig.getSaveInterval();
             }
             return AsyncService.setInterval(() -> {
                 persistentService.persist(this);
-            }, HDBConfig.getSaveInterval(), initDelay);
+            }, hdbConfig.getSaveInterval(), initDelay);
         });
     }
 
@@ -526,7 +530,6 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
 
     public CompletableFuture<Boolean> save() {
         return AsyncService.start(() -> {
-            PersistentService persistentService = HashDBMSApp.ctx().getBean(PersistentService.class);
             persistentService.persist(this);
             return true;
         });
@@ -540,7 +543,6 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
      * @return 异步结果
      */
     public boolean saveSync() {
-        PersistentService persistentService = HashDBMSApp.ctx().getBean(PersistentService.class);
         persistentService.persist(this);
         return true;
     }

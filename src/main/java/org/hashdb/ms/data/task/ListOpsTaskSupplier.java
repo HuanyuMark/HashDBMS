@@ -13,7 +13,7 @@ import java.util.*;
 /**
  * Date: 2023/11/23 23:22
  *
- * @author huanyuMake-pecdle
+ * @author Huanyu Mark
  */
 public class ListOpsTaskSupplier extends RefDataTypeOpsTaskSupplier {
     @Contract(pure = true)
