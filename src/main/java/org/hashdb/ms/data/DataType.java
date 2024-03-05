@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 
 /**
  * Date: 2023/11/22 13:38
+ * todo: Geo 类型, 可以使用 geo 库(已加入pom中依赖)
  *
  * @author Huanyu Mark
  */
@@ -67,22 +68,28 @@ public enum DataType {
         throw new UnsupportedOperationException("can not clone null");
     });
 
-    private final Set<Class<?>> javaClasses;
+    private final Set<Class<?>> javaClassesSet;
+
+    private final Class<?>[] javaClasses;
+
     private final Function<Object, Object> cloner;
     private final ReflectCache<?> reflectCache;
     private final List<String> typeSymbol;
-
     private final Class<?> clonableClass;
-
     private static Map<Class<?>, Set<DataType>> clonableClassMap;
     private static Map<Class<?>, DataType> javaClassMap;
     private static Map<String, DataType> commandSymbolMap;
 
+    private static final DataType[] ENUM_MAP = values();
 
     static {
         // 配合配置项: dbRamConfig.isStoreLikeJsonSequence()
         javaClassMap.put(LinkedHashMap.class, MAP);
         clonableClassMap.replaceAll((clonableClass, set) -> Collections.unmodifiableSet(set));
+    }
+
+    public static DataType match(int b) {
+        return ENUM_MAP[b];
     }
 
     public static class DataTypeInstanceFactory<T> extends ReflectCache<T> {
@@ -121,10 +128,14 @@ public enum DataType {
         this(List.of(clazz), typeSymbol, clonableClass, cloner);
     }
 
-    DataType(@NotNull List<Class<?>> classes, List<String> typeSymbol, Class<?> clonableClass, Function<Object, Object> cloner) {
-        this.javaClasses = classes.stream()
+    DataType(@NotNull List<Class<?>> classes,
+             List<String> typeSymbol,
+             Class<?> clonableClass,
+             Function<Object, Object> cloner) {
+        this.javaClassesSet = classes.stream()
                 .peek(c -> registerClass(c, this))
                 .collect(Collectors.toUnmodifiableSet());
+        this.javaClasses = ((Class<?>[]) javaClassesSet.toArray(Class[]::new));
         this.typeSymbol = typeSymbol;
         this.clonableClass = clonableClass;
         registerClonableClass(clonableClass, this);
@@ -189,8 +200,12 @@ public enum DataType {
         return findCloneableDataType(superclass, thisClass);
     }
 
-    public Set<Class<?>> javaClasses() {
+    public Class<?>[] javaClasses() {
         return javaClasses;
+    }
+
+    public Set<Class<?>> javaClassSet() {
+        return javaClassesSet;
     }
 
     public ReflectCache<?> reflect() {
@@ -228,7 +243,7 @@ public enum DataType {
     }
 
     public boolean support(@Nullable Object any) {
-        return any != null && javaClasses.contains(any.getClass());
+        return any != null && javaClassesSet.contains(any.getClass());
     }
 
     /**

@@ -71,7 +71,7 @@ public class BIOServer extends DBServer {
                 var con = serverChannel.accept();
 
                 ByteBuffer buffer = ByteBuffer.allocate(1024);
-                AsyncService.start(() -> {
+                AsyncService.run(() -> {
                     try (
                             BIOConnectionSession session = new BIOConnectionSession(con);
                     ) {
@@ -107,7 +107,7 @@ public class BIOServer extends DBServer {
 
     @Override
     protected void doClose() {
-        AsyncService.start(() -> {
+        AsyncService.run(() -> {
             CloseMessage closeMessage = new CloseMessage();
             closeMessage.setData(JsonService.toString("database is shutdown"));
             connectionSessionList.parallelStream().forEach(session -> session.close(closeMessage));

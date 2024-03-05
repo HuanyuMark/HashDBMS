@@ -54,8 +54,8 @@ public abstract class ExpressionEnvironmentPostProcessor implements EnvironmentP
                 continue;
             }
             // propertySource里的配置项都经过了扁平化处理, 值不会是集合类型
-//            if (value instanceof Collection<?> c) {
-//                var temp = evaluateCollection(((Collection<Object>) c));
+//            if (value instanceof Collection<?> native) {
+//                var temp = evaluateCollection(((Collection<Object>) native));
 //                if (temp == source) {
 //                    continue;
 //                }

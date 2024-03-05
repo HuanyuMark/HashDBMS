@@ -1,6 +1,7 @@
 package org.hashdb.ms.support;
 
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.NoSuchElementException;
@@ -41,6 +42,19 @@ public class Checker {
         return val;
     }
 
+    public static <N extends Number> N gt(N val, N compareNum, N defaultVal, String msg) {
+        if (val == null) {
+            if (defaultVal == null) {
+                throw Exit.error(log, msg, "value is required");
+            }
+            val = defaultVal;
+        }
+        if (val.longValue() <= compareNum.longValue()) {
+            throw Exit.error(log, msg, STR."value should be > \{compareNum}");
+        }
+        return val;
+    }
+
     public static <N extends Number> N notNegativeOrZero(N val, N defaultVal, String msg) {
         if (val == null) {
             if (defaultVal == null) {
@@ -69,15 +83,15 @@ public class Checker {
     }
 
     /**
-     * @param values 具有不同优先级的值, 最后一个值不能为null
+     * @param values 具有不同优先级的值(由高到低), 最后一个值不能为null
      * @return {@code values} 里第一个非null值
      */
     @SafeVarargs
-    public static <T> T require(T... values) {
+    public static <T> @NotNull T require(T... values) {
         if (values.length == 0) {
             throw new NoSuchElementException();
         }
-        T last = Objects.requireNonNull(values[values.length - 1], "values.last is default value, can not be null");
+        T last = Objects.requireNonNull(values[values.length - 1], "values[values.length - 1] is default value, can not be null");
         for (T value : values) {
             if (value != null) {
                 return value;
@@ -94,7 +108,7 @@ public class Checker {
                 return value;
             }
         }
-        return Objects.requireNonNull(defaultValue.get(), "defaultValue getter can not be null");
+        return Objects.requireNonNull(defaultValue.get(), "supplied defaultValue can not be null");
     }
 
     @SafeVarargs

@@ -1,6 +1,7 @@
 package org.hashdb.ms.data;
 
 import org.hashdb.ms.compiler.exception.LikePatternSyntaxException;
+import org.hashdb.ms.config.AofConfig;
 import org.hashdb.ms.config.HdbConfig;
 import org.hashdb.ms.exception.IllegalJavaClassStoredException;
 import org.hashdb.ms.exception.IncreaseUnsupportedException;
@@ -50,6 +51,9 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
 
     @StaticAutowired
     private static HdbConfig hdbConfig;
+
+    @StaticAutowired
+    private static AofConfig aofConfig;
 
     @StaticAutowired
     private static PersistentService persistentService;
@@ -576,7 +580,7 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
 
     @Override
     public String toString() {
-        return "Database" + info;
+        return STR."Database\{info}";
     }
 
     @Override
@@ -584,4 +588,23 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
         stopConsumeOpsTask().join();
         stopSaveTask();
     }
+
+//    /**
+//     * @return 如果启用了aof持久化功能, 则返回aofFile
+//     * 若aofFile在硬盘上不存在, 则创建并写入现在数据库中
+//     * 存有的k-v
+//     */
+//    public AofFile getBaseFile() {
+//        if (!aofConfig.isEnabled()) {
+//            return null;
+//        }
+//        if (aofBaseFile != null) {
+//            return aofBaseFile;
+//        }
+//        File aofFileRoot = aofConfig.getRootDir();
+//        File aofBaseFile = new File(aofFileRoot, aofConfig.getAofBaseFileName());
+//        if (aofBaseFile.exists() || !aofBaseFile.mkdir()) {
+//            throw Exit.error()
+//        }
+//    }
 }

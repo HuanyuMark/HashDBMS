@@ -1,16 +1,12 @@
 package org.hashdb.ms.util;
 
 import com.fasterxml.jackson.core.*;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufOutputStream;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.compiler.keyword.CompilerNode;
@@ -89,14 +85,13 @@ public class JsonService {
         }
     }
 
-    public static ByteBuf toByteBuf(Object obj) {
-        var out = new ByteBufOutputStream(ByteBufAllocator.DEFAULT.buffer());
+    public static void transferTo(Object obj, ByteBuf in) {
+        var out = new ByteBufOutputStream(in);
         try {
             COMMON.writeValue(((OutputStream) out), obj);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        return out.buffer();
     }
 
     public static <T> @Nullable T parse(String json, Class<T> clazz) throws JsonProcessingException {
@@ -145,7 +140,7 @@ public class JsonService {
     }
 
     @StaticAutowired
-    public static void loadStatic(DBRamConfig dbRamConfig) {
+    private static void config(DBRamConfig dbRamConfig) {
         SimpleModule dataTypeModule = new SimpleModule("hashdb", JACKSON_SERIALIZER_VERSION);
         // jackson 默认使用 LikedHashMap 来存储 Object 型 Json, 其顺序与Json串中规定的顺序一致
         // 如果不需要保持一致,则可以使用这个自定义的反序列化器, 将 Object 型映射的java对象改为 HashMap
@@ -154,9 +149,11 @@ public class JsonService {
             // 配合DataType.List的实现类
             dataTypeModule.addDeserializer(List.class, new LinkedListDeserializer());
         }
-        dataTypeModule.addDeserializer(Message.class, new MessageDeserializer());
-        dataTypeModule.addDeserializer(CompilerNode.class, new CompilerNodeDeserializer());
-        COMMON.registerModule(dataTypeModule);
+//        dataTypeModule.addDeserializer(Message.class, new MessageDeserializer());
+//        dataTypeModule.addDeserializer(CompilerNode.class, new CompilerNodeDeserializer());
+//        COMMON.registerModule(dataTypeModule);
+        COMMON.enable(DeserializationFeature.USE_LONG_FOR_INTS);
+//        COMMON.enable(DeserializationFeature.)
     }
 
     private static class HashMapDeserializer extends StdDeserializer<HashMap<Object, Object>> {

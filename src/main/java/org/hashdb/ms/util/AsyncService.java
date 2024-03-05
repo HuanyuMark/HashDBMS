@@ -10,27 +10,31 @@ import java.util.function.Supplier;
  * 提供一个全局的异步服务支持
  */
 public class AsyncService {
-    private static final Lazy<ExecutorService> executorService = AtomLazy.of(() -> {
-        var threadFactory = Thread.ofVirtual()
+    private static final ExecutorService executorService;
+
+    private static final ThreadFactory sheduleThreadFactory;
+
+    static {
+        var executorServiceThreadFactory = Thread.ofVirtual()
                 .name("vt-", 0)
                 .inheritInheritableThreadLocals(true)
                 .uncaughtExceptionHandler((thread, e) -> {
                     System.err.printf("Thread: [%s] throw exception: %s\n", thread.getName(), e);
                 })
                 .factory();
-        return Executors.newThreadPerTaskExecutor(threadFactory);
-    });
-
-    private static final Lazy<ScheduledExecutorService> scheduledExecutorService = AtomLazy.of(() -> {
-        var threadFactory = Thread.ofVirtual()
+        executorService = Executors.newThreadPerTaskExecutor(executorServiceThreadFactory);
+        sheduleThreadFactory = Thread.ofVirtual()
                 .name("vs-", 0)
                 .inheritInheritableThreadLocals(true)
                 .uncaughtExceptionHandler((thread, e) -> {
                     System.err.printf("Thread: [%s] throw exception: %s\n", thread.getName(), e);
                 })
                 .factory();
-        return Executors.newScheduledThreadPool(Integer.MAX_VALUE, threadFactory);
-    });
+    }
+
+    private static ScheduledExecutorService singleThreadScheduledService() {
+        return new ScheduledThreadPoolExecutor(1, sheduleThreadFactory);
+    }
 
     public static ThreadFactory virtualFactory(String threadPrefix) {
         return Thread.ofVirtual()
@@ -43,7 +47,19 @@ public class AsyncService {
     }
 
     public static ExecutorService service() {
-        return executorService.get();
+        return executorService;
+    }
+
+    /**
+     * @return 如果在时限内正常关闭, 则true否则false
+     */
+    public static boolean close(int time, TimeUnit timeUnit) {
+        executorService.shutdown();
+        try {
+            return executorService.awaitTermination(time, timeUnit);
+        } catch (InterruptedException e) {
+            return false;
+        }
     }
 
     public static <T> CompletableFuture<T> start(Supplier<T> supplier) {
@@ -58,19 +74,29 @@ public class AsyncService {
         return CompletableFuture.runAsync(task, service());
     }
 
-    public static List<? extends CompletableFuture<?>> start(Runnable... task) {
-        return Arrays.stream(task).map(AsyncService::start).toList();
+    public static void run(Runnable task) {
+        executorService.execute(task);
+    }
+
+    public static CompletableFuture<?>[] start(Runnable... task) {
+        return Arrays.stream(task).map(AsyncService::start).toArray(CompletableFuture[]::new);
     }
 
     public static ScheduledFuture<?> setTimeout(Runnable runnable, long milliseconds) {
-        return scheduledExecutorService.get().schedule(runnable, milliseconds, TimeUnit.MILLISECONDS);
+        var service = singleThreadScheduledService();
+        var future = service.schedule(runnable, milliseconds, TimeUnit.MILLISECONDS);
+        service.shutdown();
+        return future;
     }
 
     public static <T> ScheduledFuture<T> setTimeout(Callable<T> callable, long milliseconds) {
-        return scheduledExecutorService.get().schedule(callable, milliseconds, TimeUnit.MILLISECONDS);
+        var service = singleThreadScheduledService();
+        var future = service.schedule(callable, milliseconds, TimeUnit.MILLISECONDS);
+        service.shutdown();
+        return future;
     }
 
-    public static <T> T blockingRun(Supplier<T> task, long milliseconds) throws TimeoutException {
+    public static <T> T syncRun(Supplier<T> task, long milliseconds) throws TimeoutException {
         try {
             return CompletableFuture.supplyAsync(task, service()).get(milliseconds, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
@@ -80,7 +106,7 @@ public class AsyncService {
         }
     }
 
-    public static void blockingRun(Runnable task, long milliseconds) throws TimeoutException {
+    public static void syncRun(Runnable task, long milliseconds) throws TimeoutException {
         try {
             CompletableFuture.runAsync(task, service()).get(milliseconds, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
@@ -91,10 +117,20 @@ public class AsyncService {
     }
 
     public static ScheduledFuture<?> setInterval(Runnable runnable, long milliseconds) {
-        return scheduledExecutorService.get().scheduleAtFixedRate(runnable, 0, milliseconds, TimeUnit.MILLISECONDS);
+        return setInterval(runnable, 0, milliseconds);
     }
 
     public static ScheduledFuture<?> setInterval(Runnable runnable, long milliseconds, long initialDelayMilliseconds) {
-        return scheduledExecutorService.get().scheduleAtFixedRate(runnable, initialDelayMilliseconds, milliseconds, TimeUnit.MILLISECONDS);
+        var service = singleThreadScheduledService();
+        var future = service.scheduleAtFixedRate(runnable, initialDelayMilliseconds, milliseconds, TimeUnit.MILLISECONDS);
+        executorService.execute(() -> {
+            try {
+                future.get();
+            } catch (Exception ignore) {
+            } finally {
+                service.shutdown();
+            }
+        });
+        return future;
     }
 }

@@ -1,9 +1,11 @@
 package org.hashdb.ms;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import de.undercouch.bson4jackson.BsonFactory;
+import de.undercouch.bson4jackson.BsonParser;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.support.ConfigSource;
 import org.hashdb.ms.support.Exit;
-import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.context.ApplicationContext;
@@ -23,6 +25,7 @@ import java.net.URI;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.regex.Pattern;
 
 /**
@@ -43,9 +46,40 @@ public class HashDBMSApp implements ApplicationListener<ContextRefreshedEvent> {
      * @param args 命令行参数
      *             现在支持: --config=[URL or file path], URL支持file://, http://, https://, ftp://协议
      */
-    public static void main(String[] args) {
-        SpringApplication.run(HashDBMSApp.class, prepareArgs(args));
+
+    public record O(String name, long[] array, Object any) {
     }
+
+    public record Other(String text) {
+    }
+
+    public static void main(String[] args) throws IOException {
+        BsonFactory factory = new BsonFactory();
+//        factory.enable(BsonGenerator.Feature.ENABLE_STREAMING);
+        ObjectMapper mapper = new ObjectMapper(factory);
+        long[] longs = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+        O pojo = new O("myName", longs, new Other("this is text"));
+        byte[] bytes = mapper.writeValueAsBytes(pojo);
+        System.out.println(Arrays.toString(bytes));
+        BsonParser parser = factory.createJsonParser(bytes);
+      
+//        while (parser.hasCurrentToken()) {
+//            System.out.println(parser.nextToken());
+//            System.out.println(parser.getCurrentName());
+//            System.out.println(parser.getValueAsString());
+//            System.out.println(Arrays.toString(parser.getBinaryValue()));
+//        }
+//        SpringApplication.run(HashDBMSApp.class, prepareArgs(args));
+//        ResolvableType resolvableType = ResolvableType.forInstance(new Ref<String>() {
+//        });
+    }
+
+
+    public native void test();
+
+    interface Ref<E> {
+    }
+
 
     @Order(10)
     @EventListener(ApplicationContext.class)
@@ -81,7 +115,7 @@ public class HashDBMSApp implements ApplicationListener<ContextRefreshedEvent> {
         if (useEnv) {
             throw Exit.exception();
         }
-        String[] configPrefix = {"--config=", "-c=", "--spring.config.location=", "-Dspring.config.location="};
+        String[] configPrefix = {"--config=", "-native=", "--spring.config.location=", "-Dspring.config.location="};
         String[] filterPrefix = {"--spring.config.name=", "-Dspring.config.name="};
         String configFileDir = null;
         var res = new ArrayList<String>(args.length);

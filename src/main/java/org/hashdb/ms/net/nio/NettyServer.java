@@ -65,7 +65,7 @@ public class NettyServer implements DisposableBean, AutoCloseable {
                 log.info("server is running at [tcp: {}] cost {}ms", serverConfig.getPort(), startTime);
                 return;
             }
-            throw Exit.error("server start failed", res.cause());
+            throw Exit.error(log, "server start failed", res.cause());
         });
         // 启动后, 如果其次启动属于故障恢复, 则等待其它结点的服务发现机制(poll ping)
         // 这个结点被ping通并身份验证后, 执行其它结点给的指令, 执行故障恢复启动的逻辑

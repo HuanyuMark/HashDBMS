@@ -134,6 +134,6 @@ public class ReplicationConnectionSession implements BaseConnectionSession {
 
     @Override
     public String toString() {
-        return "Session[" + getMeta() + "] " + JsonService.mergeObjsToString(base);
+        return STR."Session[\{getMeta()}] \{JsonService.mergeObjsToString(base)}";
     }
 }

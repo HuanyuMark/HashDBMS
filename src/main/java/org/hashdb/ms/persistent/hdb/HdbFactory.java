@@ -1,5 +1,6 @@
-package org.hashdb.ms.persistent;
+package org.hashdb.ms.persistent.hdb;
 
+import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.exception.DBClientException;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -14,7 +15,8 @@ import java.util.Objects;
  *
  * @author Huanyu Mark
  */
-public class DBFileFactory {
+@Slf4j
+public class HdbFactory {
     public static final String INDEX_FILE_NAME = "index.db";
 
     @Contract("_, _ -> new")
@@ -42,4 +44,5 @@ public class DBFileFactory {
     public static File[] loadDBChunkFile(@NotNull File dbFileDir) {
         return Objects.requireNonNullElse(dbFileDir.listFiles(f -> f.getName().matches("\\d+\\.chunk\\.db")), new File[0]);
     }
+
 }

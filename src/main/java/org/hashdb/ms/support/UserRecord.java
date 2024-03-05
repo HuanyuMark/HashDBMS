@@ -11,17 +11,17 @@ import org.springframework.boot.context.properties.bind.ConstructorBinding;
  */
 @ToString
 @EqualsAndHashCode
-public final class User {
+public final class UserRecord {
     private final String username;
     private final String password;
 
     @ConstructorBinding
-    public User(String username, String password, String uname, String pwd) {
+    public UserRecord(String username, String password, String uname, String pwd) {
         this.username = Checker.require("123123", "username/uname", username, uname);
         this.password = Checker.require("123123", "password", password, pwd);
     }
 
-    public User(String username, String password) {
+    public UserRecord(String username, String password) {
         this(username, password, null, null);
     }
 

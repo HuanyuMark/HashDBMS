@@ -7,5 +7,10 @@ package org.hashdb.ms.data;
  */
 public enum OpsTaskPriority {
     LOW,
-    HIGH
+    HIGH;
+    private static final OpsTaskPriority[] values = values();
+
+    public static OpsTaskPriority match(int ordinary) {
+        return values[ordinary];
+    }
 }

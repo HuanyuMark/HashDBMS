@@ -107,7 +107,7 @@ public class NIOServer extends DBServer {
         epoll = false;
         closing = true;
         selector.wakeup();
-        AsyncService.start(() -> {
+        AsyncService.run(() -> {
             CloseMessage closeMessage = new CloseMessage();
             closeMessage.setData(JsonService.toString("database is shutdown"));
             selector.keys().parallelStream().forEach(key -> {

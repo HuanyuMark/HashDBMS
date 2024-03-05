@@ -1,4 +1,4 @@
-package org.hashdb.ms.persistent;
+package org.hashdb.ms.persistent.aof;
 
 import org.jetbrains.annotations.Nullable;
 

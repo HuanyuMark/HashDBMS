@@ -36,7 +36,7 @@ public abstract class ConfigSource implements AutoCloseable {
      */
     protected final StringBuilder buffer = new StringBuilder();
 
-    protected static final String lineSeparator = System.lineSeparator();
+    protected static final String lineSeparator = "\n";
     // 有分区, 但是要耗费更多空间, 空间换时间
     // protected final StringBuilder[] blockBuffers = IntStream.range(0, Block.values.length*3).mapToObj(i -> new StringBuilder()).toArray(StringBuilder[]::new);
 
@@ -133,7 +133,7 @@ public abstract class ConfigSource implements AutoCloseable {
         try {
             body = YamlService.toStringWriter(content).toString();
         } catch (Exception e) {
-            throw Exit.error(STR."can not convert '\{content}' to yaml text", e);
+            throw Exit.error(log, STR."can not convert '\{content}' to yaml text", e);
         }
         return body;
     }
@@ -177,7 +177,7 @@ public abstract class ConfigSource implements AutoCloseable {
                 writer.write(buffer.toString());
             }
         } catch (IOException e) {
-            throw Exit.error("can not automatically update config file", e);
+            throw Exit.error(log, "can not automatically update config file", e);
         }
     }
 

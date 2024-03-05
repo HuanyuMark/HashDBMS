@@ -122,11 +122,11 @@ public class ServerNode {
             throw Exit.error(log, STR."invalid server node. {host:\{host}, port:\{port}", "port is out of range [0,65535]");
         }
         this.host = Checker.require("illegal host", "host/ip", host, ip);
-        AsyncService.start(() -> {
+        AsyncService.run(() -> {
             try {
                 address = InetAddress.getByName(this.host);
             } catch (UnknownHostException e) {
-                throw Exit.error(STR."unresolvable host: '\{this.host}'.", e);
+                throw Exit.error(log, STR."unresolvable host: '\{this.host}'.", e);
             }
         });
         this.port = port;
@@ -188,7 +188,7 @@ public class ServerNode {
                 try {
                     address = InetAddress.getByName(host);
                 } catch (UnknownHostException e) {
-                    throw Exit.error(STR."expect resolvable host, but can not resolve. host: '\{host}'", e);
+                    throw Exit.error(log, STR."expect resolvable host, but can not resolve. host: '\{host}'", e);
                 }
             }
         });
@@ -256,15 +256,15 @@ public class ServerNode {
         var promise = new DefaultPromise<Channel>(serverNodeEventLoopGroup.next());
         if (this.address == null) {
             try {
-                AsyncService.blockingRun(() -> {
+                AsyncService.syncRun(() -> {
                     try {
                         this.address = InetAddress.getByName(host);
                     } catch (UnknownHostException e) {
-                        throw Exit.error(STR."unresolvable host '\{host}'", e);
+                        throw Exit.error(log, STR."unresolvable host '\{host}'", e);
                     }
                 }, 5_000);
             } catch (TimeoutException e) {
-                throw Exit.error(STR."unresolvable host '\{host}'", e);
+                throw Exit.error(log, STR."unresolvable host '\{host}'", e);
             }
         }
         var poller = AsyncService.setInterval(() -> {

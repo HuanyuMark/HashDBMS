@@ -81,6 +81,26 @@
             <artifactId>spring-expression</artifactId>
         </dependency>
 
+        <!-- collections -->
+<!--        <dependency>-->
+<!--            <groupId>org.apache.commons</groupId>-->
+<!--            <artifactId>commons-collections4</artifactId>-->
+<!--            <version>4.4</version>-->
+<!--        </dependency>-->
+
+        <!-- system call / platform feature support -->
+        <dependency>
+            <groupId>com.github.jnr</groupId>
+            <artifactId>jnr-posix</artifactId>
+            <version>3.1.19</version>
+        </dependency>
+        <!-- geo support -->
+        <dependency>
+            <groupId>com.github.davidmoten</groupId>
+            <artifactId>geo</artifactId>
+            <version>0.8.0</version>
+        </dependency>
+
         <!--IDE helper-->
         <dependency>
             <groupId>org.jetbrains</groupId>

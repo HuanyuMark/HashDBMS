@@ -14,6 +14,7 @@ import org.hashdb.ms.manager.StorableSystemInfo;
 import org.hashdb.ms.manager.SystemInfo;
 import org.hashdb.ms.net.exception.NotFoundDatabaseException;
 import org.hashdb.ms.net.nio.ClusterGroup;
+import org.hashdb.ms.persistent.hdb.HdbFactory;
 import org.hashdb.ms.util.AtomLazy;
 import org.hashdb.ms.util.Lazy;
 import org.hashdb.ms.util.YamlService;
@@ -62,17 +63,17 @@ public class DefaultPersistentService extends FileSystemPersistentService {
                 if (size < HDBConfig.getChunkSize()) {
                     continue;
                 }
-                File dbChunkFile = DBFileFactory.newHDBChunkFile(dbFileDir, chunkId++);
+                File dbChunkFile = HdbFactory.newHDBChunkFile(dbFileDir, chunkId++);
                 FileUtils.writeObject(dbChunkFile, buffer);
                 buffer.clear();
             }
             if (!buffer.isEmpty()) {
-                File dbChunkFile = DBFileFactory.newHDBChunkFile(dbFileDir, chunkId);
+                File dbChunkFile = HdbFactory.newHDBChunkFile(dbFileDir, chunkId);
                 FileUtils.writeObject(dbChunkFile, buffer);
                 buffer.clear();
             }
             // 写入数据库索引文件， 保存数据库的基本信息
-            File indexFile = DBFileFactory.newIndexFile(dbFileDir);
+            File indexFile = HdbFactory.newIndexFile(dbFileDir);
 //            FileUtils.prepareDir(indexFile, () -> new DBFileAccessFailedException("can`t access index db file '" + indexFile.getAbsolutePath() + "'"));
             DatabaseInfos dbInfos = database.getInfos();
             dbInfos.setLastSaveTime(new Date());
@@ -167,7 +168,7 @@ public class DefaultPersistentService extends FileSystemPersistentService {
 
     private static DatabaseInfos scanDatabaseInfo(File dbFileDir) {
         // 读取数据库索引文件，获取数据库基本信息
-        File indexFile = DBFileFactory.loadIndexFile(dbFileDir);
+        File indexFile = HdbFactory.loadIndexFile(dbFileDir);
         return (DatabaseInfos) FileUtils.readObject(indexFile);
     }
 
@@ -188,7 +189,7 @@ public class DefaultPersistentService extends FileSystemPersistentService {
         DatabaseInfos databaseInfos = scanDatabaseInfo(dbFileDir);
 
         // 读取数据库的 HashTable 分块
-        File[] dbChunkFile = DBFileFactory.loadDBChunkFile(dbFileDir);
+        File[] dbChunkFile = HdbFactory.loadDBChunkFile(dbFileDir);
         var initEntries = Arrays.stream(dbChunkFile)
                 .parallel().flatMap(file -> {
                     @SuppressWarnings("unchecked")

@@ -1,5 +1,8 @@
 package org.hashdb.ms.data;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.config.DBRamConfig;
@@ -12,6 +15,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Proxy;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Objects;
 import java.util.Set;
@@ -19,24 +23,25 @@ import java.util.concurrent.ScheduledFuture;
 
 /**
  * Date: 2023/11/21 2:37
- * 在{@link Database} 中存储 K - V 的pair
+ * 在{@link Database} 中存储 K - V 的pair 以及其对应的上下文
  *
  * @author Huanyu Mark
  */
 @Slf4j
+@EqualsAndHashCode(cacheStrategy = EqualsAndHashCode.CacheStrategy.LAZY)
 public class HValue<T> implements Cloneable {
     private static HValue<?> EMPTY;
 
-    private static OpsTaskPriority DEFAULT_EXPIRED_KEY_DELETE_PRIORITY;
+    private static DBRamConfig dbRamConfig;
 
     public static HValue<?> empty() {
         return EMPTY;
     }
 
     @StaticAutowired
-    private void loadStatic(DBRamConfig dbRamConfig) {
+    private void loadConfig(DBRamConfig dbRamConfig) {
+        HValue.dbRamConfig = dbRamConfig;
         EMPTY = new HValue<>();
-        DEFAULT_EXPIRED_KEY_DELETE_PRIORITY = dbRamConfig.getExpiredKeyDeletePriority();
     }
 
     public static <T> T unwrapData(@Nullable HValue<T> hValue) {
@@ -53,27 +58,45 @@ public class HValue<T> implements Cloneable {
     private T data;
 
     @Getter
-    private final Date createDate = new Date();
+    private Date modifyTime;
 
     /**
      * 如果为空，则永不过期
      */
     // TODO: 2024/1/14 可以提供给用户一个默认设置过期时间的选项, 通过设置ExpireTimeStrategy来指定, 固定减少/增加多少,区间,ln增长等等
     @Getter
+    @Nullable
     private Long expireMilliseconds;
     @Getter
+    @Nullable
     private Date expireDate;
 
     /**
      * 如果为高,则触发删除任务时, 将删除任务插入任务队列头部, 优先执行
      */
     @Getter
-    private OpsTaskPriority deletePriority = DEFAULT_EXPIRED_KEY_DELETE_PRIORITY;
+    private OpsTaskPriority deletePriority = dbRamConfig.getExpiredKeyDeletePriority();
     /**
      * 是否取消， 当该key过期时， 清除该key
      */
     private ScheduledFuture<?> clearWhenExpiredTask;
 
+    /**
+     * Note: {@link Database}需要主动调用{@link #clearBy(Database)} 来开启过期任务
+     * 否则这个{@link #expireDate}不会生效
+     */
+    public HValue(String key, @NotNull T data, @NotNull Date expireDate, @NotNull OpsTaskPriority deletePriority) {
+        Objects.requireNonNull(key);
+        Objects.requireNonNull(data);
+        this.key = key;
+        this.data = data;
+        this.expireDate = expireDate;
+        this.deletePriority = deletePriority;
+    }
+
+    /**
+     * 新建一个k-v上下文
+     */
     public HValue(String key, @NotNull T data) {
         Objects.requireNonNull(key);
         Objects.requireNonNull(data);
@@ -98,11 +121,7 @@ public class HValue<T> implements Cloneable {
     public void data(T data) {
         Objects.requireNonNull(data);
         this.data = data;
-    }
-
-    public void setData(T data) {
-        Objects.requireNonNull(data);
-        this.data = data;
+        this.modifyTime = new Date();
     }
 
     public String key() {
@@ -124,7 +143,7 @@ public class HValue<T> implements Cloneable {
 
     private ScheduledFuture<?> startExpiredTask(Database database, Long expireMilliseconds, @Nullable OpsTaskPriority priority) {
         cancelClear();
-        deletePriority = Objects.requireNonNullElse(priority, DEFAULT_EXPIRED_KEY_DELETE_PRIORITY);
+        deletePriority = Objects.requireNonNullElse(priority, dbRamConfig.getExpiredKeyDeletePriority());
         return AsyncService.setTimeout(() -> {
             var deleteTask = OpsTask.of(() -> database.del(key));
             if (deletePriority == OpsTaskPriority.HIGH) {
@@ -133,6 +152,39 @@ public class HValue<T> implements Cloneable {
                 database.submitOpsTask(deleteTask);
             }
         }, expireMilliseconds);
+    }
+
+    private void submitDelTaskCurrently(Database database) {
+        var deleteTask = OpsTask.of(() -> database.del(key));
+        if (deletePriority == OpsTaskPriority.HIGH) {
+            database.submitOpsTask(deleteTask, OpsTaskPriority.HIGH);
+        } else {
+            database.submitOpsTask(deleteTask);
+        }
+    }
+
+    public HValue<T> clearBy(Database database) {
+        if (expireDate != null) {
+            long time = expireDate.getTime();
+            long remaining = System.currentTimeMillis() - time;
+            if (remaining < 0) {
+                return this;
+            }
+            clearWhenExpiredTask = startExpiredTask(database, remaining, deletePriority);
+            return this;
+        }
+        if (expireMilliseconds != null) {
+            if (expireMilliseconds == -1) {
+                this.expireMilliseconds = null;
+                return this;
+            }
+            if (expireMilliseconds == -2) {
+                submitDelTaskCurrently(database);
+                return this;
+            }
+            clearWhenExpiredTask = startExpiredTask(database, expireMilliseconds, deletePriority);
+        }
+        return this;
     }
 
     /**
@@ -158,35 +210,12 @@ public class HValue<T> implements Cloneable {
             return this;
         }
         if (expireMilliseconds <= -2) {
-            var deleteTask = OpsTask.of(() -> database.del(key));
-            if (deletePriority == OpsTaskPriority.HIGH) {
-                database.submitOpsTask(deleteTask, OpsTaskPriority.HIGH);
-            } else {
-                database.submitOpsTask(deleteTask);
-            }
+            submitDelTaskCurrently(database);
             return this;
         }
 
         this.expireMilliseconds = expireMilliseconds;
         this.expireDate = new Date(System.currentTimeMillis() + expireMilliseconds);
-        // 如果不传值, 则不改变原优先级
-        if (priority == null) {
-            priority = this.deletePriority;
-        }
-        clearWhenExpiredTask = startExpiredTask(database, expireMilliseconds, priority);
-        return this;
-    }
-
-    @Deprecated
-    public HValue<T> clearBy(Database database, Date expireDate, @Nullable OpsTaskPriority priority) {
-        if (expireMilliseconds == null) {
-            return this;
-        }
-        this.expireDate = expireDate;
-        this.expireMilliseconds = expireDate.getTime() - System.currentTimeMillis();
-        if (isExpired()) {
-            throw new DBSystemException();
-        }
         // 如果不传值, 则不改变原优先级
         if (priority == null) {
             priority = this.deletePriority;
@@ -252,29 +281,35 @@ public class HValue<T> implements Cloneable {
         }
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof HValue<?> hValue)) return false;
+    private static final ByteBuf SET = ByteBufAllocator.DEFAULT.buffer("SET ".getBytes(StandardCharsets.UTF_8).length);
 
-        if (!Objects.equals(key, hValue.key)) return false;
-        if (!Objects.equals(data, hValue.data)) return false;
-        if (!createDate.equals(hValue.createDate)) return false;
-        if (!Objects.equals(expireMilliseconds, hValue.expireMilliseconds))
-            return false;
-        if (!Objects.equals(expireDate, hValue.expireDate)) return false;
-        return deletePriority == hValue.deletePriority;
+    private static final ByteBuf expireOption = ByteBufAllocator.DEFAULT.buffer("expire=".getBytes(StandardCharsets.UTF_8).length);
+
+    static {
+        SET.writeCharSequence("SET", StandardCharsets.UTF_8);
+        SET.discardReadBytes();
+        expireOption.writeCharSequence("expire=", StandardCharsets.UTF_8);
+        expireOption.discardReadBytes();
     }
 
-    @Override
-    public int hashCode() {
-        int result = key != null ? key.hashCode() : 0;
-        result = 31 * result + (data != null ? data.hashCode() : 0);
-        result = 31 * result + createDate.hashCode();
-        result = 31 * result + (expireMilliseconds != null ? expireMilliseconds.hashCode() : 0);
-        result = 31 * result + (expireDate != null ? expireDate.hashCode() : 0);
-        result = 31 * result + (deletePriority != null ? deletePriority.hashCode() : 0);
-        return result;
+    public ByteBuf writeCommand(ByteBuf buffer) {
+        buffer.writeBytes(SET);
+        buffer.writeCharSequence(key, StandardCharsets.UTF_8);
+        buffer.writeChar(' ');
+        JsonService.transferTo(data, buffer);
+        if (expireMilliseconds != null) {
+            buffer.writeChar(' ');
+            buffer.writeChar('-');
+            buffer.writeChar('-');
+            if (deletePriority == OpsTaskPriority.LOW) {
+                buffer.writeChar('l');
+            } else {
+                buffer.writeChar('h');
+            }
+            buffer.writeBytes(expireOption);
+            buffer.writeCharSequence(String.valueOf(expireMilliseconds), StandardCharsets.UTF_8);
+        }
+        return buffer;
     }
 
     @Override

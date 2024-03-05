@@ -10,20 +10,22 @@ import java.io.Serial;
 import java.io.Serializable;
 import java.util.Date;
 
+
 /**
  * Date: 2023/11/21 12:53
  *
  * @author Huanyu Mark
  */
 @Getter
-@EqualsAndHashCode
 @RequiredArgsConstructor
+@EqualsAndHashCode(cacheStrategy = EqualsAndHashCode.CacheStrategy.LAZY)
 public class DatabaseInfos implements Serializable {
     public static final DatabaseInfos NULL = new DatabaseInfos(-1, "NULL", new Date(0));
     @Serial
-    private static final long serialVersionUID = 632895L;
+    private static final long serialVersionUID = 632851392687995L;
     protected final int id;
 
+    @Getter
     protected final String name;
     protected final Date createTime;
     @Setter
@@ -34,7 +36,4 @@ public class DatabaseInfos implements Serializable {
         return JsonService.toString(this);
     }
 
-    public String getName() {
-        return name;
-    }
 }

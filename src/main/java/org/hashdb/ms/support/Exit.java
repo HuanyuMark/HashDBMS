@@ -28,8 +28,8 @@ public class Exit extends RuntimeException {
         return new Exit(1);
     }
 
-    public static Exit error(String msg, Throwable e) {
-        return error(log, msg, e.getMessage());
+    public static Exit error(Logger log, String msg, Throwable e) {
+        return error(Exit.log, msg, e.getMessage());
     }
 
     /**

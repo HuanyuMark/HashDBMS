@@ -213,6 +213,9 @@ public class DBSystem extends BlockingQueueTaskConsumer {
             log.trace("system info storing success");
             log.info("storing database ...");
         }
+        if (AsyncService.close(3, TimeUnit.SECONDS)) {
+            log.warn("some async tasks close timeout");
+        }
         // 保存数据库数据
         systemInfo.getDatabaseInfosMap().values().forEach(lazyDb -> {
             if (!lazyDb.isResolved()) {

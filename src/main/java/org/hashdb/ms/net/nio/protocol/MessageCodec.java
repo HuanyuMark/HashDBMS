@@ -26,14 +26,21 @@ public interface MessageCodec {
         DBServerConfig.RunMode.DEVELOPMENT.run(() -> {
             var messageMeta = MessageMeta.class.getEnumConstants();
             if (messageMeta.length != codecImpls.length) {
-                throw new DBSystemException(getClass().getSimpleName() + ": codec count should match the count" +
-                        " of enum constants " + MessageMeta.class);
+                throw new DBSystemException(STR."""
+                 \{getClass().getSimpleName()}:\
+                 codec count should match the count of enum constants \
+                 \{MessageMeta.class}\
+                 """);
             }
             for (int i = 0; i < messageMeta.length; i++) {
                 if (messageMeta[i].name().equals(codecImpls[i].name())) {
                     continue;
                 }
-                throw new DBSystemException(codecImpls[i].getClass().getSimpleName() + "[" + i + "]=" + codecImpls[i] + " is not equal to " + "messageMeta[" + i + "]=" + messageMeta[i]);
+                throw new DBSystemException(STR."""
+                \{codecImpls[i].getClass().getSimpleName()}[\{i}]=\{codecImpls[i]}\
+                is not equal to \
+                messageMeta[\{i}]=\{messageMeta[i]}\
+                """);
             }
         });
     }
@@ -42,11 +49,12 @@ public interface MessageCodec {
     Message<?> decode(ChannelHandlerContext ctx, ByteBuf in);
 
     default @NotNull ByteBuf encode(ChannelHandlerContext ctx, Message<?> msg) {
-        return encode(ctx.alloc().buffer(), msg);
+        var buffer = ctx.alloc().buffer();
+        encode(buffer, msg);
+        return buffer;
     }
 
-    @NotNull
-    ByteBuf encode(ByteBuf buf, Message<?> msg);
+    void encode(ByteBuf buf, Message<?> msg);
 
     LengthFieldBasedFrameDecoder frameDecoder();
 

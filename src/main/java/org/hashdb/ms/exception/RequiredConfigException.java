@@ -16,6 +16,6 @@ public class RequiredConfigException extends DBClientException {
     }
 
     public static RequiredConfigException of(List<String> keys) {
-        return new RequiredConfigException("missing required config key: '" + keys + "'");
+        return new RequiredConfigException(STR."missing required config key: '\{keys}'");
     }
 }

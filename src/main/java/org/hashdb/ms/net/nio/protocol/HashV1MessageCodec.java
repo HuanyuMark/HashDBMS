@@ -77,7 +77,6 @@ public class HashV1MessageCodec implements MessageCodec {
             return ENUM_MAP[meta.key()];
         }
 
-        @SuppressWarnings("unchecked")
         <M extends Message<?>> CodecContext(Class<M> messageClass, BodyCodec bodyCodec) {
             this(bodyCodec, new MessageConstructorDecoder<>(messageClass, messageConstructor -> messageConstructor.getParameterTypes()[messageConstructor.getParameterCount() - 1], bodyCodec));
         }
@@ -94,8 +93,8 @@ public class HashV1MessageCodec implements MessageCodec {
             this.decoder = decoder;
         }
 
-        public ByteBuf encodeBody(Object body) {
-            return bodyCodec.encode(body);
+        public void writeBody(Object body, ByteBuf buf) {
+            bodyCodec.encode(body, buf);
         }
 
         public interface MessageDecoder<M extends Message<?>> {
@@ -110,36 +109,16 @@ public class HashV1MessageCodec implements MessageCodec {
             private final boolean isAct;
 
             public MessageConstructorDecoder(Class<M> messageClass, Function<Constructor<M>, Class<?>> messageBodyFinder, BodyCodec bodyCodec) {
+                this.isAct = messageClass.isAssignableFrom(ActMessage.class);
                 this.messageConstructor = selectConstructor(messageClass);
                 this.messageBodyClass = messageBodyFinder.apply(this.messageConstructor);
-                this.isAct = messageClass.isAssignableFrom(ActMessage.class);
             }
 
-            private static <M extends Message<?>> Constructor<M> selectConstructor(Class<M> messageClass) {
-                boolean isAct = messageClass.isAssignableFrom(ActMessage.class);
+            private Constructor<M> selectConstructor(Class<M> messageClass) {
                 @SuppressWarnings("unchecked")
                 var constructors = (((Constructor<M>[]) messageClass.getConstructors()));
-                Predicate<Constructor<M>> filter;
-                if (isAct) {
-                    filter = c -> {
-                        if (c.getParameterCount() != 3) {
-                            return false;
-                        }
-                        Class<?>[] parameterTypes = c.getParameterTypes();
-                        return (parameterTypes[0] == int.class || parameterTypes[0] == Integer.class) &&
-                                (parameterTypes[1] == int.class || parameterTypes[1] == Integer.class);
-                    };
-                } else {
-                    filter = c -> {
-                        if (c.getParameterCount() != 2) {
-                            return false;
-                        }
-                        Class<?>[] parameterTypes = c.getParameterTypes();
-                        return parameterTypes[0] == int.class || parameterTypes[0] == Integer.class;
-                    };
-                }
                 try {
-                    Constructor<M> messageConstructor = Arrays.stream(constructors).filter(filter).findFirst().orElseThrow(() -> {
+                    Constructor<M> messageConstructor = Arrays.stream(constructors).filter(constructorFilter(isAct)).findFirst().orElseThrow(() -> {
                         if (isAct) {
                             return new NoSuchMethodException(
                                     STR."class '\{messageClass}' definition is illegal. it should contain a constructor with parameters '[\{long.class},\{long.class},\{Object.class}]'"
@@ -155,6 +134,27 @@ public class HashV1MessageCodec implements MessageCodec {
                     log.error(e.getMessage(), e);
                     throw Exit.exception();
                 }
+            }
+
+            @NotNull
+            private static <M extends Message<?>> Predicate<Constructor<M>> constructorFilter(boolean isAct) {
+                if (isAct) {
+                    return c -> {
+                        if (c.getParameterCount() != 3) {
+                            return false;
+                        }
+                        Class<?>[] parameterTypes = c.getParameterTypes();
+                        return (parameterTypes[0] == int.class || parameterTypes[0] == Integer.class) &&
+                                (parameterTypes[1] == int.class || parameterTypes[1] == Integer.class);
+                    };
+                }
+                return c -> {
+                    if (c.getParameterCount() != 2) {
+                        return false;
+                    }
+                    Class<?>[] parameterTypes = c.getParameterTypes();
+                    return parameterTypes[0] == int.class || parameterTypes[0] == Integer.class;
+                };
             }
 
             public boolean isAct() {
@@ -193,26 +193,33 @@ public class HashV1MessageCodec implements MessageCodec {
     }
 
     @Override
-    public @NotNull ByteBuf encode(ByteBuf ctx, Message<?> msg) {
+    public void encode(ByteBuf out, Message<?> msg) {
         var codec = CodecContext.match(msg.getMeta());
-        var body = codec.encodeBody(msg.body());
-        var out = ctx.alloc().buffer();
         // [1] message meta(message type info)
         out.writeByte(msg.getMeta().key());
         // [4] message id
         out.writeInt(msg.id());
+        int bodyLengthIndex = out.writerIndex();
+        // [4] body length.
+        // 先略过一个int
+        out.writerIndex(out.writerIndex() + 4);
         if (codec.isAct()) {
-            // [4] body length. expand body length for actId
-            out.writeInt(body.readableBytes() + 1 + 8);
             // [4] act message id
             out.writeInt(((ActMessage<?>) msg).actId());
-        } else {
-            // [4] body length
-            out.writeInt(body.readableBytes() + 1);
         }
         // [body length] body
-        out.writeBytes(body);
-        return out;
+        codec.writeBody(msg.body(), out);
+        int bodyLength;
+        if (codec.isAct()) {
+            // expand body length for actId
+            bodyLength = out.writerIndex() - bodyLengthIndex;
+        } else {
+            bodyLength = out.writerIndex() - bodyLengthIndex - 4;
+        }
+        int newestWriteIndex = out.writerIndex();
+        out.writerIndex(bodyLengthIndex);
+        out.writeInt(bodyLength);
+        out.writerIndex(newestWriteIndex);
     }
 
     @Override
@@ -229,14 +236,14 @@ public class HashV1MessageCodec implements MessageCodec {
             return null;
         }
         var id = in.readInt();
-        // 略过body长度, 这个body长度是在LengthFieldBasedFrameDecoder被用到的字段
+        // 略过body长度字段, 这个body长度是在LengthFieldBasedFrameDecoder被用到的字段
         in.readerIndex(in.readerIndex() + 4);
         // parse body
         try {
             return CodecContext.match(messageMeta).decode(id, in);
         } catch (Exception e) {
             log.warn("MESSAGE PARSE ERROR", e);
-            ctx.write(new UnsupportedBodyTypeException("body pase error").msg(0));
+            ctx.write(new UnsupportedBodyTypeException("body parse error").msg(0));
             return null;
         }
     }

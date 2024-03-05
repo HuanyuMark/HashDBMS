@@ -2,7 +2,7 @@ package org.hashdb.ms.config;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.support.User;
+import org.hashdb.ms.support.UserRecord;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.ArrayList;
@@ -21,9 +21,9 @@ public class DBManageConfig {
     /**
      * 初始用户, 在数据库系统初始化时, 会将这些用户加入到数据库中
      */
-    private final List<User> initUsers;
+    private final List<UserRecord> initUsers;
 
-    public DBManageConfig(List<User> initUsers) {
-        this.initUsers = initUsers == null ? new ArrayList<>(List.of(new User("hash", "hash"))) : initUsers;
+    public DBManageConfig(List<UserRecord> initUsers) {
+        this.initUsers = initUsers == null ? new ArrayList<>(List.of(new UserRecord("hash", "hash"))) : initUsers;
     }
 }

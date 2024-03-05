@@ -1,9 +1,7 @@
 package org.hashdb.ms.net.nio.protocol;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
-import io.netty.buffer.EmptyByteBuf;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.net.exception.UnsupportedBodyTypeException;
@@ -20,35 +18,21 @@ import java.io.IOException;
  */
 @Slf4j
 public enum BodyCodec implements MetaEnum {
-    JSON(JsonService::toByteBuf, (bodyClass, buf) -> {
+    JSON(JsonService::transferTo, (bodyClass, buf) -> {
         try {
             return JsonService.parse(new ByteBufInputStream(buf), bodyClass);
         } catch (IOException e) {
             throw new DBSystemException(e);
         }
     }),
-    NULL(BodyCodec::emptyBody, (bodyClass, buf) -> null),
-    SESSION_META(msg -> {
+    NULL((any, in) -> {
+    }, (bodyClass, buf) -> null),
+    SESSION_META((msg, buf) -> {
         if (!(msg instanceof SessionMeta meta)) {
-            throw new IllegalArgumentException("BodyParser 'SESSION_META' can not serialize '" + msg + "', expect type: 'SESSION_META'");
+            throw new IllegalArgumentException(STR."BodyParser 'SESSION_META' can not serialize '\{msg}', expect type: 'SESSION_META'");
         }
-        var buf = ByteBufAllocator.DEFAULT.buffer(4);
         buf.writeInt(meta.key());
-        return buf;
     }, (bodyClass, buf) -> SessionMeta.resolve(buf.readInt()));
-
-    private static ByteBuf EMPTY_BODY = emptyBody();
-
-    private static ByteBuf emptyBody(Object any) {
-        if (EMPTY_BODY == null) {
-            EMPTY_BODY = new EmptyByteBuf(ByteBufAllocator.DEFAULT);
-        }
-        return EMPTY_BODY;
-    }
-
-    public static ByteBuf emptyBody() {
-        return emptyBody(null);
-    }
 
     private final Encoder encoder;
 
@@ -61,11 +45,11 @@ public enum BodyCodec implements MetaEnum {
         return ordinal();
     }
 
-    interface Encoder {
-        ByteBuf encode(Object body);
+    private interface Encoder {
+        void encode(Object body, ByteBuf in);
     }
 
-    interface Decoder {
+    private interface Decoder {
         Object decode(Class<?> bodyClass, ByteBuf buf);
     }
 
@@ -82,11 +66,8 @@ public enum BodyCodec implements MetaEnum {
         }
     }
 
-    public ByteBuf encode(Object body) {
-        if (body == null) {
-            return EMPTY_BODY;
-        }
-        return encoder.encode(body);
+    public void encode(Object body, ByteBuf buf) {
+        encoder.encode(body, buf);
     }
 
     public Object decode(Class<?> bodyClass, ByteBuf buf) {
