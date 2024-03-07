@@ -5,7 +5,6 @@ import lombok.Getter;
 import org.hashdb.ms.data.Database;
 
 import java.io.Closeable;
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -13,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Date: 2024/2/29 13:50
@@ -22,43 +22,44 @@ import java.nio.file.Path;
  */
 public class Aof extends ReadableAof implements Closeable, AofFlusher {
     @Getter
-    private final Database database;
-    @Getter
     private final Path baseFilePath;
     @Getter
     private final Path newFilePath;
     @Getter
+    private final Path dbInfoFilePath;
+    @Getter
     private final Path rewriteBaseFilePath;
     @Getter
     private final Path rewriteNewFilePath;
-
     private final AofFlusher flusher;
 
     /**
-     * @param baseFile 基准文件, 可以不存在
-     * @param newFile  追加文件, 可以不存在
+     * @param baseFilePath 基准文件, 可以不存在
+     * @param newFilePath  追加文件, 可以不存在
      */
     Aof(
-            File baseFile,
-            File newFile,
-            File rewriteBaseFile,
-            File rewriteNewFile,
+            Path baseFilePath,
+            Path newFilePath,
+            Path rewriteBaseFilePath,
+            Path rewriteNewFilePath,
+            Path dbInfoFilePath,
             Database database
     ) throws IOException {
-        this.database = database;
-        this.baseFilePath = baseFile.toPath();
-        this.newFilePath = newFile.toPath();
+        super(dbInfoFilePath, database);
+        this.dbInfoFilePath = dbInfoFilePath;
+        this.baseFilePath = baseFilePath;
+        this.newFilePath = newFilePath;
         try {
-            Files.createFile(baseFilePath);
+            Files.createFile(this.baseFilePath);
         } catch (FileAlreadyExistsException ignore) {
         }
         try {
-            Files.createFile(newFilePath);
+            Files.createFile(this.newFilePath);
         } catch (FileAlreadyExistsException ignore) {
         }
 
-        rewriteBaseFilePath = rewriteBaseFile.toPath();
-        rewriteNewFilePath = rewriteNewFile.toPath();
+        this.rewriteBaseFilePath = rewriteBaseFilePath;
+        this.rewriteNewFilePath = rewriteNewFilePath;
         flusher = getAofConfig().getFlushStrategy().newFlusher(this);
     }
 
@@ -78,8 +79,8 @@ public class Aof extends ReadableAof implements Closeable, AofFlusher {
     }
 
     @Override
-    public void flush() {
-        flusher.flush();
+    public CompletableFuture<Boolean> flush() {
+        return flusher.flush();
     }
 
     @Override
@@ -93,8 +94,12 @@ public class Aof extends ReadableAof implements Closeable, AofFlusher {
 
     @Override
     public void close() throws IOException {
-        if (flusher instanceof Closeable closeable) {
-            closeable.close();
+        try {
+            flush().join();
+        } finally {
+            if (flusher instanceof Closeable closeable) {
+                closeable.close();
+            }
         }
     }
 }

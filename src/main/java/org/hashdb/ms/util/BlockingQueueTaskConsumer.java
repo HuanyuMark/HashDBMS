@@ -3,6 +3,7 @@ package org.hashdb.ms.util;
 import org.hashdb.ms.data.OpsTask;
 import org.hashdb.ms.data.OpsTaskPriority;
 import org.hashdb.ms.exception.WorkerInterruptedException;
+import org.hashdb.ms.support.CompletableFuturePool;
 
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CompletableFuture;
@@ -26,7 +27,7 @@ public class BlockingQueueTaskConsumer implements TaskConsumer {
     public synchronized CompletableFuture<Boolean> startConsumeOpsTask() {
         // 正在接收新任务，则直接 返回启动成功
         if (receiveNewTask.get()) {
-            return CompletableFuture.completedFuture(true);
+            return CompletableFuturePool.get(true);
         }
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         Supplier<CompletableFuture<?>> opsTaskConsumerSupplier = () -> AsyncService.start(() -> {
@@ -51,18 +52,21 @@ public class BlockingQueueTaskConsumer implements TaskConsumer {
             opsTaskConsumeLoop = opsTaskConsumerSupplier.get();
             return future;
         }
-        return CompletableFuture.completedFuture(true);
+        return CompletableFuturePool.get(true);
     }
 
     protected void exeTask(BlockingDeque<OpsTask<?>> taskDeque) throws InterruptedException {
         taskDeque.take().get();
     }
 
+    /**
+     * 优雅地等待任务队列清空, 然后结束消费者自然退出
+     */
     @Override
     public CompletableFuture<Boolean> stopConsumeOpsTask() {
         receiveNewTask.compareAndSet(true, false);
         if (opsTaskConsumeLoop == null) {
-            return CompletableFuture.completedFuture(true);
+            return CompletableFuturePool.get(true);
         }
         // 避免消费者线程一直卡在 take() 方法
         opsTaskDeque.add(OpsTask.empty());

@@ -25,6 +25,8 @@ public interface ConnectionSession extends Closeable {
 
     Database getDatabase();
 
+    void setDatabase(Database database);
+
     /**
      * @param name  '$'开头的参数名
      * @param value {@link org.hashdb.ms.compiler.keyword.ctx.supplier.SupplierCtx} 内联命令或者是

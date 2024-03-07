@@ -64,10 +64,10 @@ public class AofFlushStrategy {
                 }
             }).toArray(AofFlushStrategyEnum[]::new);
 
-    private final Function<Aof, AofFlusher> flusherFactory;
+    private final Function<Aof, AofFlusher> persistBrokerFactory;
 
-    protected AofFlushStrategy(Function<Aof, AofFlusher> flusherFactory) {
-        this.flusherFactory = flusherFactory;
+    protected AofFlushStrategy(Function<Aof, AofFlusher> persistBrokerFactory) {
+        this.persistBrokerFactory = persistBrokerFactory;
     }
 
     public static AofFlushStrategy getIntervalStrategy(long msInterval) {
@@ -120,7 +120,7 @@ public class AofFlushStrategy {
 
     public AofFlusher newFlusher(Aof file) {
         try {
-            return flusherFactory.apply(file);
+            return persistBrokerFactory.apply(file);
         } catch (IOExceptionWrapper wrapper) {
             throw Exit.error(log, "can not open AOF file", wrapper.getCause());
         }

@@ -5,8 +5,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.data.DataType;
+import org.hashdb.ms.data.DatabaseInfos;
 import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.data.OpsTaskPriority;
+import org.hashdb.ms.persistent.info.DbInfoBroker;
+import org.hashdb.ms.persistent.info.HashProtocolV1DistDbInfoBroker;
 import org.hashdb.ms.support.Exit;
 import org.hashdb.ms.util.Lazy;
 
@@ -26,22 +29,36 @@ import java.util.function.Consumer;
  * @author Huanyu Mark
  */
 @Slf4j
-public class HdbProtocolV1HdbPersistService implements HdbPersistService {
+public class HdbProtocolV1DbPersistService implements DbPersistService {
 
-    private final Path filePath;
+    public static final int version = 1;
 
-    HdbProtocolV1HdbPersistService(Path filePath) {
-        this.filePath = filePath;
+    private final Hdb hdb;
+
+    private final DbInfoBroker infoBroker;
+
+    HdbProtocolV1DbPersistService(Hdb hdb) {
+        this.hdb = hdb;
+        this.infoBroker = new HashProtocolV1DistDbInfoBroker(hdb.getInfosPath(), HdbPersistServiceFactory.getCharset());
+    }
+
+    public DatabaseInfos readInfos() throws IOException {
+        return infoBroker.readInfos();
     }
 
     @Override
-    public HdbProtocalV1HdbReader openReader() throws IOException {
-        return new HdbProtocalV1HdbReader(filePath);
+    public void writeInfos(DatabaseInfos infos) throws IOException {
+        infoBroker.writeInfos(infos);
     }
 
     @Override
-    public HdbProtocalV1HdbHdbWriter openWriter() throws IOException {
-        return new HdbProtocalV1HdbHdbWriter(filePath);
+    public HdbProtocalV1HdbReader openDataReader() throws IOException {
+        return new HdbProtocalV1HdbReader(hdb.getDataPath());
+    }
+
+    @Override
+    public HdbProtocalV1HdbHdbWriter openDataWriter() throws IOException {
+        return new HdbProtocalV1HdbHdbWriter(hdb.getDataPath());
     }
 
     public static class HdbProtocalV1HdbReader implements HdbReader {
@@ -79,7 +96,7 @@ public class HdbProtocolV1HdbPersistService implements HdbPersistService {
         }
 
         @Override
-        public final void read(Consumer<HValue<?>> acceptor) {
+        public final void read(Consumer<HValue<?>> dataAcceptor) {
             // skip version byte
             buf.skipBytes(1);
             try {
@@ -90,7 +107,7 @@ public class HdbProtocolV1HdbPersistService implements HdbPersistService {
                     readSize += 4;
 
                     ensureBufferSize(keyBytesLength + 9);
-                    var key = buf.readCharSequence(keyBytesLength, HdbPersistServiceProvider.getCharset()).toString();
+                    var key = buf.readCharSequence(keyBytesLength, HdbPersistServiceFactory.getCharset()).toString();
                     readSize += keyBytesLength;
 
                     var expireDate = buf.readLong();
@@ -101,7 +118,7 @@ public class HdbProtocolV1HdbPersistService implements HdbPersistService {
 
                     ensureBufferSize(1);
                     var data = readObject();
-                    acceptor.accept(new HValue<>(key, data, new Date(expireDate), deletePriority));
+                    dataAcceptor.accept(new HValue<>(key, data, new Date(expireDate), deletePriority));
                 }
             } catch (IndexOutOfBoundsException | IOException e) {
                 throw Exit.error(log, "HDB reading failed, HDB is broken", "unknown");
@@ -141,7 +158,7 @@ public class HdbProtocolV1HdbPersistService implements HdbPersistService {
                 int bytesLength = buf.readInt();
 
                 ensureBufferSize(bytesLength);
-                return buf.readCharSequence(bytesLength, HdbPersistServiceProvider.getCharset()).toString();
+                return buf.readCharSequence(bytesLength, HdbPersistServiceFactory.getCharset()).toString();
             }
         }
 
@@ -181,7 +198,7 @@ public class HdbProtocolV1HdbPersistService implements HdbPersistService {
                     readSize += 4;
 
                     ensureBufferSize(keyBytesLength);
-                    String key = buf.readCharSequence(keyBytesLength, HdbPersistServiceProvider.getCharset()).toString();
+                    String key = buf.readCharSequence(keyBytesLength, HdbPersistServiceFactory.getCharset()).toString();
                     readSize += keyBytesLength;
 
                     tryDiscard();
@@ -314,35 +331,43 @@ public class HdbProtocolV1HdbPersistService implements HdbPersistService {
     }
 
     public static class HdbProtocalV1HdbHdbWriter implements HdbWriter {
-        private final FileChannel channel;
+        private FileChannel channel;
 
         private final ByteBuf buf;
 
+        private final Path target;
+
         public HdbProtocalV1HdbHdbWriter(Path target) throws IOException {
+            this.target = target;
             buf = ByteBufAllocator.DEFAULT.buffer();
-            FileChannel channel;
+            this.channel = openChannel(target);
+        }
+
+        private static FileChannel openChannel(Path target) throws IOException {
             try {
-                channel = FileChannel.open(target, StandardOpenOption.TRUNCATE_EXISTING,
+                return FileChannel.open(target, StandardOpenOption.TRUNCATE_EXISTING,
                         StandardOpenOption.WRITE,
                         StandardOpenOption.READ,
                         ExtendedOpenOption.DIRECT);
             } catch (UnsupportedOperationException e) {
-                channel = FileChannel.open(target, StandardOpenOption.TRUNCATE_EXISTING,
+                return FileChannel.open(target, StandardOpenOption.TRUNCATE_EXISTING,
                         StandardOpenOption.WRITE,
                         StandardOpenOption.READ);
             }
-            this.channel = channel;
         }
 
         @Override
         public void write(Collection<HValue<?>> source) throws IOException {
+            if (!channel.isOpen()) {
+                channel = openChannel(target);
+            }
             // [1] version
-            buf.writeByte(1);
+            buf.writeByte(version);
             // [4] map size
             buf.writeInt(source.size());
             var lock = channel.lock();
             for (HValue<?> hValue : source) {
-                byte[] keyBytes = hValue.getKey().getBytes(HdbPersistServiceProvider.getCharset());
+                byte[] keyBytes = hValue.getKey().getBytes(HdbPersistServiceFactory.getCharset());
                 // [4] write key
                 buf.writeInt(keyBytes.length);
                 // [key length(UTF-8)]
@@ -356,6 +381,8 @@ public class HdbProtocolV1HdbPersistService implements HdbPersistService {
                 buf.discardReadBytes();
             }
             lock.close();
+            channel.force(true);
+            buf.clear();
         }
 
         private final Map<DataType, Lazy<Writer<?>>> serializerMap = new IdentityHashMap<>();
@@ -395,7 +422,9 @@ public class HdbProtocolV1HdbPersistService implements HdbPersistService {
                 if (buf.readableBytes() > 0) {
                     channel.force(true);
                 }
-                channel.close();
+                if (channel != null) {
+                    channel.close();
+                }
             } finally {
                 buf.release();
             }
@@ -410,7 +439,7 @@ public class HdbProtocolV1HdbPersistService implements HdbPersistService {
                 buf.writeInt(value.size());
                 // serialize all entry
                 for (Map.Entry<String, ?> entry : value.entrySet()) {
-                    var keyBytes = entry.getKey().getBytes(HdbPersistServiceProvider.getCharset());
+                    var keyBytes = entry.getKey().getBytes(HdbPersistServiceFactory.getCharset());
                     // key bytes size
                     buf.writeInt(keyBytes.length);
                     // key bytes
@@ -441,9 +470,9 @@ public class HdbProtocolV1HdbPersistService implements HdbPersistService {
 
         private class StringWriter implements Writer<String> {
             @Override
-            public void write(String value) throws IOException {
+            public void write(String value) {
                 buf.writeByte(DataType.STRING.ordinal());
-                byte[] bytes = value.getBytes(HdbPersistServiceProvider.getCharset());
+                byte[] bytes = value.getBytes(HdbPersistServiceFactory.getCharset());
                 buf.writeInt(bytes.length);
                 buf.writeBytes(bytes);
             }
@@ -451,7 +480,7 @@ public class HdbProtocolV1HdbPersistService implements HdbPersistService {
 
         private class NumberWriter implements Writer<Number> {
             @Override
-            public void write(Number value) throws IOException {
+            public void write(Number value) {
                 var numberClassOrdinary = mapNumberKey(value);
                 buf.writeByte(numberClassOrdinary);
                 if (value instanceof Long) {

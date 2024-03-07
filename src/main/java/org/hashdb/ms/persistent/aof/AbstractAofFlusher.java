@@ -8,15 +8,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.config.AofConfig;
 import org.hashdb.ms.data.HValue;
 import org.hashdb.ms.exception.IOExceptionWrapper;
+import org.hashdb.ms.support.CompletableFuturePool;
 import org.hashdb.ms.support.StaticAutowired;
 import org.hashdb.ms.support.SystemCall;
 import org.hashdb.ms.util.AsyncService;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
@@ -30,7 +31,7 @@ import java.util.concurrent.CompletableFuture;
  * @author Huanyu Mark
  */
 @Slf4j
-public abstract class AbstractAofFlusher implements Closeable, AofFlusher {
+public abstract class AbstractAofFlusher implements AofFlusher {
 
     @Getter
     @StaticAutowired(required = false)
@@ -45,6 +46,8 @@ public abstract class AbstractAofFlusher implements Closeable, AofFlusher {
     protected final ByteBuf buffer = ByteBufAllocator.DEFAULT.buffer();
 
     private FileChannel newFileChannel;
+
+    private final Charset charset = StandardCharsets.UTF_8;
 
     public AbstractAofFlusher(Aof aof) throws IOException {
         this.aof = aof;
@@ -126,10 +129,24 @@ public abstract class AbstractAofFlusher implements Closeable, AofFlusher {
         }
     }
 
+    @Override
+    public CompletableFuture<Boolean> flush() {
+        if (doFlush()) {
+            forceFlush();
+            if (distFileRewritable()) {
+                return doRewrite();
+            }
+        }
+        return CompletableFuturePool.get(false);
+    }
+
     /**
      * 异步方法
      */
     protected synchronized CompletableFuture<Boolean> doRewrite() {
+        if (aof.getDatabase() == null) {
+            return CompletableFuturePool.get(true);
+        }
         try {
             if (newFileChannel != null && newFileChannel.isOpen()) {
                 newFileChannel.close();
@@ -137,7 +154,7 @@ public abstract class AbstractAofFlusher implements Closeable, AofFlusher {
             newFileChannel = FileChannel.open(aof.getRewriteNewFilePath(), StandardOpenOption.CREATE_NEW, StandardOpenOption.READ, StandardOpenOption.WRITE);
         } catch (IOException e) {
             log.error("can not rewrite AOF. cause '{}'", e.getMessage());
-            return CompletableFuture.completedFuture(false);
+            return CompletableFuturePool.get(false);
         }
         var future = SystemCall.forkRun(() -> {
             try (var rewriteChannel = FileChannel.open(aof.getRewriteBaseFilePath(), StandardOpenOption.APPEND, StandardOpenOption.READ, StandardOpenOption.WRITE, StandardOpenOption.CREATE_NEW);
@@ -213,17 +230,6 @@ public abstract class AbstractAofFlusher implements Closeable, AofFlusher {
         }
     }
 
-    @Override
-    public void close() throws IOException {
-        try {
-            newFileChannel.close();
-        } catch (IOException e) {
-            buffer.release();
-            throw e;
-        }
-        buffer.release();
-    }
-
     protected void writerToBuffer(Object command) {
         switch (command) {
             case CharSequence sequence -> writerToBuffer(sequence);
@@ -235,7 +241,7 @@ public abstract class AbstractAofFlusher implements Closeable, AofFlusher {
     }
 
     protected void writerToBuffer(CharSequence command) {
-        buffer.writeCharSequence(command, StandardCharsets.UTF_8);
+        buffer.writeCharSequence(command, charset);
         buffer.writeChar('\n');
     }
 
@@ -247,5 +253,16 @@ public abstract class AbstractAofFlusher implements Closeable, AofFlusher {
     protected void writerToBuffer(ByteBuffer command) {
         buffer.writeBytes(command);
         buffer.writeChar('\n');
+    }
+
+    @Override
+    public void close() throws IOException {
+        try {
+            newFileChannel.close();
+        } catch (IOException e) {
+            buffer.release();
+            throw e;
+        }
+        buffer.release();
     }
 }

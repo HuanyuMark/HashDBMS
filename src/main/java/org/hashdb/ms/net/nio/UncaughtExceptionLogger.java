@@ -20,16 +20,16 @@ public class UncaughtExceptionLogger extends ChannelDuplexHandler implements Nam
         return INSTANCE;
     }
 
-    public static Incorporator extract(ChannelPipeline pipeline) {
+    public static Restorer extract(ChannelPipeline pipeline) {
         var lastHandler = pipeline.removeLast();
         if (!(lastHandler instanceof UncaughtExceptionLogger)) {
-            throw new DBSystemException("the last handler should be '" + UncaughtExceptionLogger.class + "'");
+            throw new DBSystemException(STR."the last handler should be '\{UncaughtExceptionLogger.class}'");
         }
         return () -> pipeline.addLast(HANDLER_NAME, INSTANCE);
     }
 
-    public interface Incorporator {
-        void incorporate();
+    public interface Restorer {
+        void restore();
     }
 
     @Override

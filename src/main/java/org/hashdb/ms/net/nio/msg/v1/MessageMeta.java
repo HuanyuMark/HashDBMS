@@ -41,7 +41,9 @@ public enum MessageMeta implements MetaEnum {
     /**
      * 切换会话的类型
      */
-    SESSION_UPGRADE(SessionUpgradeMessage.class);
+    SESSION_UPGRADE(SessionUpgradeMessage.class),
+
+    SYNC(SyncMessage.class);
     private static final MessageMeta[] ENUM_MAP = values();
 
     private final Class<? extends Message<?>> messageClass;

@@ -10,6 +10,7 @@ import org.hashdb.ms.net.nio.SessionMeta;
 import org.hashdb.ms.util.JsonService;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Date: 2024/1/17 12:09
@@ -32,7 +33,13 @@ public enum BodyCodec implements MetaEnum {
             throw new IllegalArgumentException(STR."BodyParser 'SESSION_META' can not serialize '\{msg}', expect type: 'SESSION_META'");
         }
         buf.writeInt(meta.key());
-    }, (bodyClass, buf) -> SessionMeta.resolve(buf.readInt()));
+    }, (bodyClass, buf) -> SessionMeta.resolve(buf.readInt())),
+    STRING((msg, buf) -> {
+        if (!(msg instanceof CharSequence sequence)) {
+            throw new IllegalArgumentException(STR."BodyParser 'STRING' can not serialize '\{msg}', expect type: 'String'");
+        }
+        buf.writeCharSequence(sequence, StandardCharsets.UTF_8);
+    }, (bodyClass, buf) -> buf.readCharSequence(buf.readableBytes(), StandardCharsets.UTF_8));
 
     private final Encoder encoder;
 

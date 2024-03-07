@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 
 /**
  * Date: 2024/1/16 21:15
@@ -41,8 +42,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class BusinessConnectionSession extends AbstractConnectionSession implements BaseConnectionSession {
     static final IntegerIdentityGenerator idGenerator = new IntegerIdentityGenerator(0, Integer.MAX_VALUE);
 
-    @StaticAutowired
-    private static ClusterGroup clusterGroup;
+//    @StaticAutowired
+//    private static ClusterGroup replicationGroup;
 
     @Getter
     @StaticAutowired
@@ -73,7 +74,7 @@ public class BusinessConnectionSession extends AbstractConnectionSession impleme
     @StaticAutowired
     private static void inject(ClusterGroup clusterGroup, DBServerConfig dbServerConfig, DBSystem dbSystem, SessionMountedHandler mountedHandler) {
         sessionUpgradeHandler = mountedHandler.upgradeHandler();
-        BusinessConnectionSession.clusterGroup = clusterGroup;
+//        BusinessConnectionSession.replicationGroup = clusterGroup;
         BusinessConnectionSession.dbSystem = dbSystem;
         BusinessConnectionSession.dbServerConfig = dbServerConfig;
         defaultSession = new DefaultBusinessConnectionSession();
@@ -263,11 +264,66 @@ public class BusinessConnectionSession extends AbstractConnectionSession impleme
         }
     }
 
-    class CommandExecuteHandler extends SimpleChannelInboundHandler<AppCommandMessage> implements Closeable, NamedChannelHandler {
+    public class CommandExecuteHandler extends SimpleChannelInboundHandler<AppCommandMessage> implements Closeable, NamedChannelHandler {
         private final LocalCommandExecutor commandExecutor = LocalCommandExecutor.create(BusinessConnectionSession.this);
         private final AtomicInteger executingCount = new AtomicInteger(0);
         private Object closeLocker;
         private DBClientException serverClosedException;
+
+        private Predicate<CompileStream<?>> commandExecutableChecker = compileResult -> !compileResult.isWrite();
+
+        private final CommandExecutorHandler defaultExecutor = ((compileResult, ctx, request) -> {
+            compileResult.execute().handleAsync((result, e) -> {
+                Object ret;
+                if (e == null) {
+                    ret = result;
+                    var channelFuture = ctx.writeAndFlush(new ActAppCommandMessage(request, result));
+                    channelFuture.addListener(r -> {
+                        if (r.isSuccess()) {
+                            return;
+                        }
+                        log.error("write command execution msg error", r.cause());
+                    });
+                } else {
+                    ret = e;
+                    ErrorMessage errorMessage;
+                    // 处理执行线程扔出来的异常
+                    if (e instanceof DBClientException dbClientException) {
+                        errorMessage = new ErrorMessage(request, dbClientException);
+                    } else {
+                        log.error("execute command execution error", e);
+                        errorMessage = new ErrorMessage(request, "db internal error");
+                    }
+                    // write and notify nio thread to send
+                    ctx.writeAndFlush(errorMessage);
+                }
+
+                if (closeLocker != null && executingCount.decrementAndGet() <= 0) {
+                    closeLocker.notifyAll();
+                }
+                return ret;
+            }, AsyncService.service());
+        });
+
+        private CommandExecutorHandler orElseExecutor = defaultExecutor;
+
+        public interface CommandExecutorHandler {
+            void handle(CompileStream<?> compileResult, ChannelHandlerContext ctx, AppCommandMessage request);
+        }
+
+        public CommandExecuteHandler checkCommandExecutable(Predicate<CompileStream<?>> commandExecutableChecker) {
+            this.commandExecutableChecker = commandExecutableChecker;
+            return this;
+        }
+
+        /**
+         * @param orElseExecutor replication
+         *                       expect SLAVE identity
+         *                                                                                                                                                                                                                                                                                                                                                                                               todo 上传写指令
+         */
+        public void orElseExecute(CommandExecutorHandler orElseExecutor) {
+            this.orElseExecutor = orElseExecutor;
+        }
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, AppCommandMessage request) {
@@ -294,44 +350,11 @@ public class BusinessConnectionSession extends AbstractConnectionSession impleme
                 return;
             }
             executingCount.incrementAndGet();
-            if (clusterGroup.isMaster() || clusterGroup.isSlave() && !compileResult.isWrite()) {
-                compileResult.execute().handleAsync((result, e) -> {
-                    Object ret;
-                    if (e == null) {
-                        ret = result;
-                        var channelFuture = ctx.writeAndFlush(new ActAppCommandMessage(request, result));
-                        channelFuture.addListener(r -> {
-                            if (r.isSuccess()) {
-                                return;
-                            }
-                            log.error("write command execution msg error", r.cause());
-                        });
-                    } else {
-                        ret = e;
-                        ErrorMessage errorMessage;
-                        // 处理执行线程扔出来的异常
-                        if (e instanceof DBClientException dbClientException) {
-                            errorMessage = new ErrorMessage(request, dbClientException);
-                        } else {
-                            log.error("execute command execution error", e);
-                            errorMessage = new ErrorMessage(request, "db internal error");
-                        }
-                        // write and notify nio thread to send
-                        ctx.writeAndFlush(errorMessage);
-                    }
-
-                    if (closeLocker != null && executingCount.decrementAndGet() <= 0) {
-                        closeLocker.notifyAll();
-                    }
-                    return ret;
-                }, AsyncService.service());
+            if (commandExecutableChecker.test(compileResult)) {
+                defaultExecutor.handle(compileResult, ctx, request);
                 return;
             }
-            // replication
-            // expect SLAVE identity
-            if (compileResult.isWrite()) {
-                //todo 上传写指令
-            }
+            orElseExecutor.handle(compileResult, ctx, request);
         }
 
         public void close() {
@@ -358,14 +381,14 @@ public class BusinessConnectionSession extends AbstractConnectionSession impleme
         var commandExecuteHandler = commandExecuteHandlerLazy.get();
         var protocolSwitchingHandler = protocolSwitchingHandlerLazy.get();
         var pipeline = channel.pipeline();
-        var incorporator = UncaughtExceptionLogger.extract(pipeline);
+        var restorer = UncaughtExceptionLogger.extract(pipeline);
         pipeline
                 .addLast(authenticationHandler.handlerName(), authenticationHandler)
                 .addLast(sessionUpgradeHandler.handlerName(), sessionUpgradeHandler)
                 .addLast(commandExecuteHandler.handlerName(), commandExecuteHandler)
                 .addLast(protocolSwitchingHandler.handlerName(), protocolSwitchingHandler);
 
-        incorporator.incorporate();
+        restorer.restore();
         protocol(protocol);
     }
 
@@ -373,6 +396,10 @@ public class BusinessConnectionSession extends AbstractConnectionSession impleme
         channel.pipeline().remove(CommandExecuteHandler.class);
         var commandExecuteHandler = commandExecuteHandlerLazy.get();
         commandExecuteHandler.close();
+    }
+
+    public CommandExecuteHandler getCommandExecuteHandler() {
+        return commandExecuteHandlerLazy.get();
     }
 
     @Override

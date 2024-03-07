@@ -1,6 +1,9 @@
 package org.hashdb.ms.persistent.aof;
 
+import org.hashdb.ms.support.CompletableFuturePool;
+
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Date: 2024/2/28 13:28
@@ -17,12 +20,13 @@ public class SizeAofFlusher extends AbstractAofFlusher {
     }
 
     @Override
-    public void flush() {
+    public CompletableFuture<Boolean> flush() {
         if (buffer.readableBytes() > maxCacheSize) {
             doFlush();
         }
         if (distFileRewritable()) {
-            doRewrite();
+            return doRewrite();
         }
+        return CompletableFuturePool.get(true);
     }
 }

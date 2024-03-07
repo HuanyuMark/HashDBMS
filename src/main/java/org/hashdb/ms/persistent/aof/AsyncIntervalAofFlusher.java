@@ -1,12 +1,14 @@
 package org.hashdb.ms.persistent.aof;
 
 import io.netty.buffer.ByteBuf;
+import org.hashdb.ms.support.CompletableFuturePool;
 import org.hashdb.ms.util.AsyncService;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 
 /**
@@ -16,7 +18,7 @@ import java.util.concurrent.ScheduledFuture;
  *
  * @author Huanyu Mark
  */
-public abstract class AsyncIntervalAofFlusher extends IntervalAofFlusher {
+public class AsyncIntervalAofFlusher extends IntervalAofFlusher {
     private final ScheduledFuture<?> flusherTask;
 
     public AsyncIntervalAofFlusher(Aof file, long msInterval) throws IOException {
@@ -26,7 +28,6 @@ public abstract class AsyncIntervalAofFlusher extends IntervalAofFlusher {
                 for (var command : cache) {
                     writerToBuffer(command);
                 }
-                cache.clear();
                 if (buffer.readableBytes() > 0) {
                     flush();
                 }
@@ -67,12 +68,14 @@ public abstract class AsyncIntervalAofFlusher extends IntervalAofFlusher {
         super.append(commandBuf);
     }
 
-    public synchronized void flush() {
-        if (doFlush()) {
-            forceFlush();
-            if (distFileRewritable()) {
-                doRewrite();
-            }
-        }
+
+    protected CompletableFuture<Boolean> asyncFlush() {
+        super.flush();
+        cache.clear();
+        return CompletableFuturePool.get(true);
+    }
+
+    public synchronized CompletableFuture<Boolean> flush() {
+        return asyncFlush();
     }
 }

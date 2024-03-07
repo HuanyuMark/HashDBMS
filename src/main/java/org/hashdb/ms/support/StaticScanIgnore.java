@@ -8,7 +8,7 @@ import java.lang.annotation.*;
  * 不执行静态注入的类, 标注这个
  *
  * @author Huanyu Mark
- * @see StaticAutowiredAnnotationProcessor
+ * @see StaticAnnotationProcessor
  */
 @Inherited
 @Retention(RetentionPolicy.RUNTIME)

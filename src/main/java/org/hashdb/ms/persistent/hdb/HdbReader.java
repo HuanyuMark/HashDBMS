@@ -11,5 +11,5 @@ import java.util.function.Consumer;
  * @author Huanyu Mark
  */
 public interface HdbReader extends Closeable {
-    void read(Consumer<HValue<?>> acceptor);
+    void read(Consumer<HValue<?>> dataAcceptor);
 }

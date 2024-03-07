@@ -44,7 +44,7 @@ import java.util.function.Supplier;
 @Slf4j
 @Order(1)
 @Component
-public class StaticAutowiredAnnotationProcessor implements ApplicationListener<ContextRefreshedEvent> {
+public class StaticAnnotationProcessor implements ApplicationListener<ContextRefreshedEvent> {
 
     @Override
     public void onApplicationEvent(@NotNull ContextRefreshedEvent event) {

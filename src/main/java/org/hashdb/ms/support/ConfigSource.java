@@ -72,6 +72,7 @@ public abstract class ConfigSource implements AutoCloseable {
                 doUpdate(Mark.values[i], content);
             } catch (Exception e) {
                 log.error("updater: ", e);
+                return;
             }
         }
         if (shouldFlush) {

@@ -7,12 +7,13 @@ import java.util.function.Supplier;
 
 /**
  * Date: 2023/11/14 13:37
- * 提供一个全局的异步服务支持
+ * 使用虚拟线程提供一个全局的异步服务支持. 并发量等配置, 需要使用设置
+ * {@link ForkJoinPool#commonPool()} 的配置
  */
 public class AsyncService {
-    private static final ExecutorService executorService;
+    private static final ExecutorService simpleExecutor;
 
-    private static final ThreadFactory sheduleThreadFactory;
+    private static final ScheduledExecutorService perTaskScheduledExecutor;
 
     static {
         var executorServiceThreadFactory = Thread.ofVirtual()
@@ -22,18 +23,15 @@ public class AsyncService {
                     System.err.printf("Thread: [%s] throw exception: %s\n", thread.getName(), e);
                 })
                 .factory();
-        executorService = Executors.newThreadPerTaskExecutor(executorServiceThreadFactory);
-        sheduleThreadFactory = Thread.ofVirtual()
+        simpleExecutor = Executors.newThreadPerTaskExecutor(executorServiceThreadFactory);
+        var sheduleThreadFactory = Thread.ofVirtual()
                 .name("vs-", 0)
                 .inheritInheritableThreadLocals(true)
                 .uncaughtExceptionHandler((thread, e) -> {
                     System.err.printf("Thread: [%s] throw exception: %s\n", thread.getName(), e);
                 })
                 .factory();
-    }
-
-    private static ScheduledExecutorService singleThreadScheduledService() {
-        return new ScheduledThreadPoolExecutor(1, sheduleThreadFactory);
+        perTaskScheduledExecutor = new ScheduledThreadPoolExecutor(0, sheduleThreadFactory);
     }
 
     public static ThreadFactory virtualFactory(String threadPrefix) {
@@ -47,16 +45,16 @@ public class AsyncService {
     }
 
     public static ExecutorService service() {
-        return executorService;
+        return simpleExecutor;
     }
 
     /**
      * @return 如果在时限内正常关闭, 则true否则false
      */
     public static boolean close(int time, TimeUnit timeUnit) {
-        executorService.shutdown();
+        simpleExecutor.shutdown();
         try {
-            return executorService.awaitTermination(time, timeUnit);
+            return simpleExecutor.awaitTermination(time, timeUnit);
         } catch (InterruptedException e) {
             return false;
         }
@@ -75,7 +73,7 @@ public class AsyncService {
     }
 
     public static void run(Runnable task) {
-        executorService.execute(task);
+        simpleExecutor.execute(task);
     }
 
     public static CompletableFuture<?>[] start(Runnable... task) {
@@ -83,17 +81,11 @@ public class AsyncService {
     }
 
     public static ScheduledFuture<?> setTimeout(Runnable runnable, long milliseconds) {
-        var service = singleThreadScheduledService();
-        var future = service.schedule(runnable, milliseconds, TimeUnit.MILLISECONDS);
-        service.shutdown();
-        return future;
+        return perTaskScheduledExecutor.schedule(runnable, milliseconds, TimeUnit.MILLISECONDS);
     }
 
     public static <T> ScheduledFuture<T> setTimeout(Callable<T> callable, long milliseconds) {
-        var service = singleThreadScheduledService();
-        var future = service.schedule(callable, milliseconds, TimeUnit.MILLISECONDS);
-        service.shutdown();
-        return future;
+        return perTaskScheduledExecutor.schedule(callable, milliseconds, TimeUnit.MILLISECONDS);
     }
 
     public static <T> T syncRun(Supplier<T> task, long milliseconds) throws TimeoutException {
@@ -121,16 +113,6 @@ public class AsyncService {
     }
 
     public static ScheduledFuture<?> setInterval(Runnable runnable, long milliseconds, long initialDelayMilliseconds) {
-        var service = singleThreadScheduledService();
-        var future = service.scheduleAtFixedRate(runnable, initialDelayMilliseconds, milliseconds, TimeUnit.MILLISECONDS);
-        executorService.execute(() -> {
-            try {
-                future.get();
-            } catch (Exception ignore) {
-            } finally {
-                service.shutdown();
-            }
-        });
-        return future;
+        return perTaskScheduledExecutor.scheduleAtFixedRate(runnable, initialDelayMilliseconds, milliseconds, TimeUnit.MILLISECONDS);
     }
 }

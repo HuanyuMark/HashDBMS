@@ -43,7 +43,9 @@ public class NettyServer implements DisposableBean, AutoCloseable {
         workerGroup = new NioEventLoopGroup();
     }
 
-    public NettyServer(DBServerConfig serverConfig, DBSystem dbSystem, ClientChannelInitializer clientChannelInitializer) {
+    public NettyServer(DBServerConfig serverConfig,
+                       DBSystem dbSystem,
+                       ClientChannelInitializer clientChannelInitializer) {
         this.serverConfig = serverConfig;
         this.dbSystem = dbSystem;
         this.clientChannelInitializer = clientChannelInitializer;
@@ -67,7 +69,7 @@ public class NettyServer implements DisposableBean, AutoCloseable {
             }
             throw Exit.error(log, "server start failed", res.cause());
         });
-        // 启动后, 如果其次启动属于故障恢复, 则等待其它结点的服务发现机制(poll ping)
+        // 启动后, 如果这次启动属于故障恢复, 则等待其它结点的服务发现机制(poll ping)
         // 这个结点被ping通并身份验证后, 执行其它结点给的指令, 执行故障恢复启动的逻辑
     }
 

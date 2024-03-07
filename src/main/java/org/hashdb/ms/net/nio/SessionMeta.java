@@ -20,7 +20,12 @@ public enum SessionMeta implements MetaEnum {
     /**
      * 管理用的Session, 集群,故障管理等
      */
-    MANAGEMENT(ReplicationConnectionSession.class, (base, this_) -> new ReplicationConnectionSession(base));
+    MANAGEMENT(ReplicationConnectionSession.class, (base, this_) -> {
+        if (!(base instanceof BusinessConnectionSession bus)) {
+            throw new IllegalUpgradeSessionException(base.getMeta(), this_);
+        }
+        return new ReplicationConnectionSession(bus);
+    });
 
     private static final SessionMeta[] ENUM_MAP = SessionMeta.values();
 

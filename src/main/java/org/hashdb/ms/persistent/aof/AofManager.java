@@ -1,17 +1,17 @@
 package org.hashdb.ms.persistent.aof;
 
 import io.netty.buffer.ByteBuf;
-import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.config.AofConfig;
 import org.hashdb.ms.data.Database;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.persistent.FileUtils;
 import org.hashdb.ms.support.Exit;
-import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
@@ -22,12 +22,13 @@ import java.util.regex.Pattern;
  * @author Huanyu Mark
  */
 @Slf4j
-@Component
+@RequiredArgsConstructor
 public class AofManager {
-    @Resource
-    private AofConfig aofConfig;
+    private final AofConfig aofConfig;
     private final Pattern numberPattern = Pattern.compile("[0-9]+");
     private final Map<Database, Aof> databaseAofMap = new ConcurrentHashMap<>();
+
+    private final Map<Path, Aof> dbDirMap = new ConcurrentHashMap<>();
 
     /**
      * @param content 一般是远程传过来的aof文件
@@ -38,16 +39,29 @@ public class AofManager {
 
     private Aof create(Database db) {
         var databaseName = db.getInfos().getName();
-        File dbDir = new File(aofConfig.getRootDir(), databaseName);
-        FileUtils.prepareDir(dbDir, f ->
+        var dbDir = FileUtils.prepareDir(new File(aofConfig.getRootDir(), databaseName), f ->
                 new DBSystemException(STR."can not create aof file directory \{f.toPath().toAbsolutePath()}"));
+        return doCreate(dbDir.toPath(), db);
+    }
+
+    public Aof get(Path dbDir) {
+        return dbDirMap.computeIfAbsent(dbDir, this::doCreate);
+    }
+
+    private Aof doCreate(Path dbDir) {
+        return doCreate(dbDir, null);
+    }
+
+    private Aof doCreate(Path dbDir, Database db) {
         try {
             return new Aof(
-                    new File(dbDir, aofConfig.getBaseFileName()),
-                    new File(dbDir, aofConfig.getBaseFileName()),
-                    new File(dbDir, aofConfig.getRewrite().getBaseFileName()),
-                    new File(dbDir, aofConfig.getRewrite().getNewFileName()),
-                    db);
+                    Path.of(dbDir.toString(), aofConfig.getBaseFileName()),
+                    Path.of(dbDir.toString(), aofConfig.getBaseFileName()),
+                    Path.of(dbDir.toString(), aofConfig.getRewrite().getBaseFileName()),
+                    Path.of(dbDir.toString(), aofConfig.getRewrite().getNewFileName()),
+                    Path.of(dbDir.toString(), aofConfig.getDbInfoFileName()),
+                    db
+            );
         } catch (IOException e) {
             throw Exit.error(log, "can not create aof file", e);
         }
@@ -57,7 +71,7 @@ public class AofManager {
      * @param database 数据库
      * @return aofFile
      */
-    public Aof getAof(Database database) {
+    public Aof get(Database database) {
         return databaseAofMap.computeIfAbsent(database, this::create);
     }
 }

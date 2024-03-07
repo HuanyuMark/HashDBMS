@@ -36,6 +36,7 @@ public abstract class AbstractConnectionSession implements ConnectionSession {
         return database;
     }
 
+    @Override
     public void setDatabase(Database database) {
         if (database == null) {
             close();

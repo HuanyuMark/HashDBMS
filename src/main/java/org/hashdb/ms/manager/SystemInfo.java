@@ -32,6 +32,7 @@ public class SystemInfo {
     private final Map<DatabaseInfos, Lazy<Database>> databaseInfosMap = new HashMap<>();
 
     private final Map<Lazy<Database>, DatabaseInfos> navigableDbInfosMap = new HashMap<>();
+
     public final Object SAVE_LOCK = new Object();
 
     private DBSystem system;

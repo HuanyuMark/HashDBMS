@@ -4,7 +4,6 @@ import io.netty.channel.Channel;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.compiler.CompileStream;
 import org.hashdb.ms.data.Database;
-import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.net.Parameter;
 import org.hashdb.ms.net.nio.msg.v1.CloseMessage;
 import org.hashdb.ms.net.nio.protocol.Protocol;
@@ -14,36 +13,38 @@ import org.hashdb.ms.util.JsonService;
 
 /**
  * Date: 2024/2/3 21:15
+ * 从机连到主机, 主机维护的Session
  *
  * @author Huanyu Mark
  */
 @Slf4j
 public class ReplicationConnectionSession implements BaseConnectionSession {
-
     @StaticAutowired
-    private static ClusterGroup group;
-    private final BaseConnectionSession base;
+    private static ReplicationGroup group;
+    private final BusinessConnectionSession base;
+    //    private ServerNode client;
+    private ReplicationContext replicationContext;
 
-    private ServerNode client;
-
-    public ReplicationConnectionSession(BaseConnectionSession base) {
-        if (base instanceof ReplicationConnectionSession) {
-            throw new DBSystemException(STR."can not manage session '\{base}'");
-        }
+    public ReplicationConnectionSession(BusinessConnectionSession base) {
         this.base = base;
-        bindHandlers(base.channel());
+//        base.getCommandExecuteHandler().checkCommandExecutable(compileResult -> {
+//            return group.isMaster() || !compileResult.isWrite();
+//        }).orElseExecute(((compileResult, ctx, request) -> {
+//
+//        }));
+//        bindHandlers(base.channel());
     }
 
-    public ServerNode endpoint() {
-        return client;
-    }
+//    public ServerNode endpoint() {
+//        return client;
+//    }
 
     private void bindHandlers(Channel channel) {
         var pipeline = channel.pipeline();
         var incorporator = UncaughtExceptionLogger.extract(pipeline);
 
 
-        incorporator.incorporate();
+        incorporator.restore();
     }
 
     @Override
@@ -69,6 +70,12 @@ public class ReplicationConnectionSession implements BaseConnectionSession {
     @Override
     public CacheMap<String, CompileStream<?>> getLocalCommandCache() {
         return base.getLocalCommandCache();
+    }
+
+    @Override
+    public void setDatabase(Database database) {
+        base.setDatabase(database);
+        replicationContext = group.getReplicationContext(database);
     }
 
     @Override

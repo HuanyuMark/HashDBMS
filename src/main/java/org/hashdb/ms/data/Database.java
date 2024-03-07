@@ -1,24 +1,24 @@
 package org.hashdb.ms.data;
 
+import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.compiler.exception.LikePatternSyntaxException;
-import org.hashdb.ms.config.AofConfig;
-import org.hashdb.ms.config.HdbConfig;
 import org.hashdb.ms.exception.IllegalJavaClassStoredException;
 import org.hashdb.ms.exception.IncreaseUnsupportedException;
 import org.hashdb.ms.exception.ServiceStoppedException;
-import org.hashdb.ms.persistent.PersistentService;
-import org.hashdb.ms.support.StaticAutowired;
-import org.hashdb.ms.util.AsyncService;
-import org.hashdb.ms.util.AtomLazy;
+import org.hashdb.ms.persistent.aof.AofFlusher;
+import org.hashdb.ms.persistent.hdb.AbstractHdb;
 import org.hashdb.ms.util.BlockingQueueTaskConsumer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 
 import java.util.*;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiFunction;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Stream;
@@ -31,7 +31,9 @@ import java.util.stream.Stream;
  *
  * @author Huanyu Mark
  */
-public class Database extends BlockingQueueTaskConsumer implements Iterable<HValue<?>>, IDatabase, AutoCloseable {
+@Slf4j
+public class Database extends BlockingQueueTaskConsumer implements
+        Iterable<HValue<?>>, IDatabase, AutoCloseable, ApplicationContextAware {
 
     /**
      * 数据库信息
@@ -42,21 +44,31 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
      * 因为一切操作都需要通过opsEventQueue 来进行，且只有一个消费者线程，所以天生线程安全，故而使用
      * {@link HashMap}
      */
-    protected final HashMap<String, HValue<?>> table = new HashMap<>();
-    protected final AtomLazy<ScheduledFuture<?>> saveTask;
+    protected HashMap<String, HValue<?>> table;
+    //    protected final AtomLazy<ScheduledFuture<?>> saveTask;
     public final Object SAVE_TASK_LOCK = new Object();
     private final AtomicInteger usingCount = new AtomicInteger(0);
     // TODO: 2024/1/15  给用户提供一个选项, 设置读操作多线程化阈值(负数为不使用)与设置读操作时的并行度
     private final List<OpsTask<?>> readTaskBatch = new ArrayList<>();
 
-    @StaticAutowired
-    private static HdbConfig hdbConfig;
+    //    @StaticAutowired
+//    private static PersistentService persistentService;
+    private AbstractHdb hdb;
 
-    @StaticAutowired
-    private static AofConfig aofConfig;
+    private AofFlusher aofFlusher;
 
-    @StaticAutowired
-    private static PersistentService persistentService;
+//    {
+//        if (hdbManager != null) {
+//            hdb = hdbManager.get(this);
+//        } else {
+//            hdb = nopHdb;
+//        }
+//        if (aofManager != null) {
+//            aofFlusher = aofManager.get(this);
+//        } else {
+//            aofFlusher = nopAofFlusher;
+//        }
+//    }
 
     @Override
     protected void exeTask(BlockingDeque<OpsTask<?>> taskDeque) throws InterruptedException {
@@ -103,47 +115,51 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
     }
 
     public CompletableFuture<Boolean> startDaemon() {
-        saveTask.get();
+//        saveTask.get();
         return startConsumeOpsTask();
     }
 
-    public synchronized boolean stopSaveTask() {
-        if (!saveTask.isResolved()) {
-            return true;
-        }
-        // 如果在保存任务中，执行线程被阻塞在IO,网络操作中，则不直接
-        // 抛出中断异常， 让执行线程继续执行
-        saveTask.get().cancel(false);
-        saveTask.computedWith(null);
-        return true;
-    }
+//    public synchronized boolean stopSaveTask() {
+//        if (!saveTask.isResolved()) {
+//            return true;
+//        }
+//        // 如果在保存任务中，执行线程被阻塞在IO,网络操作中，则不直接
+//        // 抛出中断异常， 让执行线程继续执行
+//        saveTask.get().cancel(false);
+//        saveTask.computedWith(null);
+//        return true;
+//    }
 
-    public Database(int id, String name, Date createTime) {
-        this(new DatabaseInfos(id, name, createTime));
-    }
-
-    public Database(DatabaseInfos databaseInfos) {
+    Database(DatabaseInfos databaseInfos) {
         this.info = databaseInfos;
-        saveTask = AtomLazy.of(() -> {
-            final long nextSaveTime = hdbConfig.getSaveInterval() + info.getLastSaveTime().getTime();
-            long initDelay = nextSaveTime - System.currentTimeMillis();
-            if (initDelay < 0) {
-                initDelay += hdbConfig.getSaveInterval();
-            }
-            return AsyncService.setInterval(() -> {
-                persistentService.persist(this);
-            }, hdbConfig.getSaveInterval(), initDelay);
-        });
+        this.table = new HashMap<>();
+//        saveTask = AtomLazy.of(() -> {
+//            final long nextSaveTime = hdbConfig.getSaveInterval() + info.getLastSaveTime().getTime();
+//            long initDelay = nextSaveTime - System.currentTimeMillis();
+//            if (initDelay < 0) {
+//                initDelay += hdbConfig.getSaveInterval();
+//            }
+//            return AsyncService.setInterval(() -> {
+//                persistentService.persist(this);
+//            }, hdbConfig.getSaveInterval(), initDelay);
+//        });
     }
 
-    public Database(int id, String name, Date createTime, @NotNull Map<String, StorableHValue<?>> fromData) {
-        this(new DatabaseInfos(id, name, createTime), fromData);
+//    @Deprecated
+//    public Database(DatabaseInfos databaseInfos, @NotNull Map<String, ? extends StorableHValue<?>> fromData
+//    ) {
+//        this(databaseInfos);
+//        restoreAll(fromData);
+//    }
+
+    public void unsafeSetData(HashMap<String, HValue<?>> data) {
+        if (this.table != null) {
+            this.table.clear();
+        }
+        this.table = Objects.requireNonNull(data);
+        opsTaskDeque.clear();
     }
 
-    public Database(DatabaseInfos databaseInfos, @NotNull Map<String, ? extends StorableHValue<?>> fromData) {
-        this(databaseInfos);
-        restoreAll(fromData);
-    }
 
     private void restoreAll(Map<String, ? extends StorableHValue<?>> from) {
         for (var entry : from.entrySet()) {
@@ -179,6 +195,7 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
         if (oldValue != null) {
             oldValue.cancelClear();
         }
+        hdb.modify();
         return oldValue;
     }
 
@@ -201,7 +218,7 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
                 stepNumber = Long.valueOf(step);
             }
         } catch (NumberFormatException e) {
-            throw new IncreaseUnsupportedException("step '" + step + "' must be a number");
+            throw new IncreaseUnsupportedException(STR."step '\{step}' must be a number");
         }
         @SuppressWarnings("unchecked")
         HValue<Object> value = (HValue<Object>) table.get(key);
@@ -223,6 +240,7 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
                     throw IllegalJavaClassStoredException.of(rawValue.getClass());
                 }
                 value.data(newValue);
+                hdb.modify();
                 return oldValue;
             }
             case NUMBER -> {
@@ -237,14 +255,16 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
                     throw IllegalJavaClassStoredException.of(rawValue.getClass());
                 }
                 value.data(newValue);
+                hdb.modify();
                 return oldValue;
             }
             case NULL -> {
                 table.put(key, new HValue<>(key, stepNumber).clearBy(this, millis, priority));
+                hdb.modify();
                 return null;
             }
             default ->
-                    throw new IncreaseUnsupportedException("can`t increase type: '" + dataType + "' with step '" + step + "'");
+                    throw new IncreaseUnsupportedException(STR."can`t increase type: '\{dataType}' with step '\{step}'");
         }
     }
 
@@ -303,6 +323,7 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
         if (value != null) {
             value.cancelClear();
         }
+        hdb.modify();
         return value;
     }
 
@@ -313,6 +334,7 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
      */
     public void clear() {
         table.values().forEach(HValue::cancelClear);
+        hdb.modify(table.size());
         table.clear();
     }
 
@@ -343,6 +365,7 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
         if (limit == null) {
             return matchedValues;
         }
+        hdb.modify(matchedValues.size());
         return matchedValues.stream().limit(limit).toList();
     }
 
@@ -354,7 +377,7 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
      * @param key      键名
      * @param value    新值
      * @param millis   几毫秒后过期
-     * @param priority
+     * @param priority 操作优先级
      * @return 旧值，可能为空
      */
     public HValue<?> rpl(String key, Object value, Long millis, OpsTaskPriority priority) {
@@ -366,6 +389,7 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
         HValue<Object> old = hValue.cloneDefault();
         hValue.clearBy(this, millis, priority);
         hValue.data(value);
+        hdb.modify();
         return old;
     }
 
@@ -399,7 +423,7 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
      *
      * @param key      要过期的键
      * @param millis   多少毫秒后过期
-     * @param priority
+     * @param priority 操作优先级
      */
     public void expire(String key, Long millis, OpsTaskPriority priority) {
         HValue<?> value = table.get(key);
@@ -407,6 +431,7 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
             return;
         }
         value.clearBy(this, millis, priority);
+        hdb.modify();
     }
 
     /**
@@ -415,7 +440,7 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
      *
      * @param key       要过期的键
      * @param timestamp 在该时间戳过期
-     * @param priority
+     * @param priority  操作优先级
      */
     @Deprecated
     public void expireAt(String key, long timestamp, OpsTaskPriority priority) {
@@ -424,6 +449,7 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
             return;
         }
         value.clearBy(this, timestamp, priority);
+        hdb.modify();
     }
 
     /**
@@ -433,7 +459,7 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
      *
      * @param pattern  正则
      * @param millis   多少毫秒后过期
-     * @param priority
+     * @param priority 操作优先级
      */
     public void expireLike(Pattern pattern, Long millis, OpsTaskPriority priority) {
         table.values().parallelStream()
@@ -446,6 +472,7 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
                 })
                 .forEach(v -> {
                     v.clearBy(this, millis, priority);
+                    hdb.modify();
                 });
     }
 
@@ -455,7 +482,7 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
      *
      * @param pattern   正则
      * @param timestamp 到这个时间戳过期
-     * @param priority
+     * @param priority  操作优先级
      */
     public void expireAtLike(Pattern pattern, long timestamp, OpsTaskPriority priority) {
         table.values().parallelStream()
@@ -468,6 +495,7 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
                 })
                 .forEach(v -> {
                     v.clearBy(this, timestamp, priority);
+                    hdb.modify();
                 });
     }
 
@@ -533,10 +561,20 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
     }
 
     public CompletableFuture<Boolean> save() {
-        return AsyncService.start(() -> {
-            persistentService.persist(this);
-            return true;
-        });
+        var res = new CompletableFuture<Boolean>();
+        var f1 = aofFlusher.flush();
+        var f2 = hdb.flush();
+        BiFunction<Boolean, Throwable, ?> handler = (ok, e) -> {
+            if (e != null) {
+                res.completeExceptionally(e);
+                return null;
+            }
+            res.complete(ok);
+            return null;
+        };
+        f1.handleAsync(handler);
+        f2.handleAsync(handler);
+        return res;
     }
 
     /**
@@ -547,8 +585,18 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
      * @return 异步结果
      */
     public boolean saveSync() {
-        persistentService.persist(this);
-        return true;
+        try {
+            var f1 = aofFlusher.flush();
+            var f2 = hdb.flush();
+            if (!f1.join()) {
+                return false;
+            }
+            return f2.join();
+        } catch (Exception e) {
+            log.error("saveSync error", e);
+            return false;
+        }
+//        persistentService.persist(this);
     }
 
     @NotNull
@@ -562,7 +610,7 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
         if (super.checkTaskQueueConsumer()) {
             return true;
         }
-        throw new ServiceStoppedException("database '" + info.getName() + "' has stopped providing external services");
+        throw new ServiceStoppedException(STR."database '\{info.getName()}' has stopped providing external services");
     }
 
     @Override
@@ -584,9 +632,18 @@ public class Database extends BlockingQueueTaskConsumer implements Iterable<HVal
     }
 
     @Override
-    public void close() {
-        stopConsumeOpsTask().join();
-        stopSaveTask();
+    public void close() throws Exception {
+        var f1 = stopConsumeOpsTask();
+        hdb.close();
+        aofFlusher.close();
+        f1.join();
+        //        stopSaveTask();
+    }
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        hdb = applicationContext.getBeanProvider(AbstractHdb.class).getObject(this);
+        aofFlusher = applicationContext.getBeanProvider(AofFlusher.class).getObject(this);
     }
 
 //    /**

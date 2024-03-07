@@ -16,7 +16,7 @@ import java.lang.annotation.*;
  * Note: 对于那些无参的静态方法, 也会被调用一次
  *
  * @author Huanyu Mark
- * @see StaticAutowiredAnnotationProcessor
+ * @see StaticAnnotationProcessor
  */
 @Inherited
 @Retention(RetentionPolicy.RUNTIME)

@@ -4,6 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.function.Supplier;
@@ -15,6 +17,7 @@ import java.util.function.Supplier;
  */
 @Slf4j
 public class Checker {
+
     public static <N extends Number> int notNegative(N val, N defaultVal, String msg) {
         if (val == null) {
             if (defaultVal == null) {
@@ -130,5 +133,62 @@ public class Checker {
             }
         }
         throw Exit.error(log, msg, STR."\{valueName} is required");
+    }
+
+    public static String requireSimpleFilename(String... names) {
+        if (names.length == 0) {
+            throw Exit.error(log, "filename is required", "filename is required");
+        }
+        String defaultName = nullableSimpleFilename(names[names.length - 1]);
+        if (defaultName == null) {
+            throw Exit.error(log, "default filename is illegal", "code error");
+        }
+
+        for (String name : names) {
+            try {
+                var checkPath = Path.of(name);
+                if (checkPath.getParent() != null) {
+                    log.error(STR."illegal filename '\{name}'. cause: filename must be a file name, not a path");
+                }
+                if (name.contains(" ")) {
+                    log.error(STR."illegal filename '\{name}'. cause: filename must not contain space");
+                }
+                return name;
+            } catch (InvalidPathException e) {
+                log.error(STR."illegal filename '\{name}'. cause: \{e.getMessage()}");
+            }
+        }
+
+        return defaultName;
+    }
+
+    public static String nullableSimpleFilename(String name) {
+        try {
+            var checkPath = Path.of(name);
+            if (checkPath.getParent() != null) {
+                return null;
+            }
+            if (name.contains(" ")) {
+                return null;
+            }
+            return name;
+        } catch (InvalidPathException e) {
+            return null;
+        }
+    }
+
+    public static String checkSimpleFilename(String filename) {
+        try {
+            var checkPath = Path.of(filename);
+            if (checkPath.getParent() != null) {
+                throw new IllegalArgumentException(STR."illegal filename '\{filename}'", new RuntimeException("filename must be a file name, not a path"));
+            }
+            if (filename.contains(" ")) {
+                throw new IllegalArgumentException(STR."illegal filename '\{filename}'", new RuntimeException("filename must not contain space"));
+            }
+            return filename;
+        } catch (InvalidPathException e) {
+            throw new IllegalArgumentException(STR."illegal filename '\{filename}'", e);
+        }
     }
 }

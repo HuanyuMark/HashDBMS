@@ -3,25 +3,29 @@ package org.hashdb.ms.manager;
 import jakarta.annotation.PreDestroy;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.hashdb.ms.aspect.methodAccess.DisposableCall;
 import org.hashdb.ms.config.DBManageConfig;
 import org.hashdb.ms.data.DataType;
 import org.hashdb.ms.data.Database;
+import org.hashdb.ms.data.DatabaseInfos;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.net.exception.DatabaseClashException;
 import org.hashdb.ms.net.exception.NotFoundDatabaseException;
 import org.hashdb.ms.net.nio.ClusterGroup;
 import org.hashdb.ms.persistent.PersistentService;
+import org.hashdb.ms.persistent.sys.SystemPersistService;
 import org.hashdb.ms.util.AsyncService;
 import org.hashdb.ms.util.BlockingQueueTaskConsumer;
 import org.hashdb.ms.util.Lazy;
 import org.hashdb.ms.util.TimeCounter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Date;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -37,20 +41,35 @@ import java.util.function.Consumer;
  */
 @Slf4j
 @Component
-public class DBSystem extends BlockingQueueTaskConsumer {
+public class DBSystem extends BlockingQueueTaskConsumer implements Closeable {
     @Getter
-    private SystemInfo systemInfo;
+    private final SystemInfo systemInfo;
 
     @Getter
     private ClusterGroup clusterGroup;
 
+    @Deprecated
     private final PersistentService persistentService;
+
+    private final SystemPersistService persistService;
 
     private final DBManageConfig manageConfig;
 
-    public DBSystem(PersistentService persistentService, DBManageConfig manageConfig) {
+    private final ObjectProvider<Database> databaseProvider;
+
+    public DBSystem(
+            PersistentService persistentService,
+            DBManageConfig manageConfig,
+            SystemPersistService persistService,
+            SystemInfo systemInfo,
+            ObjectProvider<Database> databaseProvider
+    ) {
+        this.systemInfo = systemInfo;
+        systemInfo.setSystem(this);
         this.persistentService = persistentService;
         this.manageConfig = manageConfig;
+        this.persistService = persistService;
+        this.databaseProvider = databaseProvider;
         startConsumeOpsTask();
     }
 
@@ -108,7 +127,7 @@ public class DBSystem extends BlockingQueueTaskConsumer {
             clashWithName.clashWith("name");
             throw clashWithName;
         }
-        var newDb = new Database(id, name, new Date());
+        var newDb = databaseProvider.getObject(new DatabaseInfos(id, name, new Date()));
         initializer.accept(newDb);
         var lazy = Lazy.of(() -> {
             newDb.startDaemon().join();
@@ -136,20 +155,17 @@ public class DBSystem extends BlockingQueueTaskConsumer {
         return lazy.get();
     }
 
-    @DisposableCall
-    private void setSystemInfo(@NotNull SystemInfo systemInfo) {
-        this.systemInfo = systemInfo;
-        systemInfo.setSystem(this);
-    }
-
     /**
      * 初始化数据库
      */
     @EventListener(ApplicationContext.class)
-    public void init() {
-        // 扫描 系统信息,
-        setSystemInfo(persistentService.scanSystemInfo());
+    public void init(SystemInfo systemInfo) {
         initSystemInternalDB();
+    }
+
+    @Override
+    public void close() throws IOException {
+        persistService.write(systemInfo);
     }
 
     public void initSystemInternalDB() {
@@ -225,9 +241,12 @@ public class DBSystem extends BlockingQueueTaskConsumer {
             var reportTimeout = AsyncService.setTimeout(() -> {
                 log.warn("Timed out waiting for the database {} to complete all tasks", db);
             }, 10_000);
-            db.close();
+            try {
+                db.close();
+            } catch (Exception e) {
+                log.error(STR."fail to close database \{db}", e);
+            }
             reportTimeout.cancel(true);
-            persistentService.persist(db);
             if (log.isTraceEnabled()) {
                 log.trace("db '{}' storing success", db);
             }
@@ -240,4 +259,6 @@ public class DBSystem extends BlockingQueueTaskConsumer {
         }
         log.info("System closed {}, cost {} ms", forkJoinPoolClosingMsg, dbmsCostTimeCounter);
     }
+
+
 }

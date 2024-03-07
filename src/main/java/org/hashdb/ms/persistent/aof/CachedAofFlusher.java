@@ -2,10 +2,12 @@ package org.hashdb.ms.persistent.aof;
 
 import io.netty.buffer.ByteBuf;
 import lombok.extern.slf4j.Slf4j;
+import org.hashdb.ms.util.AsyncService;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Queue;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Date: 2024/3/3 13:59
@@ -36,5 +38,21 @@ public abstract class CachedAofFlusher extends AbstractAofFlusher {
     @Override
     public void append(ByteBuffer commandBuf) {
         cache.add(commandBuf);
+    }
+
+    @Override
+    public CompletableFuture<Boolean> flush() {
+        var res = super.flush();
+        var next = new CompletableFuture<Boolean>();
+        res.handleAsync((ok, e) -> {
+            cache.clear();
+            if (e != null) {
+                next.completeExceptionally(e);
+                return null;
+            }
+            next.complete(ok);
+            return null;
+        }, AsyncService.service());
+        return next;
     }
 }

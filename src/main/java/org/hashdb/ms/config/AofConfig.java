@@ -7,12 +7,16 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.persistent.aof.AofFlushStrategy;
+import org.hashdb.ms.persistent.aof.AofManager;
 import org.hashdb.ms.support.Checker;
 import org.hashdb.ms.support.Exit;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 
 import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * Date: 2023/12/5 16:56
@@ -24,10 +28,12 @@ import java.util.Arrays;
 @ConfigurationProperties(value = "db.aof", ignoreInvalidFields = true)
 public class AofConfig extends PersistentConfig {
     /**
-     * 是否开启aof持久化
+     * true:
+     * 在第一次访问数据库时, 才从磁盘中加载数据入内存
+     * false:
+     * 在启动数据库服务器时, 就将所有的数据从磁盘读入内存
      */
-    private final boolean enabled;
-
+    private final boolean lazyLoad;
     /**
      * 重写相关
      */
@@ -44,6 +50,14 @@ public class AofConfig extends PersistentConfig {
      * 最新的追加的命令刷入硬盘里的文件都叫这个
      */
     protected final String newFileName = "new.aof";
+
+    private final String systemInfoFileName;
+
+    public String getSystemInfoFileName() {
+        return Objects.requireNonNullElseGet(systemInfoFileName, () -> getDefaultConfig().getSysInfoFileName());
+    }
+
+    private final String dbInfoFileName = "db.info";
 
     /**
      * 如果该节点是主节点,则该节点的aof持久化策略为slaveFlushStrategy
@@ -64,17 +78,19 @@ public class AofConfig extends PersistentConfig {
     protected final int noFlushStrategyCacheSize = 10 * 1024 * 1024;
 
     public AofConfig(
+            Boolean lazyLoad,
             String path,
-            Boolean enabled,
             RewriteConfig rewire,
             String flushStrategy,
-            String slaveFlushStrategy
+            String slaveFlushStrategy,
+            String systemInfoFileName
     ) {
-        super(path);
-        this.enabled = Checker.require(enabled, false);
+        super(path, false);
+        this.lazyLoad = Checker.require(lazyLoad, true);
         this.rewrite = Checker.require(() -> new RewriteConfig(64 * 1024 * 1024L, null, 100D), rewire);
         this.flushStrategy = Checker.require(resolveStrategy(flushStrategy, "db.aof.flush-strategy"), AofFlushStrategy.EVERY_SECOND);
         this.slaveFlushStrategy = Checker.require(resolveStrategy(slaveFlushStrategy, "db.aof.slave-flush-strategy"), this.flushStrategy, AofFlushStrategy.EVERY_SECOND);
+        this.systemInfoFileName = Checker.nullableSimpleFilename(systemInfoFileName);
     }
 
     /**
@@ -160,5 +176,11 @@ public class AofConfig extends PersistentConfig {
             this.minSize = Checker.notNegative(Checker.require(minSize, threshold), 1, STR."illegal value '\{minSize}' of option 'db.aof.rewite.min-size'");
             this.percentage = Checker.notNegative(percentage, 1, STR."illegal value '\{percentage}' of option 'db.aof.rewrite.percentage'");
         }
+    }
+
+    @Bean
+    @ConditionalOnExpression("#{'${db.aof.path}' != null }")
+    public AofManager aofManager(AofConfig aofConfig) {
+        return new AofManager(aofConfig);
     }
 }

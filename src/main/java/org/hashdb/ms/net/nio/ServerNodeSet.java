@@ -30,6 +30,7 @@ public class ServerNodeSet<N extends ServerNode> {
         var old = keyMap.put(node.key(), node);
         if (old == null || !old.key().equals(node.key())) {
             onChange();
+            onAdd(node);
         }
     }
 
@@ -83,5 +84,8 @@ public class ServerNodeSet<N extends ServerNode> {
     }
 
     protected void onChange() {
+    }
+
+    protected void onAdd(ServerNode node) {
     }
 }

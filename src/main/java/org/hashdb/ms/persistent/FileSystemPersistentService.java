@@ -46,7 +46,7 @@ public abstract class FileSystemPersistentService implements PersistentService {
 
     protected File getSystemInfoFile() {
         File dbFileRootDir = HDBConfig.getRootDir();
-        return new File(dbFileRootDir, HDBConfig.getSystemInfoFileName());
+        return new File(dbFileRootDir, HDBConfig.getDbInfoFileName());
     }
 
     protected File getPersistentConfigFile() {

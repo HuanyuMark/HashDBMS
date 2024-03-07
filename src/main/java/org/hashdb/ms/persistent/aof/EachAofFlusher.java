@@ -15,14 +15,4 @@ public class EachAofFlusher extends AbstractAofFlusher {
     public EachAofFlusher(Aof file) throws IOException {
         super(file);
     }
-
-    @Override
-    public void flush() {
-        if (doFlush()) {
-            forceFlush();
-            if (distFileRewritable()) {
-                doRewrite();
-            }
-        }
-    }
 }

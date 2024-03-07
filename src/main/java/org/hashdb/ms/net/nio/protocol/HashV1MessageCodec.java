@@ -11,6 +11,7 @@ import org.hashdb.ms.net.nio.msg.v1.*;
 import org.hashdb.ms.support.Exit;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -58,7 +59,9 @@ public class HashV1MessageCodec implements MessageCodec {
          * 切换会话的类型
          */
         SESSION_UPGRADE(SessionUpgradeMessage.class, BodyCodec.SESSION_META,
-                (id, bodyCodec, buf) -> new SessionUpgradeMessage(((SessionMeta) bodyCodec.decode(SessionMeta.class, buf))));
+                (id, bodyCodec, buf) -> new SessionUpgradeMessage(((SessionMeta) bodyCodec.decode(SessionMeta.class, buf)))),
+
+        SYNC(SyncMessage.class);
 
         private final MessageDecoder<?> decoder;
 
@@ -70,7 +73,17 @@ public class HashV1MessageCodec implements MessageCodec {
         private static final CodecContext[] ENUM_MAP = values();
 
         CodecContext(Class<? extends Message<?>> messageClass) {
-            this(messageClass, BodyCodec.JSON);
+            this(messageClass, selectDefaultBodyCodec(messageClass));
+        }
+
+        private static BodyCodec selectDefaultBodyCodec(Class<? extends Message<?>> messageClass) {
+            var type = ResolvableType.forClass(messageClass);
+            var generic = type.getSuperType().getGeneric(0);
+            var bodyClass = generic.resolve();
+            if (bodyClass != null && CharSequence.class.isAssignableFrom(bodyClass)) {
+                return BodyCodec.STRING;
+            }
+            return BodyCodec.JSON;
         }
 
         public static CodecContext match(MessageMeta meta) {

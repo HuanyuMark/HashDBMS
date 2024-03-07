@@ -11,7 +11,7 @@ import org.hashdb.ms.data.StorableHValue;
 import org.hashdb.ms.manager.SystemInfo;
 import org.hashdb.ms.net.exception.NotFoundDatabaseException;
 import org.hashdb.ms.net.nio.ClusterGroup;
-import org.hashdb.ms.persistent.hdb.HdbFactory;
+import org.hashdb.ms.persistent.hdb.HdbManager;
 import org.hashdb.ms.util.AsyncService;
 import org.jetbrains.annotations.NotNull;
 import org.openjdk.jol.info.ClassLayout;
@@ -47,24 +47,24 @@ public class AofHdbPersistentService implements PersistentService {
                     if (size < hdbConfig.getChunkSize()) {
                         continue;
                     }
-                    File dbChunkFile = HdbFactory.newHDBChunkFile(hdbRootDir, chunkId++);
+                    File dbChunkFile = HdbManager.newHDBChunkFile(hdbRootDir, chunkId++);
                     FileUtils.writeObject(dbChunkFile, buffer);
                     buffer.clear();
                 }
                 if (!buffer.isEmpty()) {
-                    File dbChunkFile = HdbFactory.newHDBChunkFile(hdbRootDir, chunkId);
+                    File dbChunkFile = HdbManager.newHDBChunkFile(hdbRootDir, chunkId);
                     FileUtils.writeObject(dbChunkFile, buffer);
                     buffer.clear();
                 }
                 // 写入数据库索引文件， 保存数据库的基本信息
-                File indexFile = HdbFactory.newIndexFile(hdbRootDir);
+                File indexFile = HdbManager.newIndexFile(hdbRootDir);
 //            FileUtils.prepareDir(indexFile, () -> new DBFileAccessFailedException("can`t access index db file '" + indexFile.getAbsolutePath() + "'"));
                 DatabaseInfos dbInfos = database.getInfos();
                 dbInfos.setLastSaveTime(new Date());
                 return FileUtils.writeObject(indexFile, dbInfos);
             });
             var aofSaveTask = AsyncService.start(() -> {
-                if (!aofConfig.isEnabled()) {
+                if (aofConfig.getRootPath() == null) {
                     return true;
                 }
 

@@ -14,7 +14,7 @@ import org.hashdb.ms.manager.StorableSystemInfo;
 import org.hashdb.ms.manager.SystemInfo;
 import org.hashdb.ms.net.exception.NotFoundDatabaseException;
 import org.hashdb.ms.net.nio.ClusterGroup;
-import org.hashdb.ms.persistent.hdb.HdbFactory;
+import org.hashdb.ms.persistent.hdb.HdbManager;
 import org.hashdb.ms.util.AtomLazy;
 import org.hashdb.ms.util.Lazy;
 import org.hashdb.ms.util.YamlService;
@@ -63,17 +63,17 @@ public class DefaultPersistentService extends FileSystemPersistentService {
                 if (size < HDBConfig.getChunkSize()) {
                     continue;
                 }
-                File dbChunkFile = HdbFactory.newHDBChunkFile(dbFileDir, chunkId++);
+                File dbChunkFile = HdbManager.newHDBChunkFile(dbFileDir, chunkId++);
                 FileUtils.writeObject(dbChunkFile, buffer);
                 buffer.clear();
             }
             if (!buffer.isEmpty()) {
-                File dbChunkFile = HdbFactory.newHDBChunkFile(dbFileDir, chunkId);
+                File dbChunkFile = HdbManager.newHDBChunkFile(dbFileDir, chunkId);
                 FileUtils.writeObject(dbChunkFile, buffer);
                 buffer.clear();
             }
             // 写入数据库索引文件， 保存数据库的基本信息
-            File indexFile = HdbFactory.newIndexFile(dbFileDir);
+            File indexFile = HdbManager.newIndexFile(dbFileDir);
 //            FileUtils.prepareDir(indexFile, () -> new DBFileAccessFailedException("can`t access index db file '" + indexFile.getAbsolutePath() + "'"));
             DatabaseInfos dbInfos = database.getInfos();
             dbInfos.setLastSaveTime(new Date());
@@ -129,7 +129,7 @@ public class DefaultPersistentService extends FileSystemPersistentService {
         return Arrays.stream(
                         Objects.requireNonNullElse(
                                 HDBConfig.getRootDir()
-                                        .listFiles(file -> !HDBConfig.getSystemInfoFileName().equals(file.getName())
+                                        .listFiles(file -> !HDBConfig.getDbInfoFileName().equals(file.getName())
                                                 && file.isDirectory() && file.canRead()),
                                 new File[0]
                         )
@@ -144,7 +144,7 @@ public class DefaultPersistentService extends FileSystemPersistentService {
         return Arrays.stream(
                         Objects.requireNonNullElse(
                                 HDBConfig.getRootDir()
-                                        .listFiles(file -> !HDBConfig.getSystemInfoFileName().equals(file.getName())
+                                        .listFiles(file -> !HDBConfig.getDbInfoFileName().equals(file.getName())
                                                 && file.isDirectory() && file.canRead()),
                                 new File[0]
                         )
@@ -168,7 +168,7 @@ public class DefaultPersistentService extends FileSystemPersistentService {
 
     private static DatabaseInfos scanDatabaseInfo(File dbFileDir) {
         // 读取数据库索引文件，获取数据库基本信息
-        File indexFile = HdbFactory.loadIndexFile(dbFileDir);
+        File indexFile = HdbManager.loadIndexFile(dbFileDir);
         return (DatabaseInfos) FileUtils.readObject(indexFile);
     }
 
@@ -189,7 +189,7 @@ public class DefaultPersistentService extends FileSystemPersistentService {
         DatabaseInfos databaseInfos = scanDatabaseInfo(dbFileDir);
 
         // 读取数据库的 HashTable 分块
-        File[] dbChunkFile = HdbFactory.loadDBChunkFile(dbFileDir);
+        File[] dbChunkFile = HdbManager.loadDBChunkFile(dbFileDir);
         var initEntries = Arrays.stream(dbChunkFile)
                 .parallel().flatMap(file -> {
                     @SuppressWarnings("unchecked")
@@ -197,8 +197,8 @@ public class DefaultPersistentService extends FileSystemPersistentService {
                     return chunk.entrySet().parallelStream();
                 })
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-
-        return new Database(databaseInfos, initEntries);
+        throw new UnsupportedOperationException();
+//        return new Database(databaseInfos, initEntries);
     }
 
     /**
@@ -209,7 +209,7 @@ public class DefaultPersistentService extends FileSystemPersistentService {
      */
     @Override
     public SystemInfo scanSystemInfo() {
-        File[] files = HDBConfig.getRootDir().listFiles(file -> HDBConfig.getSystemInfoFileName().equals(file.getName()));
+        File[] files = HDBConfig.getRootDir().listFiles(file -> HDBConfig.getDbInfoFileName().equals(file.getName()));
         if (files != null) {
             if (files.length > 1) {
                 throw new DBClientException("system info file is not unique");

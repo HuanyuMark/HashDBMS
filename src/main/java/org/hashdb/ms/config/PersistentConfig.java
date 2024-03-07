@@ -1,11 +1,14 @@
 package org.hashdb.ms.config;
 
+import jakarta.annotation.Resource;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.hashdb.ms.exception.DBSystemException;
 import org.hashdb.ms.exception.RequiredConfigException;
 import org.hashdb.ms.persistent.FileUtils;
 import org.hashdb.ms.support.Exit;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.core.annotation.AnnotationUtils;
 
@@ -22,13 +25,25 @@ import java.util.Objects;
 @Slf4j
 @Getter
 public class PersistentConfig {
-    protected Path rootPath;
 
-    private final File rootDir;
+    @Resource
+    @Getter(AccessLevel.PROTECTED)
+    private DefaultConfig defaultConfig;
+    /**
+     * 如果这两个其中之一为null, 则说明不使用这种持久化方式
+     */
+    protected final @Nullable Path rootPath;
 
-    public PersistentConfig(String rootPath) {
-        if (rootPath == null) {
-            throw Exit.error(log, "config loading failed!", RequiredConfigException.of("db.file.path"));
+    private final @Nullable File rootDir;
+
+    public PersistentConfig(String rootPath, boolean required) {
+        if (rootPath == null || rootPath.trim().isEmpty()) {
+            if (required) {
+                throw Exit.error(log, "config loading failed!", RequiredConfigException.of("db.file.path"));
+            }
+            rootDir = null;
+            this.rootPath = null;
+            return;
         }
         try {
             this.rootPath = Path.of(rootPath).normalize();
